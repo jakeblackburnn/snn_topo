@@ -1,0 +1,17 @@
+{
+  "session_idx": 11,
+  "mouse_name": "Lederberg",
+  "date_exp": "2017-12-05",
+  "n_neurons": 698,
+  "n_trials": 340,
+  "bin_size_s": 0.01,
+  "stim_onset_s": 0.5,
+  "window_bins": [
+    50,
+    200
+  ],
+  "n_pca": 10,
+  "maxdim": 1,
+  "n_left": 135,
+  "n_right": 141
+}
