@@ -4,9 +4,11 @@ import torch
 import torch.nn as nn
 import snntorch as snn
 
+from ..config import LIF_BETA, N_HIDDEN
+
 
 class SNNPolicy(nn.Module):
-    def __init__(self, n_in: int = 2, n_hidden: int = 128, n_out: int = 2, beta: float = 0.9):
+    def __init__(self, n_in: int = 2, n_hidden: int = N_HIDDEN, n_out: int = 2, beta: float = LIF_BETA):
         super().__init__()
         self.fc1 = nn.Linear(n_in, n_hidden)
         self.lif1 = snn.Leaky(beta=beta)
@@ -15,7 +17,7 @@ class SNNPolicy(nn.Module):
 
     def forward(self, spk_in: torch.Tensor):
         """spk_in: (T, batch, n_in) -> hidden_spk: (T, batch, n_hidden), out_spk: (T, batch, n_out)."""
-        T, batch = spk_in.shape[0], spk_in.shape[1]
+        T = spk_in.shape[0]
         mem1 = self.lif1.init_leaky()
         mem2 = self.lif2.init_leaky()
         hidden_rec, out_rec = [], []

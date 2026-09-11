@@ -1,0 +1,46 @@
+16:08:21 [INFO] === snn_training — logging to results/logs/snn_training_20260911T160821.log ===
+16:08:22 [INFO] training on device=cuda, n_updates=400, batch_size=32
+16:08:22 [INFO] update    1/400 loss=-0.069 acc=0.53 baseline=+0.01 elapsed=0.2s
+16:08:23 [INFO] update   10/400 loss=-0.136 acc=0.97 baseline=+0.50 elapsed=0.7s
+16:08:23 [INFO] update   20/400 loss=-0.225 acc=0.97 baseline=+0.81 elapsed=1.1s
+16:08:24 [INFO] update   30/400 loss=+0.001 acc=1.00 baseline=+0.93 elapsed=1.6s
+16:08:24 [INFO] update   40/400 loss=-0.000 acc=1.00 baseline=+0.97 elapsed=2.1s
+16:08:25 [INFO] update   50/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=2.6s
+16:08:25 [INFO] update   60/400 loss=-0.000 acc=1.00 baseline=+0.98 elapsed=3.1s
+16:08:26 [INFO] update   70/400 loss=-0.082 acc=0.97 baseline=+0.99 elapsed=3.6s
+16:08:26 [INFO] update   80/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=4.1s
+16:08:27 [INFO] update   90/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=4.5s
+16:08:27 [INFO] update  100/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=5.0s
+16:08:28 [INFO] update  110/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=5.5s
+16:08:28 [INFO] update  120/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=6.0s
+16:08:29 [INFO] update  130/400 loss=-0.082 acc=0.97 baseline=+0.99 elapsed=6.5s
+16:08:29 [INFO] update  140/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=6.9s
+16:08:29 [INFO] update  150/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=7.4s
+16:08:30 [INFO] update  160/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=7.9s
+16:08:30 [INFO] update  170/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=8.4s
+16:08:31 [INFO] update  180/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=8.9s
+16:08:31 [INFO] update  190/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=9.4s
+16:08:32 [INFO] update  200/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=9.8s
+16:08:32 [INFO] update  210/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=10.3s
+16:08:33 [INFO] update  220/400 loss=-0.008 acc=0.97 baseline=+0.99 elapsed=10.8s
+16:08:33 [INFO] update  230/400 loss=-0.090 acc=0.94 baseline=+0.98 elapsed=11.3s
+16:08:34 [INFO] update  240/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=11.8s
+16:08:34 [INFO] update  250/400 loss=-0.001 acc=0.97 baseline=+0.99 elapsed=12.3s
+16:08:35 [INFO] update  260/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=12.7s
+16:08:35 [INFO] update  270/400 loss=-0.000 acc=1.00 baseline=+0.98 elapsed=13.2s
+16:08:36 [INFO] update  280/400 loss=-0.000 acc=1.00 baseline=+0.99 elapsed=13.7s
+16:08:36 [INFO] update  290/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=14.2s
+16:08:37 [INFO] update  300/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=14.7s
+16:08:37 [INFO] update  310/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=15.1s
+16:08:38 [INFO] update  320/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=15.6s
+16:08:38 [INFO] update  330/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=16.1s
+16:08:39 [INFO] update  340/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=16.6s
+16:08:39 [INFO] update  350/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=17.1s
+16:08:40 [INFO] update  360/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=17.6s
+16:08:40 [INFO] update  370/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=18.1s
+16:08:41 [INFO] update  380/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=18.5s
+16:08:41 [INFO] update  390/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=19.0s
+16:08:42 [INFO] update  400/400 loss=-0.000 acc=1.00 baseline=+1.00 elapsed=19.5s
+16:08:42 [INFO] training done in 19.5s (0.049s/update)
+16:08:42 [INFO] final 50-update mean accuracy: 0.999
+16:08:42 [INFO] saved training curve figure to /home/jake/Code/main/snn_topo/results/figures/snn_training_curve.png

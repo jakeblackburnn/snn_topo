@@ -4,22 +4,29 @@ EMA baseline + entropy bonus reduce variance. Differentiability comes entirely f
 snntorch's surrogate-gradient spike function; REINFORCE supplies the reward-based
 (non-differentiable-environment) objective on top.
 """
-import sys
 import time
 
 import pandas as pd
 import torch
 import torch.nn.functional as F
 
-from snn_model import SNNPolicy
-from snn_task import sample_batch
+from ..config import (
+    BASELINE_MOMENTUM, BATCH_SIZE, ENTROPY_COEF, LEARNING_RATE, N_UPDATES,
+    NUM_STEPS, RESULTS_DIR, TRAIN_SEED,
+)
+from ..data.snn_task import sample_batch
+from ..io_utils import save_dataframe
+from ..logging_utils import get_logger
+from ..models.snn_model import SNNPolicy
 
-ROOT_RESULTS = __import__("pathlib").Path(__file__).resolve().parent.parent / "results"
 
-
-def train(n_updates=400, batch_size=32, num_steps=150, lr=1e-3, entropy_coef=0.01,
-          baseline_momentum=0.9, seed=0, device=None, log_every=10):
+def train(n_updates: int = N_UPDATES, batch_size: int = BATCH_SIZE, num_steps: int = NUM_STEPS,
+          lr: float = LEARNING_RATE, entropy_coef: float = ENTROPY_COEF,
+          baseline_momentum: float = BASELINE_MOMENTUM, seed: int = TRAIN_SEED,
+          device: str = None, log_every: int = 10):
+    log = get_logger()
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    log.info(f"training on device={device}, n_updates={n_updates}, batch_size={batch_size}")
     torch.manual_seed(seed)
     gen = torch.Generator().manual_seed(seed)
 
@@ -52,22 +59,17 @@ def train(n_updates=400, batch_size=32, num_steps=150, lr=1e-3, entropy_coef=0.0
 
         if update % log_every == 0 or update == 1:
             elapsed = time.time() - t0
-            print(f"update {update:4d}/{n_updates} loss={loss.item():+.3f} acc={acc:.2f} "
-                  f"baseline={baseline:+.2f} elapsed={elapsed:.1f}s")
+            log.info(f"update {update:4d}/{n_updates} loss={loss.item():+.3f} acc={acc:.2f} "
+                      f"baseline={baseline:+.2f} elapsed={elapsed:.1f}s")
 
     total_time = time.time() - t0
-    print(f"training done in {total_time:.1f}s ({total_time / n_updates:.3f}s/update)")
+    log.info(f"training done in {total_time:.1f}s ({total_time / n_updates:.3f}s/update)")
 
     df = pd.DataFrame(rows)
-    ROOT_RESULTS.mkdir(exist_ok=True)
-    df.to_csv(ROOT_RESULTS / "snn_training_curve.csv", index=False)
-    torch.save(model.state_dict(), ROOT_RESULTS / "snn_policy_weights.pt")
+    RESULTS_DIR.mkdir(exist_ok=True)
+    save_dataframe(df, RESULTS_DIR / "snn_training_curve.csv")
+    torch.save(model.state_dict(), RESULTS_DIR / "snn_policy_weights.pt")
 
     last_n = min(50, len(df))
-    print(f"final {last_n}-update mean accuracy: {df['accuracy'].tail(last_n).mean():.3f}")
+    log.info(f"final {last_n}-update mean accuracy: {df['accuracy'].tail(last_n).mean():.3f}")
     return model, df
-
-
-if __name__ == "__main__":
-    n_updates = int(sys.argv[1]) if len(sys.argv) > 1 else 400
-    train(n_updates=n_updates)

@@ -1,0 +1,16 @@
+16:08:47 [INFO] === snn_analysis — logging to results/logs/snn_analysis_20260911T160847.log ===
+16:08:48 [INFO] eval accuracy over 200 trials: 1.000
+16:08:48 [INFO] network choices: left=95 right=105
+16:08:48 [INFO] [snn_left] n_trials=95 PCA explained_var(top3)=[0.534 0.101 0.064]
+16:08:48 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 10.62292537680293, 'max_persistence': 0.5537364709279704}
+16:08:48 [INFO]   H1: {'n_features': 93, 'n_finite': 93, 'total_persistence': 0.49598013528083446, 'max_persistence': 0.03711811103961876}
+16:08:48 [INFO] [snn_right] n_trials=105 PCA explained_var(top3)=[0.522 0.11  0.053]
+16:08:48 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 11.750743632681003, 'max_persistence': 0.5454667677786206}
+16:08:48 [INFO]   H1: {'n_features': 82, 'n_finite': 82, 'total_persistence': 0.5622202490634074, 'max_persistence': 0.020295291323520648}
+16:08:48 [INFO] [snn_left_half1] n_trials=47 PCA explained_var(top3)=[0.459 0.098 0.08 ]
+16:08:48 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 12.544523868545571, 'max_persistence': 0.5500795386178527}
+16:08:48 [INFO]   H1: {'n_features': 94, 'n_finite': 94, 'total_persistence': 0.7660591077890895, 'max_persistence': 0.033490076176994885}
+16:08:48 [INFO] [snn_left_half2] n_trials=48 PCA explained_var(top3)=[0.483 0.09  0.081]
+16:08:48 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 12.193788754672982, 'max_persistence': 0.5387628390165569}
+16:08:48 [INFO]   H1: {'n_features': 95, 'n_finite': 95, 'total_persistence': 0.6198715385928305, 'max_persistence': 0.0332223500078007}
+16:08:48 [INFO] done. meta: {'n_eval': 200, 'num_steps': 150, 'eval_accuracy': 1.0, 'n_left': 95, 'n_right': 105, 'n_pca': 10, 'maxdim': 1, 'device': 'cuda'}

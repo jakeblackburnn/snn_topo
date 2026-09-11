@@ -1,0 +1,8 @@
+16:09:45 [INFO] === selftest_topology — logging to results/logs/selftest_topology_20260911T160945.log ===
+16:09:45 [INFO] gudhi H0 summary: {'n_features': 150, 'n_finite': 149, 'total_persistence': 8.196751989283845, 'max_persistence': 0.16408264199644426}
+16:09:45 [INFO] gudhi H1 summary: {'n_features': 3, 'n_finite': 3, 'total_persistence': 1.4788163366514497, 'max_persistence': 1.469271355113373}
+16:09:45 [INFO] ripser H0 summary: {'n_features': 150, 'n_finite': 149, 'total_persistence': 8.19675201550126, 'max_persistence': 0.16408264636993408}
+16:09:45 [INFO] ripser H1 summary: {'n_features': 3, 'n_finite': 3, 'total_persistence': 1.4788163527846336, 'max_persistence': 1.4692713618278503}
+16:09:45 [INFO] top H1 persistence values (gudhi): [np.float64(1.469271355113373), np.float64(0.009215988333384426), np.float64(0.00032899320469241544)]
+16:09:45 [INFO] gudhi-vs-ripser H1 diagram distance (should be small): {'wasserstein': 8.546014842456568e-09, 'bottleneck': 6.6236027218558036e-09, 'backend': 'gudhi+pot[cuda]'}
+16:09:45 [INFO] SANITY CHECK PASSED

@@ -1,0 +1,18 @@
+16:08:12 [INFO] === bio_analysis — logging to results/logs/bio_analysis_20260911T160812.log ===
+16:08:12 [INFO] already downloaded: /home/jake/Code/main/snn_topo/data/raw/steinmetz_part0.npz (87542157 bytes)
+16:08:16 [INFO] part0 has 13 sessions
+16:08:16 [INFO] session 11: 698 neurons, 340 trials, 250 time bins
+16:08:16 [INFO] session 11: left=135 right=141 no-go=64
+16:08:16 [INFO] [bio_left] n_trials=135 PCA explained_var(top3)=[0.409 0.24  0.088]
+16:08:16 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 8.006402061345655, 'max_persistence': 0.18137174361896835}
+16:08:16 [INFO]   H1: {'n_features': 1, 'n_finite': 1, 'total_persistence': 0.2030956761144016, 'max_persistence': 0.2030956761144016}
+16:08:16 [INFO] [bio_right] n_trials=141 PCA explained_var(top3)=[0.499 0.171 0.075]
+16:08:16 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 8.394523723761104, 'max_persistence': 0.3247454761579334}
+16:08:16 [INFO]   H1: {'n_features': 3, 'n_finite': 3, 'total_persistence': 0.21919976410580233, 'max_persistence': 0.20334826518519078}
+16:08:16 [INFO] [bio_left_half1] n_trials=67 PCA explained_var(top3)=[0.374 0.201 0.083]
+16:08:16 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 9.862403242707469, 'max_persistence': 0.2024045661877106}
+16:08:16 [INFO]   H1: {'n_features': 1, 'n_finite': 1, 'total_persistence': 0.13998025647766876, 'max_persistence': 0.13998025647766876}
+16:08:16 [INFO] [bio_left_half2] n_trials=68 PCA explained_var(top3)=[0.357 0.231 0.085]
+16:08:16 [INFO]   H0: {'n_features': 150, 'n_finite': 149, 'total_persistence': 10.415165281477558, 'max_persistence': 0.18747605194208952}
+16:08:16 [INFO]   H1: {'n_features': 1, 'n_finite': 1, 'total_persistence': 0.2789413061460482, 'max_persistence': 0.2789413061460482}
+16:08:16 [INFO] done. meta: {'session_idx': 11, 'mouse_name': 'Lederberg', 'date_exp': '2017-12-05', 'n_neurons': 698, 'n_trials': 340, 'bin_size_s': 0.01, 'stim_onset_s': 0.5, 'window_bins': [50, 200], 'n_pca': 10, 'maxdim': 1, 'n_left': 135, 'n_right': 141}
