@@ -107,7 +107,7 @@ class TopoConfig:
     smooth_win: int = 5
     maxdim: int = 2
     min_trials: int = 5  # conditions with fewer trials are skipped, not computed on noise
-    n_resamples: int = 100  # bootstrap/permutation draws per significance test
+    n_resamples: int = 50  # split-half resamples per significance test; see topology/stats.py for cost
 
 
 @dataclass
