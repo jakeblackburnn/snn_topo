@@ -28,7 +28,8 @@ def cmd_snn(args):
     task = TASKS[args.task]
     datasets = [task.bio_match] if task.bio_match else list(DATASETS)
     refs = [load_session(d, s) for d in datasets for s in DATASETS[d].reference_sessions]
-    cfg = ModelConfig(arch=args.arch, neuron=args.neuron, connectivity=args.connectivity, n_hidden=args.n_hidden)
+    cfg = ModelConfig(arch=args.arch, neuron=args.neuron, connectivity=args.connectivity, n_hidden=args.n_hidden,
+                      n_layers=args.n_layers, n_modules=args.n_modules)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     snn_entry(f"snn:{task.name}:single", task, cfg, TrainConfig(n_updates=args.n_updates), TopoConfig(), refs,
               run_dir, device)
@@ -51,6 +52,8 @@ def main(argv=None):
     s.add_argument("--neuron", default="lif")
     s.add_argument("--connectivity", default="random")
     s.add_argument("--n-hidden", type=int, default=256)
+    s.add_argument("--n-layers", type=int, default=1, help="feedforward depth")
+    s.add_argument("--n-modules", type=int, default=1, help="modular: number of modules (>= 2)")
     s.add_argument("--n-updates", type=int, default=200)
     s.add_argument("--out", default=str(RESULTS_DIR / "snn_single"))
     s.set_defaults(fn=cmd_snn)
