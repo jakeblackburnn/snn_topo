@@ -9,6 +9,7 @@ from .config import RESULTS_DIR
 from .contracts import ModelConfig, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
 from .logging_utils import setup_logging
+from .search import run_search
 from .tasks import TASKS
 
 
@@ -35,6 +36,12 @@ def cmd_snn(args):
     write_tables(run_dir)
 
 
+def cmd_search(args):
+    """Wall-clock-capped model search for one task; rerun the same command to resume."""
+    setup_logging("search", Path(args.out) / "logs")
+    run_search(args.task, args.out, args.budget_hours * 3600, seed=args.seed, n_trials=args.n_trials)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="snntopo")
     sub = p.add_subparsers(dest="command", required=True)
@@ -54,6 +61,14 @@ def main(argv=None):
     s.add_argument("--n-updates", type=int, default=200)
     s.add_argument("--out", default=str(RESULTS_DIR / "snn_single"))
     s.set_defaults(fn=cmd_snn)
+
+    r = sub.add_parser("search", help="search model configs for one task under a wall-clock budget")
+    r.add_argument("--task", required=True, choices=list(TASKS))
+    r.add_argument("--budget-hours", type=float, required=True)
+    r.add_argument("--out", required=True, help="run directory; an existing one is resumed")
+    r.add_argument("--n-trials", type=int, help="stop once the study holds this many trials")
+    r.add_argument("--seed", type=int, default=0)
+    r.set_defaults(fn=cmd_search)
 
     args = p.parse_args(argv)
     args.fn(args)
