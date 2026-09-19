@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snntopo"
+version = "2.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy", "scipy", "pandas", "pyarrow", "scikit-learn", "matplotlib", "requests",
+    "torch", "snntorch", "ripser", "persim", "gudhi", "POT", "networkx", "optuna",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+snntopo = "snntopo.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["snntopo*"]
+
+[tool.pytest.ini_options]
+# worktree-local code wins over the shared venv's editable install
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = ["data: needs downloaded bio data or network access"]
