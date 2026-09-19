@@ -8,7 +8,7 @@ version = "2.0.0"
 requires-python = ">=3.12"
 dependencies = [
     "numpy", "scipy", "pandas", "pyarrow", "scikit-learn", "matplotlib", "requests",
-    "torch", "snntorch", "ripser", "persim", "gudhi", "POT", "networkx", "optuna",
+    "torch", "snntorch", "ripser", "persim", "gudhi", "POT", "networkx", "optuna", "threadpoolctl",
 ]
 
 [project.optional-dependencies]
