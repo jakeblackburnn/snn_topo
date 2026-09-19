@@ -4,6 +4,7 @@ topology.stats is owned by another workstream, so compare/split_half_null are re
 by fakes that return well-formed DistanceResults, and the bio registry by two small
 synthetic datasets."""
 import numpy as np
+import optuna
 import pytest
 import torch
 from optuna.trial import TrialState
@@ -11,6 +12,7 @@ from optuna.trial import TrialState
 import snntopo.atlas as atlas
 import snntopo.search as search
 from snntopo.contracts import Activity, BioSession, DatasetEntry, DistanceResult, TopoConfig, TrainConfig
+from snntopo.models import valid_triples, validate
 from snntopo.tasks import TASKS
 from snntopo.tasks.symbols import CHANNELS_PER_SYMBOL
 
@@ -48,8 +50,8 @@ def fakes(monkeypatch):
     monkeypatch.setattr(atlas, "compare", fake_compare)
     monkeypatch.setattr(atlas, "split_half_null", lambda a, conds, topo, seed=0: [])
     monkeypatch.setattr(search, "MIN_TRAIN_S", 0.01)
-    # Only this family builds until the model registry lands.
-    monkeypatch.setattr(search, "model_families", lambda: [("recurrent", "lif", "random")])
+    # One family, so a trial costs a small recurrent net; the registry's own tests cover the rest.
+    monkeypatch.setattr(search, "valid_triples", lambda: [("recurrent", "lif", "random")])
 
 
 def snn_records(run_dir):
@@ -144,10 +146,21 @@ def test_generic_task_is_single_objective_with_nearest_bio(fakes, tmp_path, name
         assert t.values == [r.accuracy]
 
 
-def test_model_families_are_valid_triples():
-    families = search.model_families()
-    assert ("recurrent", "lif", "random") in families
-    assert all((c == "none") == (a == "feedforward") for a, _, c in families)
+def test_sampled_configs_are_all_buildable():
+    """The search must never propose a config the registry rejects: a FAIL trial teaches
+    the sampler nothing and burns a slot in the budget."""
+    study = optuna.create_study(sampler=optuna.samplers.RandomSampler(seed=0))
+    families = valid_triples()
+    seen = set()
+    for _ in range(400):
+        trial = study.ask()
+        cfg = search.sample_model(trial, families)
+        validate(cfg)  # raises if not buildable
+        seen.add((cfg.arch, cfg.n_layers, cfg.n_modules))
+        study.tell(trial, 0.0)
+    assert {a for a, _, _ in seen} == {"feedforward", "recurrent", "modular"}
+    assert max(l for a, l, _ in seen if a == "feedforward") > 1  # depth is actually explored
+    assert max(m for a, _, m in seen if a == "modular") > 2
 
 
 def shown_symbols(spk_in, slots):

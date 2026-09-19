@@ -21,7 +21,6 @@ feeds the sampler a made-up number:
 Run directory: search.db (Optuna sqlite) next to the atlas files (see atlas.py).
 Rerunning the same command resumes: the trial count and the wall-clock budget both
 count across resumes (elapsed time is stored on the study)."""
-import itertools
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -34,21 +33,15 @@ from .atlas import bio_entry, read_records, snn_entry, write_tables
 from .contracts import AtlasRecord, BioSession, ModelConfig, Task, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
 from .logging_utils import get_logger
-from .models import ARCHS, CONNECTIVITIES, NEURONS
+from .models import MIN_POPULATION, valid_triples
 from .tasks import TASKS
 
 MIN_TRAIN_S = 60.0  # don't start a trial that would get less training time than this
 # D5 budgets allow roughly 50-150 trials per task; Optuna's default population of 50
 # would spend most of that on the random first generation.
 POPULATION = 20
-
-
-def model_families() -> list[tuple[str, str, str]]:
-    """Valid (arch, neuron, connectivity) triples: connectivity is "none" iff the arch is
-    feedforward. Reconcile with the model registry's own valid-triples listing once it
-    lands, so the rule lives in one place."""
-    return [(a, n, c) for a, n, c in itertools.product(ARCHS, NEURONS, CONNECTIVITIES)
-            if (c == "none") == (a == "feedforward")]
+MAX_LAYERS = 3
+MAX_MODULES = 8
 
 
 def sample_model(trial: optuna.Trial, families: list[tuple[str, str, str]]) -> ModelConfig:
@@ -56,8 +49,11 @@ def sample_model(trial: optuna.Trial, families: list[tuple[str, str, str]]) -> M
     # NSGA-II/TPE model the family as a single always-present parameter.
     arch, neuron, connectivity = trial.suggest_categorical("family", ["/".join(f) for f in families]).split("/")
     n_hidden = trial.suggest_int("n_hidden", 64, 1024, log=True)
-    n_layers = trial.suggest_int("n_layers", 1, 3) if arch == "feedforward" else 1
-    n_modules = trial.suggest_int("n_modules", 2, 8) if arch == "modular" else 1
+    # models.validate rejects fewer than MIN_POPULATION neurons per layer/module, so the
+    # depth ranges depend on the width already drawn rather than wasting trials on FAIL.
+    max_groups = n_hidden // MIN_POPULATION
+    n_layers = trial.suggest_int("n_layers", 1, min(MAX_LAYERS, max_groups)) if arch == "feedforward" else 1
+    n_modules = trial.suggest_int("n_modules", 2, min(MAX_MODULES, max_groups)) if arch == "modular" else 1
     # Prototype: of radius {0.5, 0.8, 1.0, 1.2, 1.5} only 1.0 trained, so stay inside
     # (0.8, 1.2). Sampled for every arch so NSGA-II evolves it (conditional parameters
     # fall back to random sampling); feedforward has no recurrent weight to rescale.
@@ -126,7 +122,7 @@ def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials
 
     study = open_study(task, run_dir, seed)
     elapsed_before = study.user_attrs.get("elapsed_s", 0.0)
-    families = model_families()
+    families = valid_triples()
     overhead_s = 0.0  # worst non-training time (build + eval + topology) per trial so far
     while True:
         if n_trials is not None and len(study.trials) >= n_trials:
