@@ -8,6 +8,7 @@ import pandas as pd
 from .atlas import load_signature_diagrams, read_tables
 from .figures import (plot_accuracy_distance, plot_accuracy_distribution,
                       plot_comparison_bars, plot_signature_diagrams)
+from .tasks import TASKS
 
 
 def _markdown_table(frame: pd.DataFrame, columns: list[str]) -> str:
@@ -41,6 +42,11 @@ def _pareto_front(entries: pd.DataFrame) -> pd.DataFrame:
         if not dominates:
             keep.append(index)
     return usable.loc[keep].sort_values(["objective_distance", "accuracy"], ascending=[True, False])
+
+
+def _is_matched_task(source: str) -> bool:
+    task = TASKS.get(source)
+    return task is not None and task.bio_match is not None
 
 
 def _read_runs(run_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Path]]:
@@ -109,26 +115,24 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
             name = f"{dataset}_reference_diagrams.png"
             plot_signature_diagrams(diagrams, figures / name, f"{dataset} reference sessions")
             lines.extend([f"![{dataset} diagrams](figures/{name})", ""])
-        bio_distances = distances[distances["entry_id"].isin(rows["entry_id"])] if not distances.empty else distances
-        if not bio_distances.empty:
-            lines.extend(["### Split-half distance results", "", _markdown_table(
-                bio_distances, ["entry_id", "target", "condition", "dim", "metric", "distance", "null_mean", "null_q95", "p_value", "n_resamples"]
-            )])
-
-    matched_tasks = set(snn.loc[snn.get("objective_distance", pd.Series(dtype=float)).notna(), "source"])
-    matched = snn[snn["source"].isin(matched_tasks)]
+    matched = snn[snn["source"].map(_is_matched_task)]
+    representatives: dict[str, pd.DataFrame] = {}
     for task, rows in matched.groupby("source"):
         front = _pareto_front(rows)
-        name = f"{task}_accuracy_distance.png"
-        plot_accuracy_distance(rows.dropna(subset=["accuracy", "objective_distance"]), figures / name,
-                               f"{task}: accuracy versus topology", set(front.entry_id))
-        lines.extend([f"## Matched task: {task}", "", f"![{task} Pareto plot](figures/{name})", "",
-                      "### Pareto front", "", _markdown_table(front, ["entry_id", "accuracy", "objective_distance", "status"])])
+        representatives[task] = front
+        lines.extend([f"## Matched task: {task}", ""])
+        scored = rows.dropna(subset=["accuracy", "objective_distance"])
+        if not scored.empty:
+            name = f"{task}_accuracy_distance.png"
+            plot_accuracy_distance(scored, figures / name, f"{task}: accuracy versus topology", set(front.entry_id))
+            lines.extend([f"![{task} Pareto plot](figures/{name})", ""])
+        lines.extend(["### Pareto front", "", _markdown_table(front, ["entry_id", "accuracy", "objective_distance", "status"])])
 
-    generic = snn[~snn["source"].isin(matched_tasks)]
+    generic = snn[~snn["source"].map(_is_matched_task)]
     for task, rows in generic.groupby("source"):
         lines.extend([f"## Generic task: {task}", ""])
         usable = rows.dropna(subset=["accuracy"])
+        representatives[task] = usable.nlargest(5, "accuracy")
         if not usable.empty:
             name = f"{task}_accuracy_distribution.png"
             plot_accuracy_distribution(usable, figures / name, f"{task}: accuracy distribution")
@@ -137,9 +141,19 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
         lines.extend(["### Nearest bio signatures", "", _markdown_table(counts, ["nearest_bio", "count"])])
 
     if not distances.empty:
-        lines.extend(["## Distance results", "", "Every distance includes its resampling null mean and p-value (D7).", ""])
-        for source, row_ids in snn.groupby("source").groups.items():
-            task_distances = distances[distances["entry_id"].isin(entries.loc[row_ids, "entry_id"])]
+        lines.extend([
+            "## Distance results", "", "Every distance includes its resampling null mean and p-value (D7). "
+            "This report shows Pareto-front matched entries, the top five generic entries by accuracy, "
+            "and bio split-half rows; the complete table is [`distances.csv`](distances.csv).", "",
+        ])
+        bio_ids = set(bio["entry_id"])
+        bio_distances = distances[(distances["entry_id"].isin(bio_ids)) & (distances["target"] == "self")]
+        if not bio_distances.empty:
+            lines.extend(["### Bio split-half nulls", "", _markdown_table(
+                bio_distances, ["entry_id", "target", "condition", "dim", "metric", "distance", "null_mean", "null_q95", "p_value", "n_resamples"]
+            )])
+        for source, representative_rows in representatives.items():
+            task_distances = distances[distances["entry_id"].isin(representative_rows["entry_id"])]
             if task_distances.empty:
                 continue
             lines.extend([f"### {source}", "", _markdown_table(

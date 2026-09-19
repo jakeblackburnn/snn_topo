@@ -36,10 +36,9 @@ def plot_signature_diagrams(diagrams_by_label: dict[str, dict[str, np.ndarray]],
     fig, axes = plt.subplots(1, max(1, len(labels)), figsize=(5 * max(1, len(labels)), 4), squeeze=False)
     for ax, label in zip(axes[0], labels):
         diagrams = diagrams_by_label[label]
-        finite = [d for d in range(3) if f"all_H{d}" in diagrams]
         conditions = sorted({key.rsplit("_H", 1)[0] for key in diagrams})
         condition = "all" if "all" in conditions else (conditions[0] if conditions else "")
-        dims = [d for d in range(3) if f"{condition}_H{d}" in diagrams] or finite
+        dims = [d for d in range(3) if f"{condition}_H{d}" in diagrams]
         values = [np.asarray(diagrams[f"{condition}_H{d}"]) for d in dims]
         finite_values = [d[np.isfinite(d[:, 1])] for d in values]
         extent = [v for d in finite_values for v in d.ravel()]
@@ -56,12 +55,6 @@ def plot_signature_diagrams(diagrams_by_label: dict[str, dict[str, np.ndarray]],
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
-
-
-def plot_diagrams(diagrams_by_label: dict[str, dict[str, np.ndarray]], path,
-                  title: str | None = None) -> None:
-    """Compatibility name for the reusable persistence-diagram plot."""
-    plot_signature_diagrams(diagrams_by_label, path, title)
 
 
 def plot_comparison_bars(distances: pd.DataFrame, path, dims: tuple[int, ...] = (0, 1, 2)) -> None:

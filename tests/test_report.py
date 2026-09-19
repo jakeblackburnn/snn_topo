@@ -52,3 +52,38 @@ def test_report_handles_an_empty_run(tmp_path: Path):
     report = write_report([tmp_path / "empty-run"], tmp_path / "report")
     assert "No atlas records found" in report.read_text()
     assert (report.parent / "entries.parquet").exists()
+
+
+def test_failed_matched_task_is_not_reported_as_generic(tmp_path: Path):
+    run = tmp_path / "run"
+    append_record(run, AtlasRecord(
+        entry_id="snn:steinmetz_2afc:failed", kind="snn", source="steinmetz_2afc", status="degenerate",
+    ))
+
+    text = write_report([run], tmp_path / "report").read_text()
+    assert "Matched task: steinmetz_2afc" in text
+    assert "Generic task: steinmetz_2afc" not in text
+
+
+def test_report_limits_distance_details_to_representative_entries(tmp_path: Path):
+    run = tmp_path / "run"
+    append_record(run, AtlasRecord(
+        entry_id="snn:steinmetz_2afc:front", kind="snn", source="steinmetz_2afc", status="ok",
+        accuracy=0.8, objective_distance=0.2, distances=[_distance("self", 0.2)],
+    ))
+    append_record(run, AtlasRecord(
+        entry_id="snn:steinmetz_2afc:dominated", kind="snn", source="steinmetz_2afc", status="ok",
+        accuracy=0.7, objective_distance=0.3, distances=[_distance("self", 0.3)],
+    ))
+    for index in range(6):
+        append_record(run, AtlasRecord(
+            entry_id=f"snn:unknown_generic:{index}", kind="snn", source="unknown_generic", status="ok",
+            accuracy=float(index), distances=[_distance("self", float(index))],
+        ))
+
+    distance_section = write_report([run], tmp_path / "report").read_text().split("## Distance results", 1)[1]
+    assert "distances.csv" in distance_section
+    assert "snn:steinmetz_2afc:front" in distance_section
+    assert "snn:steinmetz_2afc:dominated" not in distance_section
+    assert "snn:unknown_generic:0" not in distance_section
+    assert "snn:unknown_generic:5" in distance_section
