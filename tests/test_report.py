@@ -48,6 +48,35 @@ def test_report_from_synthetic_atlas(tmp_path: Path):
     assert (report.parent / "figures" / "steinmetz_reference_diagrams.png").exists()
 
 
+def test_bio_signature_table_is_long_form_and_deduped_across_runs(tmp_path: Path):
+    """A reference session is recomputed in every run that needs it, so the same bio
+    entry_id arrives more than once; and its per-condition stats belong in rows, not in
+    a column per condition x dim x stat unioned over every dataset in the atlas.
+
+    These runs hold no SNN entries, which is also the `snntopo bio` + `snntopo report`
+    path that used to raise KeyError('source')."""
+    record = AtlasRecord(
+        entry_id="bio:steinmetz:11", kind="bio", source="steinmetz", status="ok", session_id="11",
+        summary={"all_H0_n": 5, "all_H0_total_persistence": 1.0, "all_H0_max_persistence": 0.4,
+                 "all_raw_diameter": 3.0, "left_H1_n": 2, "left_H1_total_persistence": 0.2,
+                 "left_H1_max_persistence": 0.1, "left_raw_diameter": 2.5},
+    )
+    runs = [tmp_path / "run_a", tmp_path / "run_b"]
+    for run in runs:
+        append_record(run, record)
+    # a second dataset whose conditions are disjoint: its columns must not leak into this table
+    append_record(runs[1], AtlasRecord(
+        entry_id="bio:allen:719161530", kind="bio", source="allen", status="ok", session_id="719161530",
+        summary={"orientation_90_H0_n": 7, "orientation_90_raw_diameter": 1.5},
+    ))
+
+    section = write_report(runs, tmp_path / "report").read_text().split("## Bio signature: steinmetz", 1)[1]
+    section = section.split("## ", 1)[0]
+    assert section.count("| bio:steinmetz:11 |") == 2  # (all, H0) and (left, H1), once each
+    assert "| all | H0 | 5 | 1 | 0.4 | 3 |" in section
+    assert "orientation_90" not in section
+
+
 def test_report_handles_an_empty_run(tmp_path: Path):
     report = write_report([tmp_path / "empty-run"], tmp_path / "report")
     assert "No atlas records found" in report.read_text()

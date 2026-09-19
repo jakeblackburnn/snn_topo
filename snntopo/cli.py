@@ -41,7 +41,8 @@ def cmd_snn(args):
 def cmd_search(args):
     """Wall-clock-capped model search for one task; rerun the same command to resume."""
     setup_logging("search", Path(args.out) / "logs")
-    run_search(args.task, args.out, args.budget_hours * 3600, seed=args.seed, n_trials=args.n_trials)
+    run_search(args.task, args.out, args.budget_hours * 3600, seed=args.seed, n_trials=args.n_trials,
+               train_cfg=TrainConfig(n_updates=args.n_updates))
 
 
 def cmd_report(args):
@@ -75,6 +76,8 @@ def main(argv=None):
     r.add_argument("--budget-hours", type=float, required=True)
     r.add_argument("--out", required=True, help="run directory; an existing one is resumed")
     r.add_argument("--n-trials", type=int, help="stop once the study holds this many trials")
+    r.add_argument("--n-updates", type=int, default=TrainConfig().n_updates,
+                   help="per-trial update cap; lower it (with --n-trials) for a mini-run")
     r.add_argument("--seed", type=int, default=0)
     r.set_defaults(fn=cmd_search)
     rp = sub.add_parser("report", help="build a static report from atlas run directories")

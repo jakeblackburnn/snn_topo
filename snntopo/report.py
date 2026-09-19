@@ -30,6 +30,29 @@ def _markdown_table(frame: pd.DataFrame, columns: list[str]) -> str:
     ])
 
 
+def _signature_table(rows: pd.DataFrame) -> pd.DataFrame:
+    """One row per (entry, condition, dim). The flat "sum.{cond}_H{d}_{stat}" columns are
+    unioned across every dataset in the atlas, so pivoting them into headers gives a
+    hundred-column table that is mostly another dataset's empty conditions."""
+    records = []
+    for _, row in rows.iterrows():  # itertuples mangles the "sum.{cond}_H{d}" column names
+        stats = {column[4:]: row[column] for column in rows.columns
+                 if column.startswith("sum.") and pd.notna(row[column])}
+        for key in sorted(k for k in stats if k.endswith("_n")):
+            condition, dim = key[:-len("_n")].rsplit("_H", 1)
+            records.append({"entry_id": row["entry_id"], "session_id": row["session_id"],
+                            "condition": condition, "dim": f"H{dim}", "n": int(stats[key]),
+                            "total_persistence": stats.get(f"{condition}_H{dim}_total_persistence"),
+                            "max_persistence": stats.get(f"{condition}_H{dim}_max_persistence"),
+                            "raw_diameter": stats.get(f"{condition}_raw_diameter")})
+    if not records:  # every condition was too thin to compute (see TopoConfig.min_trials)
+        return pd.DataFrame(columns=["entry_id", "session_id", "condition", "dim", "n"])
+    table = pd.DataFrame(records)
+    for column in ("total_persistence", "max_persistence", "raw_diameter"):
+        table[column] = table[column].map(lambda x: f"{x:.4g}" if pd.notna(x) else "")
+    return table.sort_values(["entry_id", "condition", "dim"])
+
+
 def _pareto_front(entries: pd.DataFrame) -> pd.DataFrame:
     """Nondominated rows for maximize-accuracy, minimize-distance objectives."""
     usable = entries.dropna(subset=["accuracy", "objective_distance"]).copy()
@@ -98,24 +121,24 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
                   .reindex(columns=["ok", "degenerate", "failed", "timeout"], fill_value=0).reset_index())
         lines.append(_markdown_table(status, list(status.columns)))
 
-    bio = entries[entries["kind"] == "bio"]
+    # A reference session is recomputed in every run that needs it (a generic task pulls
+    # all three datasets'), and its entry_id is dataset+session, so duplicates are the
+    # same signature. SNN entry_ids are per-run trial numbers and must not be deduped.
+    bio = entries[entries["kind"] == "bio"].drop_duplicates(subset="entry_id")
     for dataset, rows in bio.groupby("source"):
         lines.extend([f"## Bio signature: {dataset}", ""])
-        summary_columns = ["entry_id", "session_id"] + [
-            f"sum.{condition}_H{dim}_{stat}"
-            for condition in sorted({column.split("_H", 1)[0][4:] for column in rows.columns
-                                     if column.startswith("sum.") and "_H" in column})
-            for dim in range(3) for stat in ("n", "total_persistence", "max_persistence")
-            if f"sum.{condition}_H{dim}_{stat}" in rows
-        ]
-        lines.append(_markdown_table(rows, summary_columns))
+        summary = _signature_table(rows)
+        lines.append(_markdown_table(summary, list(summary.columns)))
         diagrams = {row.entry_id: load_signature_diagrams(signatures[row.entry_id])
                     for row in rows.itertuples() if row.entry_id in signatures and signatures[row.entry_id].exists()}
         if diagrams:
             name = f"{dataset}_reference_diagrams.png"
             plot_signature_diagrams(diagrams, figures / name, f"{dataset} reference sessions")
             lines.extend([f"![{dataset} diagrams](figures/{name})", ""])
-    matched = snn[snn["source"].map(_is_matched_task)]
+    # astype(bool): on an empty frame map() yields an object-dtype Series, which pandas
+    # reads as a column selector instead of a mask (bio-only runs then lose every column).
+    is_matched = snn["source"].map(_is_matched_task).astype(bool)
+    matched = snn[is_matched]
     representatives: dict[str, pd.DataFrame] = {}
     for task, rows in matched.groupby("source"):
         front = _pareto_front(rows)
@@ -128,7 +151,7 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
             lines.extend([f"![{task} Pareto plot](figures/{name})", ""])
         lines.extend(["### Pareto front", "", _markdown_table(front, ["entry_id", "accuracy", "objective_distance", "status"])])
 
-    generic = snn[~snn["source"].map(_is_matched_task)]
+    generic = snn[~is_matched]
     for task, rows in generic.groupby("source"):
         lines.extend([f"## Generic task: {task}", ""])
         usable = rows.dropna(subset=["accuracy"])
@@ -147,7 +170,8 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
             "and bio split-half rows; the complete table is [`distances.csv`](distances.csv).", "",
         ])
         bio_ids = set(bio["entry_id"])
-        bio_distances = distances[(distances["entry_id"].isin(bio_ids)) & (distances["target"] == "self")]
+        bio_distances = distances[(distances["entry_id"].isin(bio_ids)) & (distances["target"] == "self")] \
+            .drop_duplicates(subset=["entry_id", "condition", "dim", "metric"])
         if not bio_distances.empty:
             lines.extend(["### Bio split-half nulls", "", _markdown_table(
                 bio_distances, ["entry_id", "target", "condition", "dim", "metric", "distance", "null_mean", "null_q95", "p_value", "n_resamples"]
