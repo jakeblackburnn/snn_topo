@@ -5,6 +5,7 @@ indices in the concatenation part0, part1, part2; consequently id ``"11"``
 remains the 698-unit prototype session.
 """
 from pathlib import Path
+from functools import cache
 
 import numpy as np
 import requests
@@ -40,7 +41,9 @@ def _download(part: int) -> Path:
     return path
 
 
+@cache
 def _part_data(part: int):
+    """Keep each decompressed object array in memory across session loads."""
     return np.load(_download(part), allow_pickle=True)["dat"]
 
 
@@ -73,11 +76,10 @@ def _session_data(session_id: str):
 
 def load(session_id: str) -> BioSession:
     dat = _session_data(session_id)
-    left = np.asarray(dat["contrast_left"])
-    right = np.asarray(dat["contrast_right"])
-    # These are correct-side labels, not the animal's eventual wheel movement.
-    left_mask = left > right
-    right_mask = right > left
+    response = np.asarray(dat["response"])
+    # The SNN and IBL activity are both split by the chosen action, not correctness.
+    left_mask = response == 1
+    right_mask = response == -1
     spikes = np.asarray(dat["spks"], dtype=np.float32)
     regions = np.asarray(dat["brain_area"]).astype(str)
     return BioSession(

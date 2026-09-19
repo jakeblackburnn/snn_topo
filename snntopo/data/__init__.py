@@ -13,7 +13,4 @@ DATASETS: dict[str, DatasetEntry] = {
 
 
 def load_session(dataset: str, session_id: str) -> BioSession:
-    try:
-        return DATASETS[dataset].load(session_id)
-    except KeyError as error:
-        raise KeyError(f"unknown dataset {dataset!r}") from error
+    return DATASETS[dataset].load(session_id)

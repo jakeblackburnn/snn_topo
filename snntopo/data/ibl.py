@@ -1,11 +1,11 @@
 """IBL brain-wide-map 2AFC sessions loaded through ONE.
 
-IBL stores choices as -1 for a left wheel choice and +1 for a right choice.
-The labels below intentionally follow that convention: in this one-sided contrast
-task, left/right name the response that is correct for a stimulus on that side,
-matching the Steinmetz task labels.  No-go (choice zero) trials are excluded.
+IBL's wheel sign is derived from each session's trials table, rather than assumed:
+on rewarded trials, the choice accompanying a left contrast is ``left`` and the
+choice accompanying a right contrast is ``right``.  No-go trials are excluded.
 """
 from pathlib import Path
+import json
 
 import numpy as np
 
@@ -29,8 +29,19 @@ def _cache_path(session_id: str) -> Path:
     return DATA_DIR / "ibl" / f"{session_id}.npz"
 
 
+def _sessions_path() -> Path:
+    return DATA_DIR / "ibl" / "brainwidemap_sessions.json"
+
+
 def list_sessions() -> list[str]:
-    return list(REFERENCE_SESSIONS)
+    """Return every session carrying ONE's public Brainwidemap release tag."""
+    path = _sessions_path()
+    if path.exists():
+        return json.loads(path.read_text())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sessions = sorted(str(eid) for eid in _one().search(tag="Brainwidemap"))
+    path.write_text(json.dumps(sessions))
+    return sessions
 
 
 def _one():
@@ -59,13 +70,17 @@ def _latest_by_collection(records: list[dict]) -> dict[str, dict]:
 
 
 def _load_by_id(one, record: dict):
-    """Download a REST record through ONE, including records absent from its cache.
+    """Download one selected public BWM record through ONE's public web client.
 
-    ``load_dataset_from_id`` only sees ONE's local parquet index.  BWM's current
-    release records are queried from Alyx above, so use ONE's corresponding
-    downloader directly and decode the returned local file.
+    ONE 3.5's public ``load_dataset`` / ``load_object`` currently report BWM
+    files as absent even with their exact collection and revision: their remote
+    dataset query omits the tagged public records.  Alyx's public REST endpoint
+    does return those records, and ``alyx.download_file`` is its public downloader.
     """
-    path = Path(one._download_dataset(record))
+    records = [r for r in record["file_records"] if r.get("exists") and r.get("data_url")]
+    if not records:
+        raise RuntimeError(f"IBL dataset has no downloadable file record: {record['url']}")
+    path = Path(one.alyx.download_file(records[0]["data_url"], target_dir=DATA_DIR / "ibl" / "one"))
     if path.suffix == ".npy":
         return np.load(path, allow_pickle=False)
     if path.suffix == ".pqt":
@@ -80,6 +95,19 @@ def _get_trials(one, session_id: str):
         raise RuntimeError(f"IBL session {session_id} has no trials table")
     record = max(records, key=lambda r: (r.get("default_dataset", False), r.get("revision", "")))
     return _load_by_id(one, record)
+
+
+def _choice_values(trials) -> tuple[int, int]:
+    """Infer left/right wheel choices from rewarded single-side contrast trials."""
+    choice = np.asarray(trials["choice"])
+    rewarded = np.asarray(trials["feedbackType"]) == 1
+    left_stimulus = np.asarray(trials["contrastLeft"], dtype=float) > 0
+    right_stimulus = np.asarray(trials["contrastRight"], dtype=float) > 0
+    left_choices = np.unique(choice[rewarded & left_stimulus])
+    right_choices = np.unique(choice[rewarded & right_stimulus])
+    if len(left_choices) != 1 or len(right_choices) != 1 or left_choices[0] == right_choices[0]:
+        raise RuntimeError("could not establish IBL left/right choice convention from rewarded trials")
+    return int(left_choices[0]), int(right_choices[0])
 
 
 def _good_probe_units(one, session_id: str):
@@ -120,7 +148,7 @@ def _bin_units(probes, stim_onsets: np.ndarray) -> tuple[np.ndarray, list[str]]:
     spikes = np.zeros((n_units, len(stim_onsets), N_BINS), dtype=np.float32)
     collections = []
     offset = 0
-    for collection, spike_times, spike_clusters, good_ids, regions in probes:
+    for _, spike_times, spike_clusters, good_ids, regions in probes:
         keep = np.isin(spike_clusters, good_ids)
         times, clusters = spike_times[keep], spike_clusters[keep]
         for trial, onset in enumerate(stim_onsets):
@@ -139,30 +167,38 @@ def _download_processed(session_id: str) -> None:
     trials = _get_trials(one, session_id)
     onset = np.asarray(trials["stimOn_times"], dtype=float)
     choice = np.asarray(trials["choice"], dtype=float)
+    left_choice, right_choice = _choice_values(trials)
     keep = np.isfinite(onset) & np.isin(choice, (-1, 1))
     onset, choice = onset[keep], choice[keep]
     probes = _good_probe_units(one, session_id)
     spikes, collections = _bin_units(probes, onset)
     details = one.get_details(session_id)
     np.savez_compressed(_cache_path(session_id), spikes=spikes, choice=choice.astype(np.int8),
+                        left_choice=left_choice, right_choice=right_choice,
                         subject=str(details["subject"]), date=str(details["date"]),
                         regions=np.asarray(collections))
 
 
 def load(session_id: str) -> BioSession:
-    if session_id not in REFERENCE_SESSIONS:
+    if session_id not in list_sessions():
         raise KeyError(f"unknown IBL reference session {session_id}")
     path = _cache_path(session_id)
-    if not path.exists():
+    stale = False
+    if path.exists():
+        with np.load(path, allow_pickle=False) as cached:
+            stale = "left_choice" not in cached or "right_choice" not in cached
+    if not path.exists() or stale:
         path.parent.mkdir(parents=True, exist_ok=True)
         _download_processed(session_id)
     with np.load(path, allow_pickle=False) as data:
         spikes = data["spikes"].astype(np.float32, copy=False)
         choice = data["choice"]
+        left_choice = int(data["left_choice"])
+        right_choice = int(data["right_choice"])
         subject, date = str(data["subject"]), str(data["date"])
         regions = data["regions"].astype(str)
-    left = choice == -1
-    right = choice == 1
+    left = choice == left_choice
+    right = choice == right_choice
     return BioSession(
         dataset="ibl", session_id=session_id,
         activity=Activity(spikes, {"all": left | right, "left": left, "right": right}, WINDOW, BIN_SIZE_S),
