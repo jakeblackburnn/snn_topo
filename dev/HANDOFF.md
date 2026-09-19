@@ -6,7 +6,7 @@
 - `snntopo bio --dataset {steinmetz,ibl,allen}` → 5 bio entries ok (Steinmetz 11; IBL ×3; Allen 719161530). IBL 120 s, Allen 43 s.
 - Only model that builds on main: recurrent/lif/random (interface placeholder `snntopo/models/prototype_rlif.py`). A `snntopo search` on main would mark every other family "failed".
 ## In flight
-- **ws-models** (worktree `../snn_topo.worktrees/ws-models`, Claude node "SNN model registry across four axes") had NOT committed at 15:33. Uncommitted: models/{connectivity,networks,neurons}.py, tests/test_models.py, prototype_rlif.py deleted, models/__init__.py + cli.py modified. Its last note: modular M=2 learns in 60–160 updates, M=4 in ~500–800. It was doing final GPU timings.
+- **ws-models** (worktree `../snn_topo.worktrees/ws-models`) committed `6e62477 Model registry across arch x neuron x connectivity x scale` right after this handoff was written — unreviewed, unmerged. Worker note: modular M=2 learns in 60–160 updates, M=4 in ~500–800.
 - `.nodeterm/` untracked (canvas state; left alone).
 ## Next
 1. Read the ws-models worker's final message (`get-linked-context` on node term-mu8qktti-4bea1351), then review `git diff main...ws-models` against `snntopo/contracts.py` (ModelConfig forward contract; any new fields must have defaults).
