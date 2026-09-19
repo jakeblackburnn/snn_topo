@@ -16,6 +16,7 @@
 5. Write dev/SPEC.md from requirements.md. Append dev/context/decisions.md D1–D10 plus the kickoff decisions (see Pointers) into a new dev/DECISIONS.md. Leave dev/context/ untouched.
 6. Close the worktrees: nodeterm `close-worktree`, or `git worktree remove`.
 ## Traps
+- ws-models also appended to dev/devlog/2026-09.md, so expect a devlog merge conflict; keep both entries in time order.
 - nodeterm `send`/`notify` → "Agent messaging refused" even after the user toggled the setting. Use `write --node <id> --text "...\n"` instead (one confirm dialog per message). The user said to just use write.
 - stats.py runs a forkserver process pool, so callers need an `if __name__ == "__main__"` guard. The CLI already has one.
 - The IBL choice sign is derived from the trials table (+1 = left-correct choice), NOT choice==-1. It's cached in each npz (`left_choice`/`right_choice`); stale caches re-process automatically.
