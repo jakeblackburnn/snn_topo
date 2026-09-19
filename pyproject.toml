@@ -9,6 +9,7 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy", "scipy", "pandas", "pyarrow", "scikit-learn", "matplotlib", "requests",
     "torch", "snntorch", "ripser", "persim", "gudhi", "POT", "networkx", "optuna", "threadpoolctl",
+    "ONE-api", "iblatlas", "h5py", "remfile",
 ]
 
 [project.optional-dependencies]
