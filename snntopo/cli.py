@@ -9,6 +9,7 @@ from .config import RESULTS_DIR
 from .contracts import ModelConfig, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
 from .logging_utils import setup_logging
+from .report import write_report
 from .tasks import TASKS
 
 
@@ -35,6 +36,10 @@ def cmd_snn(args):
     write_tables(run_dir)
 
 
+def cmd_report(args):
+    write_report([Path(run) for run in args.run], Path(args.out))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="snntopo")
     sub = p.add_subparsers(dest="command", required=True)
@@ -54,6 +59,11 @@ def main(argv=None):
     s.add_argument("--n-updates", type=int, default=200)
     s.add_argument("--out", default=str(RESULTS_DIR / "snn_single"))
     s.set_defaults(fn=cmd_snn)
+
+    r = sub.add_parser("report", help="build a static report from atlas run directories")
+    r.add_argument("--run", action="append", required=True, help="atlas run directory (repeatable)")
+    r.add_argument("--out", required=True, help="report output directory")
+    r.set_defaults(fn=cmd_report)
 
     args = p.parse_args(argv)
     args.fn(args)

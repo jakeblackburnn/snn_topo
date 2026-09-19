@@ -25,3 +25,4 @@ include = ["snntopo*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 markers = ["data: needs downloaded bio data or network access"]
+addopts = "-m 'not data'"
