@@ -1,0 +1,225 @@
+# Decisions
+
+D1-D10 were taken while building the context packet and are copied from
+`dev/context/decisions.md` (left untouched as the frozen input to the build). D11-D16
+were taken during the build itself.
+
+## D1 · 2026-09-19 · Atlas + paired comparison, not a pure hypothesis test or pure survey
+**Decision:** The deliverable is a topology atlas (characteristic signature per bio
+dataset, per SNN model×task) with paired bio-vs-SNN distance comparisons as one section
+where a matched pair exists, plus a well-formed, reusable codebase for future experiments.
+**Why:** A pure hypothesis-test scope would force every task to have a bio pair, losing the
+value of generic SNN-only tasks (checking signature stability across tasks). A pure-survey
+scope would drop the original cross-domain question the prototype was built to answer. The
+atlas framing keeps both.
+**Rejected:** hypothesis-test-only (loses generic tasks); survey-only (loses the
+cross-domain comparison that motivated the project).
+**Revisit if:** the atlas format turns out to add overhead without anyone actually querying
+across runs — in that case collapse back to per-task reports.
+
+## D2 · 2026-09-19 · Bio datasets: Steinmetz (existing) + IBL + Allen Visual Coding
+**Decision:** Add IBL brain-wide map (same 2AFC task family as Steinmetz, many more
+sessions) and Allen Visual Coding (passive-viewing, no choice/reward) as the two new bio
+datasets. IBL auth (ONE API) is set up now, not deferred.
+**Why:** IBL gives statistical power within the same task type Steinmetz already
+established works well for this pipeline. Allen tests whether the topology signature tracks
+decision structure specifically, by providing a same-species, same-recording-technology
+dataset with no decision/reward structure at all.
+**Rejected:** motor/reaching dataset (e.g. Churchland/Shenoy) — real task-type diversity
+value, but more integration work than this build should take on at once; CRCNS pvc-* —
+registration/DUA friction, redundant with Allen's role.
+**Revisit if:** the H0/H1 pattern needs a motor-task data point to disambiguate (e.g. if
+Allen's passive-viewing result is ambiguous about whether decision structure matters).
+
+## D3 · 2026-09-19 · SNN model suite is searched, not preset, across 4 axes
+**Decision:** SNN models vary across architecture family (feedforward / recurrent / modular
+multi-population), neuron model (LIF / adaptive-LIF / Izhikevich-style), connectivity
+structure (random / small-world / scale-free / modular-with-hub), and scale — explored via
+multi-objective search (accuracy vs. bio-topology-distance) rather than a fixed grid.
+**Why:** The prototype's three experiments each changed one architectural property and found
+the H0 gap only widened — the honest conclusion is that a hand-picked sequence of configs
+isn't finding whatever configuration (if any) narrows the gap. A search treats "find a
+performant, bio-like SNN" as the actual objective instead of guessing configs one at a
+time. The modular/multi-population architecture family exists specifically to test the
+prototype's leading hypothesis (single homogeneous population vs. bio's multi-region
+circuit).
+**Rejected:** fixed factorial grid analyzed post-hoc — simpler infra, but doesn't target the
+actual question ("can we find a config that's both good and bio-like") as directly, and the
+config space (4 axes) is large enough that a full grid is wasteful compared to a search
+that spends budget where it's informative.
+**Revisit if:** search infra (Optuna/NSGA-II) proves to be more build overhead than the
+payoff justifies — fall back to a curated grid per axis.
+
+## D4 · 2026-09-19 · Generic (unmatched) tasks are single-objective (accuracy only)
+**Decision:** Tasks with no matched bio dataset (e.g. N-back, delayed match-to-sample) run
+accuracy-only search. Topology is still computed and recorded against the nearest bio
+signature for atlas purposes, but doesn't drive the search objective.
+**Why:** There's no principled "correct" bio target for a task with no bio counterpart —
+using "nearest signature, any dataset" as a search objective would optimize toward an
+arbitrary target dressed up as a real comparison.
+**Rejected:** searching against nearest-any-dataset bio signature as a second objective —
+rejected for the reason above.
+**Revisit if:** a fourth bio dataset with a naturally-matching generic task appears (e.g. a
+working-memory bio dataset paired with delayed match-to-sample).
+
+## D5 · 2026-09-19 · Compute budget: wall-clock cap per task, short individual runs
+**Decision:** Multi-objective search runs under a wall-clock budget per task (one shared
+16GB GPU); individual training runs should target under 30 minutes each rather than a few
+long expensive ones.
+**Why:** Predictable total runtime on shared hardware; short runs let the search sample more
+configs per unit time, which matters more than any single run being maximally converged
+given this is an exploratory search over a 4-axis space.
+**Rejected:** trial-count cap (unpredictable total runtime if expensive configs get
+sampled); no fixed cap (fine for an interactive session, not for a build spec that needs to
+be handed to a build team).
+**Revisit if:** early search runs show 30 minutes is too short to get a meaningful accuracy
+signal for larger-scale/modular configs.
+
+## D6 · 2026-09-19 · Add H2 + bottleneck distance alongside H0/H1 + Wasserstein
+**Decision:** Topology module computes H0, H1, *and* H2 persistence, and both Wasserstein
+and bottleneck distance (prototype had H0/H1 + Wasserstein only).
+**Why:** User's explicit call — the bigger project should capture a more complete
+topological picture; the point-cloud scale (100-150 points) that made the prototype's Rips
+computation cheap still holds, so the added compute is affordable.
+**Rejected:** keeping method unchanged — considered (avoids changing two things at once —
+method and scale), but user opted to extend the method now given the project's overall
+scope is already expanding.
+**Revisit if:** H2 turns out uninformative (e.g. near-zero/noise across every run) or
+bottleneck distance never disagrees meaningfully with Wasserstein — drop the redundant one
+later rather than carrying dead weight. **Status 2026-09-19:** H2 is empty for every bio
+condition at `n_pca=10`; this is the first evidence toward that revisit.
+
+## D7 · 2026-09-19 · Add permutation/bootstrap significance testing
+**Decision:** Every reported bio-vs-SNN and null-baseline distance gets a permutation or
+bootstrap p-value/CI.
+**Why:** Flagged as a limitation in all three prototype reports; the search producing many
+runs per task (rather than one-off comparisons) makes proper null distributions cheap to
+build where the prototype's single-run design couldn't.
+**Rejected:** keeping eyeballed noise-floor ratios — was viable for a same-day prototype,
+not for a package meant to support ongoing conclusions.
+**Revisit if:** never — this is a strict improvement given the atlas's scale.
+
+## D8 · 2026-09-19 · Atlas delivered as structured data + static reports, no dashboard
+**Decision:** Atlas is CSV/parquet/JSON per run (matching the prototype's
+`comparison_table.csv` pattern) plus generated markdown/figure reports. No interactive
+dashboard in this build.
+**Why:** Matches existing, working pattern; avoids building and maintaining extra infra
+(e.g. Streamlit) for a project already expanding on several other axes at once.
+**Rejected:** interactive dashboard — more useful for ad hoc exploration, but explicitly
+deferred given the scope already includes a search harness, 3 bio datasets, and 4 model
+axes.
+**Revisit if:** the number of atlas entries grows large enough that static reports stop
+being a usable way to explore results.
+
+## D9 · 2026-09-19 · Multi-agent nodeterm team builds the codebase only
+**Decision:** The opusplan-orchestrated multi-agent team (Codex delegate + spawned Claude
+agents) is scoped to building the framework. The actual post-build search experiments run
+afterward as normal sequential jobs on the one shared GPU — no agent-team
+concurrency/scheduling story is needed.
+**Why:** Avoids designing GPU-contention handling into the agent team's coordination
+pattern for a problem (concurrent training jobs) that doesn't need to exist if experiments
+run sequentially after the build is done.
+**Rejected:** build-and-orchestrate-experiments — would require real GPU-scheduling
+coordination between agents, unnecessary complexity for a single shared card.
+**Revisit if:** experiment turnaround time becomes a bottleneck and concurrent (carefully
+GPU-budgeted) runs become worth the coordination cost.
+
+## D10 · 2026-09-19 · Build team: hierarchical, interfaces-first, worktree-per-agent
+**Decision:** Opusplan orchestrator defines shared interfaces first (registries for bio
+datasets / model families / tasks), then fans out to parallel workers per workstream (bio
+loaders, model registry, task suite, topology+stats module, search harness, package/tests),
+each in its own worktree, with an orchestrator review/merge gate before integration. Codex
+takes mechanical/boilerplate workstreams; spawned Claude agents take design-sensitive ones.
+Full detail in `dev/context/agent-team.md`.
+**Why:** User confirmed as proposed. Defining interfaces before fanning out avoids
+integration conflicts between parallel agents; worktree-per-agent keeps their changes
+isolated until the review gate.
+**Rejected:** fewer/broader workstreams (less parallelism, less coordination overhead) —
+user picked the finer-grained split.
+**Revisit if:** the review/merge gate becomes a bottleneck — collapse workstreams or loosen
+the gate.
+
+## D11 · 2026-09-19 · Point clouds are diameter-normalized before Rips
+**Decision:** Each condition's PCA trajectory point cloud is rescaled to unit diameter
+before persistence is computed. The raw diameter is recorded per atlas entry as its own
+statistic.
+**Why:** Bio spike counts per 10 ms bin and SNN 0/1 spikes per step live on different
+scales, so the prototype's H0 gap partly measured firing-rate magnitude rather than
+trajectory shape. Normalizing makes the diagrams comparable as shape; keeping raw diameter
+means no information is lost, and a scale difference remains visible as a number instead of
+contaminating every distance.
+**Rejected:** comparing raw diagrams (what the prototype did — conflates scale and shape);
+normalizing by a fixed global constant (arbitrary, and still scale-sensitive across
+datasets).
+**Revisit if:** two configurations with genuinely different dynamics normalize onto the
+same signature — then scale carries real signal and belongs back in the distance.
+
+## D12 · 2026-09-19 · Allen Visual Coding is bio-only
+**Decision:** Allen contributes an atlas signature and serves as a nearest-signature
+candidate for generic tasks. It gets no matched SNN task and no search objective.
+**Why:** Allen is passive viewing with no choice or reward, so there is no action-condition
+structure to match an SNN task against; inventing one would fabricate the pairing that D2
+brought Allen in to act as a control for.
+**Rejected:** building a matched orientation-discrimination task — would turn the passive
+control into just another decision dataset, destroying its role.
+**Revisit if:** a decision-making Allen dataset (e.g. Visual Behavior) is added — that one
+could carry a matched task while Visual Coding stays the control.
+
+## D13 · 2026-09-19 · Significance null is trial-matched split-half resampling
+**Decision:** A cross-source distance is tested against a null built by repeatedly splitting
+each source's trials in half and measuring within-source distances, pooled across sources
+and matched on trial count. `p = (1 + #{null >= observed}) / (1 + n)`. `TopoConfig.n_resamples`
+defaults to 50.
+**Why:** The quantity of interest is "are these two populations further apart than the same
+population is from itself", and trial count strongly affects diagram distance, so the null
+has to hold it fixed. Pooling across both sources avoids privileging either one's internal
+variability.
+**Rejected:** permuting condition labels (tests a different question — whether conditions
+differ — not whether sources do); a fixed analytic noise floor (the prototype's approach,
+which all three of its reports flagged as inadequate).
+**Revisit if:** power becomes the binding constraint — effects below roughly 2× the null
+mean are often missed at 50 resamples, and raising it is a linear cost (~43 s per entry
+against 3 references).
+
+## D14 · 2026-09-19 · Every evaluated config becomes an atlas record, including failures
+**Decision:** `snn_entry()` always appends a record with a status of `ok`, `degenerate`,
+`failed` or `timeout`. Optuna is told the measured values for the first three and FAIL only
+where nothing was measured.
+**Why:** The atlas is meant to characterise the model space, and "this family collapses to a
+one-action policy" is a finding about that space, not an error to discard. Degenerate runs
+carry an honest near-chance accuracy, which keeps them off the useful end of the Pareto
+front without inventing a penalty term.
+**Rejected:** recording only successful trials (silently biases the atlas); penalty values
+for failures (feeds the sampler a number nobody measured).
+**Revisit if:** never expected to — but if failure records ever dominate the atlas by
+volume, split them into their own table rather than dropping them.
+
+## D15 · 2026-09-19 · Model validity lives in the registry; the search samples within it
+**Decision:** `models.validate()` / `models.valid_triples()` are the single definition of
+what is buildable. `search.sample_model()` samples the family as one categorical over
+`valid_triples()` and bounds `n_layers` / `n_modules` by `n_hidden // MIN_POPULATION`.
+**Why:** The search harness originally duplicated the validity rule, and its independent
+ranges (`n_hidden` 64-1024 against `n_modules` 2-8) proposed configs the registry rejects.
+A rejected config becomes a FAIL trial that teaches the sampler nothing and spends budget.
+Sampling the family as a single always-present categorical also lets NSGA-II and TPE model
+it, where conditional parameters would fall back to random sampling.
+**Rejected:** clamping an out-of-range draw after sampling (many trials collapse onto the
+same config and the sampler cannot tell); letting invalid configs fail as trials (wastes the
+budget the wall-clock cap is there to protect).
+**Revisit if:** a future axis makes validity depend on something the sampler cannot see
+before building — then validity has to move into a pre-build filter instead.
+
+## D16 · 2026-09-19 · Surrogate gradient dampened ×0.3 and readout zero-initialised
+**Decision:** The ATan surrogate gradient is scaled by 0.3 (Bellec et al. 2018 dampening),
+and output-layer weights start at zero.
+**Why:** Undamped, gradients through 150 steps of recurrence at spectral radius 1 reach
+norms around 1e12 against 1e3 at the readout, so a global-norm clip leaves the readout with
+no effective step — 14 of 18 recurrent/modular mini-runs sat at chance undamped against 7
+of 18 damped. With a random readout init, output spike counts differ by tens of spikes per
+trial, making the softmax over counts near-deterministic and vanishing REINFORCE's log-prob
+gradient before it can explore: 6 of 9 recurrent runs stuck at chance against 0 of 9 with a
+zero init.
+**Rejected:** per-layer gradient clipping (more machinery, treats the symptom); a smaller
+spectral radius (would silently exclude the critical regime the search is meant to explore).
+**Revisit if:** a neuron model is added whose gradient scale differs enough that one global
+dampening factor no longer serves — then it becomes a per-neuron constant.
