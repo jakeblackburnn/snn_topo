@@ -1,0 +1,8 @@
+15:50:55 [INFO] === snn_training — logging to results/logs/snn_training_20260912T155055.log ===
+15:50:55 [INFO] training on device=cuda, n_updates=20, batch_size=64
+15:50:56 [INFO] update    1/20 loss=-0.004 acc=0.53 baseline=+0.01 elapsed=0.3s
+15:50:57 [INFO] update   10/20 loss=-0.025 acc=0.98 baseline=+0.35 elapsed=0.8s
+15:50:57 [INFO] update   20/20 loss=-0.031 acc=0.95 baseline=+0.75 elapsed=1.3s
+15:50:57 [INFO] training done in 1.3s (0.066s/update)
+15:50:57 [INFO] final 20-update mean accuracy: 0.851
+15:50:57 [INFO] saved training curve figure to /home/jake/Code/main/snn_topo/results/figures/snn_training_curve.png

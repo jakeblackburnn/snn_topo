@@ -1,0 +1,14 @@
+16:02:29 [INFO] === comparison — logging to results/logs/comparison_20260912T160229.log ===
+16:02:29 [INFO] bio null (split-half)        H0: wasserstein=0.0778 bottleneck=0.0196 (gudhi+pot[cuda])
+16:02:29 [INFO] bio null (split-half)        H1: wasserstein=0.1089 bottleneck=0.1026 (gudhi+pot[cuda])
+16:02:29 [INFO] snn null (split-half)        H0: wasserstein=0.0846 bottleneck=0.0255 (gudhi+pot[cuda])
+16:02:30 [INFO] snn null (split-half)        H1: wasserstein=0.0262 bottleneck=0.0104 (gudhi+pot[cuda])
+16:02:30 [INFO] bio vs snn (left)            H0: wasserstein=2.0161 bottleneck=0.7322 (gudhi+pot[cuda])
+16:02:30 [INFO] bio vs snn (left)            H1: wasserstein=0.1457 bottleneck=0.1015 (gudhi+pot[cuda])
+16:02:30 [INFO] bio vs snn (right)           H0: wasserstein=1.9978 bottleneck=0.7252 (gudhi+pot[cuda])
+16:02:30 [INFO] bio vs snn (right)           H1: wasserstein=0.1485 bottleneck=0.1017 (gudhi+pot[cuda])
+16:02:30 [INFO] bio left vs right            H0: wasserstein=0.3044 bottleneck=0.1434 (gudhi+pot[cuda])
+16:02:30 [INFO] bio left vs right            H1: wasserstein=0.1533 bottleneck=0.1017 (gudhi+pot[cuda])
+16:02:30 [INFO] snn left vs right            H0: wasserstein=0.2841 bottleneck=0.0813 (gudhi+pot[cuda])
+16:02:30 [INFO] snn left vs right            H1: wasserstein=0.0386 bottleneck=0.0143 (gudhi+pot[cuda])
+16:02:31 [INFO] saved results/comparison_table.csv and results/figures/comparison.png

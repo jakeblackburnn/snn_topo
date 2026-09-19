@@ -1,0 +1,10 @@
+{
+  "n_eval": 340,
+  "num_steps": 150,
+  "eval_accuracy": 0.9617647528648376,
+  "n_left": 184,
+  "n_right": 156,
+  "n_pca": 10,
+  "maxdim": 1,
+  "device": "cuda"
+}
