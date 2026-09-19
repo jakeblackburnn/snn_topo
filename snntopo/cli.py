@@ -9,6 +9,7 @@ from .config import RESULTS_DIR
 from .contracts import ModelConfig, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
 from .logging_utils import setup_logging
+from .report import write_report
 from .search import run_search
 from .tasks import TASKS
 
@@ -42,6 +43,10 @@ def cmd_search(args):
     run_search(args.task, args.out, args.budget_hours * 3600, seed=args.seed, n_trials=args.n_trials)
 
 
+def cmd_report(args):
+    write_report([Path(run) for run in args.run], Path(args.out))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="snntopo")
     sub = p.add_subparsers(dest="command", required=True)
@@ -69,6 +74,10 @@ def main(argv=None):
     r.add_argument("--n-trials", type=int, help="stop once the study holds this many trials")
     r.add_argument("--seed", type=int, default=0)
     r.set_defaults(fn=cmd_search)
+    rp = sub.add_parser("report", help="build a static report from atlas run directories")
+    rp.add_argument("--run", action="append", required=True, help="atlas run directory (repeatable)")
+    rp.add_argument("--out", required=True, help="report output directory")
+    rp.set_defaults(fn=cmd_report)
 
     args = p.parse_args(argv)
     args.fn(args)
