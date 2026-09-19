@@ -4,4 +4,4 @@ __pycache__/
 .claude/
 snntopo.egg-info/
 results/
-data/
+/data/

@@ -2,8 +2,10 @@
 line below. Matched tasks set bio_match to a DATASETS key and use that dataset's
 condition names as action_names; generic tasks set bio_match = None."""
 from ..contracts import Task
+from .ibl_2afc import Ibl2AFC
 from .steinmetz_2afc import Steinmetz2AFC
 
 TASKS: dict[str, Task] = {
     "steinmetz_2afc": Steinmetz2AFC(),
+    "ibl_2afc": Ibl2AFC(),
 }

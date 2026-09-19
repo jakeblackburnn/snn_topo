@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from snntopo.data import DATASETS
+from snntopo.data import steinmetz
 from snntopo.tasks import TASKS
 
 pytestmark = pytest.mark.data
@@ -22,3 +23,15 @@ def test_reference_session_loads_in_activity_layout(name):
     matched = [t for t in TASKS.values() if t.bio_match == name]
     for task in matched:
         assert set(task.action_names) <= set(a.conditions)
+
+
+def test_steinmetz_global_session_11_stays_in_part0():
+    session = steinmetz.load("11")
+    assert session.activity.spikes.shape[:2] == (698, 340)
+    assert session.activity.window == slice(50, 200)
+    assert set(session.activity.conditions) == {"all", "left", "right"}
+
+
+def test_steinmetz_global_ids_concatenate_the_three_parts(monkeypatch):
+    monkeypatch.setattr(steinmetz, "_part_data", lambda part: [None] * (part + 1))
+    assert steinmetz.list_sessions() == ["0", "1", "2", "3", "4", "5"]
