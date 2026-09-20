@@ -91,9 +91,11 @@ flattened `entries`/`distances` CSV + Parquet.
 
 ### Search (`snntopo/search.py`)
 Optuna under a wall-clock budget per task, resumable by rerunning the same command.
-Matched tasks use NSGA-II over two objectives (maximise accuracy, minimise mean Wasserstein
-distance to the dataset's reference sessions); generic tasks use TPE over accuracy alone
-and record `nearest_bio` instead. Each trial outcome reaches Optuna in a way that neither
+Matched tasks use single-objective TPE minimising a null-normalised, structure-penalised
+distance to the dataset's reference sessions (`objective.py`), subject to an accuracy-floor
+feasibility constraint (D17 — accuracy saturated on steinmetz_2afc in E1, so it carried no
+information as a second NSGA-II objective). Generic tasks use TPE over accuracy alone and
+record `nearest_bio` instead. Each trial outcome reaches Optuna in a way that neither
 crashes the study nor invents a number — see the module docstring for the status mapping.
 
 ### Reports (`snntopo/report.py`, `snntopo/figures.py`)

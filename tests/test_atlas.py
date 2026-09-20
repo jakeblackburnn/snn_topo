@@ -5,9 +5,10 @@ import numpy as np
 import pytest
 
 from snntopo import objective
-from snntopo.atlas import (append_record, load_signature_diagrams, read_records,
+from snntopo.atlas import (append_record, bio_entry, load_signature_diagrams, read_records,
                            read_tables, rescore, save_signature, write_tables)
-from snntopo.contracts import AtlasRecord, DistanceResult, Signature
+from snntopo.contracts import AtlasRecord, BioSession, DistanceResult, Signature
+from tests.test_topology import TOPO_FAST, circle, curve_activity
 
 
 def _distance(target="bio:steinmetz:11"):
@@ -159,3 +160,30 @@ def test_rescore_matches_live_scoring(tmp_path: Path):
     assert row["rescored_distance_ratio"] == pytest.approx(expected["distance_ratio"])
     assert row["rescored_structure_penalty"] == pytest.approx(expected["structure_penalty"])
     assert row["model.arch"] == "recurrent"
+
+
+def test_bio_entry_siblings_cross_compare(tmp_path: Path):
+    """D18: with >=2 reference sessions of a dataset (the ibl_2afc case), each bio
+    record's distances should include a cross-compare against every other one, on top
+    of its own split-half null -- the bio-vs-bio 'how far is far' baseline."""
+    sessions = [BioSession("ibl", str(i), curve_activity(circle(40), 40, 20, seed=i), {}) for i in range(3)]
+
+    # Mirror run_search's loop: each session only cross-compares against already-processed
+    # siblings, so 3 sessions -> 3 unique pairs, not 6 directed ones.
+    processed = []
+    for s in sessions:
+        siblings = [p for p in processed]
+        bio_entry(s, TOPO_FAST, tmp_path, siblings)
+        processed.append(s)
+
+    records = {r.session_id: r for r in read_records(tmp_path)}
+    assert len(records) == 3
+    cross = {r.session_id: [d for d in r.distances if d.target != "self" and d.target.startswith("bio:")]
+             for r in records.values()}
+    assert len(cross["0"]) == 0    # first: no earlier siblings yet
+    assert len(cross["1"]) > 0     # cross-compared against session 0
+    assert len(cross["2"]) > 0     # cross-compared against sessions 0 and 1
+    assert {d.target for d in cross["1"]} == {"bio:ibl:0"}
+    assert {d.target for d in cross["2"]} == {"bio:ibl:0", "bio:ibl:1"}
+    # every session still keeps its own split-half noise floor
+    assert all(any(d.target == "self" for d in r.distances) for r in records.values())

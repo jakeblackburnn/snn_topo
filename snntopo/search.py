@@ -11,7 +11,7 @@ distance), with degenerate trials kept off the useful end of the Pareto front by
 honest near-chance accuracy. E1 (192 trials, steinmetz_2afc) saturated accuracy (median
 1.000, min 0.956), collapsing the Pareto front to a single point -- accuracy carried no
 information. Single-objective distance minimization plus an explicit accuracy-floor
-constraint (ACCURACY_FLOOR, via Optuna's constraints_func) replaces it: trials below the
+constraint (ACCURACY_FLOOR, via `trial.set_constraint`) replaces it: trials below the
 floor are infeasible to the sampler, but their objective_distance is still the real
 measured number, never fabricated.
 
@@ -90,10 +90,6 @@ def objective_values(task: Task, record: AtlasRecord) -> list[float] | None:
     return [record.objective_distance]
 
 
-def _constraint(trial: optuna.trial.FrozenTrial) -> tuple[float]:
-    return (trial.user_attrs.get("accuracy_gap", 0.0),)  # Optuna convention: <=0 is feasible
-
-
 def open_study(task: Task, run_dir: Path, seed: int) -> optuna.Study:
     storage = f"sqlite:///{run_dir / 'search.db'}"
     n_prior = 0
@@ -102,7 +98,10 @@ def open_study(task: Task, run_dir: Path, seed: int) -> optuna.Study:
     # Offset the sampler seed on resume, or it would replay the random draws it
     # already made.
     if task.bio_match:
-        sampler = optuna.samplers.TPESampler(seed=seed + n_prior, constraints_func=_constraint)
+        # TPESampler reads trial.constraints (set via trial.set_constraint in the loop
+        # below) at sampling time regardless of how it was constructed -- no
+        # constraints_func needed (that path is deprecated as of optuna 5.0.0).
+        sampler = optuna.samplers.TPESampler(seed=seed + n_prior)
         directions = ["minimize"]
     else:
         sampler = optuna.samplers.TPESampler(seed=seed + n_prior)
@@ -131,13 +130,17 @@ def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials
     refs = reference_sessions(task)
     existing = {r.entry_id: r for r in read_records(run_dir)}
     bio_records = []
+    ref_by_id = {}  # entry_id -> BioSession, for already-processed same-dataset siblings
     for ref in refs:
         ref_id = f"bio:{ref.dataset}:{ref.session_id}"
         if ref_id in existing:
             bio_records.append(existing[ref_id])
         else:
-            siblings = [s for s in refs if s is not ref and s.dataset == ref.dataset]
+            # compare() is symmetric, so only cross-compare against siblings already
+            # processed (earlier this loop) -- each pair gets computed once, not twice.
+            siblings = [s for s in ref_by_id.values() if s.dataset == ref.dataset]
             bio_records.append(bio_entry(ref, topo, run_dir, siblings))
+        ref_by_id[ref_id] = ref
     target_counts = {r.entry_id: objective.feature_counts(r.summary) for r in bio_records}
 
     study = open_study(task, run_dir, seed)
@@ -163,7 +166,10 @@ def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials
         overhead_s = max(overhead_s, time.time() - t_trial - record.meta.get("train_elapsed_s", 0.0))
         trial.set_user_attr("entry_id", entry_id)
         trial.set_user_attr("status", record.status)
-        trial.set_user_attr("accuracy_gap", accuracy_floor - record.accuracy if record.accuracy is not None else 0.0)
+        accuracy_gap = accuracy_floor - record.accuracy if record.accuracy is not None else 0.0
+        trial.set_user_attr("accuracy_gap", accuracy_gap)  # kept for logging/tests; <=0 is feasible
+        if task.bio_match:
+            trial.set_constraint("accuracy_floor", accuracy_gap)
         values = objective_values(task, record)
         if values is None:
             study.tell(trial, state=TrialState.FAIL)

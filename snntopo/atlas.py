@@ -117,18 +117,20 @@ def rescore(run_dir, weight: float = objective.STRUCTURE_WEIGHT) -> pd.DataFrame
     return pd.DataFrame(rows)
 
 
-def bio_entry(session: BioSession, topo: TopoConfig, run_dir, siblings: list[BioSession] = []) -> AtlasRecord:
+def bio_entry(session: BioSession, topo: TopoConfig, run_dir, siblings: list[BioSession] | None = None) -> AtlasRecord:
     """A bio session's signature plus its split-half null, appended to the atlas. If
     `siblings` (other reference sessions of the same dataset) are given, also compares
     against each of them -- D18: bio-vs-bio distances land in distances.csv alongside
-    SNN-vs-bio ones, as the "how far is far" baseline."""
+    SNN-vs-bio ones, as the "how far is far" baseline. `compare` is symmetric, so pass
+    only already-processed siblings (e.g. earlier ones in a loop) to avoid computing
+    each pair twice."""
     entry_id = f"bio:{session.dataset}:{session.session_id}"
     sig = compute_signature(session.activity, topo)
     sig_path = Path(run_dir) / "signatures" / f"{file_id(entry_id)}.npz"
     save_signature(sig_path, sig)
     distances = split_half_null(session.activity, list(sig.diagrams), topo)
     conditions = list(sig.diagrams)
-    for sib in siblings:
+    for sib in (siblings or []):
         target = f"bio:{sib.dataset}:{sib.session_id}"
         distances += compare(session.activity, sib.activity, target, conditions, topo)
     record = AtlasRecord(
