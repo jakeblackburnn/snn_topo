@@ -87,7 +87,15 @@ scope is already expanding.
 **Revisit if:** H2 turns out uninformative (e.g. near-zero/noise across every run) or
 bottleneck distance never disagrees meaningfully with Wasserstein — drop the redundant one
 later rather than carrying dead weight. **Status 2026-09-19:** H2 is empty for every bio
-condition at `n_pca=10`; this is the first evidence toward that revisit.
+condition at `n_pca=10`; this is the first evidence toward that revisit. **Status
+2026-09-20 (supersedes above):** the n_pca=10 emptiness was an artifact, not a property of
+H2 itself — swept n_pca ∈ {10,20,30,50} on Steinmetz 11 + the 3 IBL sessions; at n_pca≥20,
+5 of 12 session×condition cells go nonzero (1-3 features), matching SNN-scale sparsity, not
+zero. **H2 stays; revisit not triggered.** The bottleneck half of the revisit condition is
+trending the other way: H1 bottleneck detects only 2% of pairs at an effect size (ratio
+2.31) where H1 wasserstein detects 96% (ratio 2.58) — consistent with a fat-tailed
+max-statistic null rather than an n_resamples power problem. Worth a bottleneck-specific
+revisit, separate from H2.
 
 ## D7 · 2026-09-19 · Add permutation/bootstrap significance testing
 **Decision:** Every reported bio-vs-SNN and null-baseline distance gets a permutation or
@@ -223,3 +231,35 @@ zero init.
 spectral radius (would silently exclude the critical regime the search is meant to explore).
 **Revisit if:** a neuron model is added whose gradient scale differs enough that one global
 dampening factor no longer serves — then it becomes a per-neuron constant.
+
+## D17 · 2026-09-20 · Amend D3: drop accuracy as a second search objective on matched tasks
+**Decision:** Matched tasks (steinmetz_2afc, ibl_2afc) search single-objective (minimize
+bio-topology-distance) with an accuracy-floor feasibility constraint (~0.7), not
+multi-objective NSGA-II over (accuracy, distance).
+**Why:** E1 (4h steinmetz_2afc search, 192 trials) found accuracy saturated — median 1.000,
+min 0.956 — so the Pareto front was a single point and NSGA-II was effectively
+single-objective the entire run; the second axis bought nothing. D14's rationale that
+degenerate trials self-exclude via near-chance accuracy is preserved by the floor
+constraint, not lost.
+**Rejected:** keeping two objectives with a non-saturating second axis (e.g. `|accuracy-1|`)
+— the same saturated quantity in different clothing, doesn't fix the underlying problem.
+**Revisit if:** a task's accuracy stops saturating (e.g. nback once it trains above chance)
+— then a real two-objective front may exist and multi-objective search is worth it again.
+
+## D18 · 2026-09-20 · Report the bio-vs-bio distance distribution alongside SNN-vs-bio
+**Decision:** Add each run's bio-vs-bio pairwise distances (where ≥2 bio references exist)
+as a reported baseline next to SNN-vs-bio distances. D13's split-half significance test
+stays as the "is this measured, not noise" check; it is not sufficient alone to claim an SNN
+is *meaningfully* distinguishable from bio.
+**Why:** E1 offline re-analysis (2026-09-20): pairwise `compare()` across the 3 cached IBL
+reference sessions, same `TopoConfig` defaults as E1, gave H0 wasserstein ratio 4.3-4.7×
+(6/6 pairs p<0.05) and H1 ratio ~2.5× (3/6 p<0.05) — as large as or larger than E1's median
+SNN-vs-bio ratios (H0 4.59, H1 2.58), and E1's best config (t0153) sat *inside* the
+bio-vs-bio range on both. The p<0.05 test alone can't separate "different animal" from
+"different model class"; E1's "0/191 entries free of significant tests" measured mostly
+normal between-animal variability, not an SNN-specific gap.
+**Rejected:** replacing D13's null design — the split-half mechanics are fine and stay;
+this only adds a second reported baseline for interpreting the distance, not a new test.
+**Revisit if:** more bio reference sessions become available per dataset and the bio-vs-bio
+distribution needs recomputing; or if bio-vs-bio distance turns out unstable enough (e.g.
+new sessions land far outside the 3-session range) that it's not a reliable yardstick.
