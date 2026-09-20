@@ -117,9 +117,12 @@ def open_study(task: Task, run_dir: Path, seed: int) -> optuna.Study:
 def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials: int | None = None,
                train_cfg: TrainConfig = TrainConfig(), topo: TopoConfig = TopoConfig(),
                device: str | None = None, accuracy_floor: float = ACCURACY_FLOOR,
-               weight: float = objective.STRUCTURE_WEIGHT) -> optuna.Study:
+               weight: float = objective.STRUCTURE_WEIGHT, arch: str | None = None) -> optuna.Study:
     """Sample, train and measure model configs for `task_name` until the budget can't fit
-    another trial (or the study holds n_trials). Returns the study."""
+    another trial (or the study holds n_trials). Returns the study. `arch`, if given,
+    restricts sampling to that architecture family (e.g. "modular") instead of all of
+    models.ARCHS -- a way to point a run at one region of the space without a separate
+    search-space axis."""
     log = get_logger()
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -146,6 +149,10 @@ def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials
     study = open_study(task, run_dir, seed)
     elapsed_before = study.user_attrs.get("elapsed_s", 0.0)
     families = valid_triples()
+    if arch is not None:
+        families = [f for f in families if f[0] == arch]
+        if not families:
+            raise ValueError(f"no valid (arch, neuron, connectivity) triples for arch={arch!r}")
     overhead_s = 0.0  # worst non-training time (build + eval + topology) per trial so far
     while True:
         if n_trials is not None and len(study.trials) >= n_trials:

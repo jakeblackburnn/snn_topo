@@ -10,6 +10,7 @@ from .config import RESULTS_DIR
 from .contracts import ModelConfig, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
 from .logging_utils import setup_logging
+from .models import ARCHS
 from .report import write_report
 from .search import ACCURACY_FLOOR, run_search
 from .tasks import TASKS
@@ -58,7 +59,7 @@ def cmd_search(args):
     setup_logging("search", Path(args.out) / "logs")
     run_search(args.task, args.out, args.budget_hours * 3600, seed=args.seed, n_trials=args.n_trials,
                train_cfg=TrainConfig(n_updates=args.n_updates), topo=topo_from_args(args),
-               accuracy_floor=args.accuracy_floor, weight=args.structure_weight)
+               accuracy_floor=args.accuracy_floor, weight=args.structure_weight, arch=args.arch)
 
 
 def cmd_report(args):
@@ -109,6 +110,8 @@ def main(argv=None):
                    help="matched trials below this accuracy are constrained-infeasible (D17)")
     r.add_argument("--structure-weight", type=float, default=objective.STRUCTURE_WEIGHT,
                    help="weight on the structure penalty term in the objective")
+    r.add_argument("--arch", choices=list(ARCHS), default=None,
+                   help="restrict sampling to one architecture family (default: all)")
     add_topo_args(r)
     r.set_defaults(fn=cmd_search)
 
