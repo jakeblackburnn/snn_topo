@@ -61,16 +61,30 @@ def snn_records(run_dir):
 def test_matched_search_records_every_trial(fakes, tmp_path):
     study = search.run_search("steinmetz_2afc", tmp_path, budget_s=600, n_trials=3, train_cfg=TINY, topo=TOPO,
                               device="cpu")
-    assert len(study.directions) == 2
+    assert len(study.directions) == 1
     assert len(study.trials) == 3
     records = snn_records(tmp_path)
     assert [r.entry_id for r in records] == [t.user_attrs["entry_id"] for t in study.trials]
     for t, r in zip(study.trials, records):
         if t.state == TrialState.COMPLETE:
-            assert t.values == [r.accuracy, r.objective_distance]
+            assert t.values == [r.objective_distance]
     bio = [r for r in atlas.read_records(tmp_path) if r.kind == "bio"]
     assert [r.entry_id for r in bio] == ["bio:steinmetz:11"]  # matched: its own dataset only
     assert (tmp_path / "entries.csv").exists() and (tmp_path / "search.db").exists()
+
+
+def test_accuracy_floor_marks_trials_infeasible(fakes, tmp_path):
+    """D14 compliance: an impossible-to-meet floor makes every trial infeasible, but
+    objective_distance stays a real measured number -- never fabricated or None just
+    because the trial is infeasible."""
+    study = search.run_search("steinmetz_2afc", tmp_path, budget_s=600, n_trials=3, train_cfg=TINY, topo=TOPO,
+                              device="cpu", accuracy_floor=1.1)
+    records = snn_records(tmp_path)
+    for t, r in zip(study.trials, records):
+        assert t.user_attrs["accuracy_gap"] > 0
+        if t.state == TrialState.COMPLETE:
+            assert r.objective_distance is not None
+            assert t.values == [r.objective_distance]
 
 
 def test_failed_and_degenerate_trials_dont_crash(fakes, monkeypatch, tmp_path):
@@ -101,7 +115,8 @@ def test_failed_and_degenerate_trials_dont_crash(fakes, monkeypatch, tmp_path):
     statuses = [r.status for r in snn_records(tmp_path)]
     assert statuses[:3] == ["failed", "failed", "degenerate"]
     assert [t.state for t in study.trials[:3]] == [TrialState.FAIL, TrialState.FAIL, TrialState.COMPLETE]
-    assert study.trials[2].values[1] is not None  # distance from the one condition that exists
+    assert study.trials[2].values[0] is not None  # distance from the one condition that exists
+    assert study.trials[2].user_attrs["accuracy_gap"] > 0  # near-chance accuracy: infeasible, D17
     assert study.trials[3].state == TrialState.COMPLETE
 
 

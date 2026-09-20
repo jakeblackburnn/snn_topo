@@ -151,6 +151,10 @@ class AtlasRecord:
     train: dict | None = None
     accuracy: float | None = None
     objective_distance: float | None = None  # search's bio-distance objective; None for generic tasks/bio
+    distance_ratio: float | None = None  # objective_distance's null-normalized-distance term (see objective.py)
+    structure_penalty: float | None = None  # objective_distance's H1/H2 feature-count-mismatch term
+    objective_terms: int | None = None  # number of (condition, dim) terms objective.score included
+    objective_version: str | None = None  # objective.OBJECTIVE_VERSION at scoring time
     nearest_bio: str | None = None  # generic tasks: closest bio target by "all"-condition distance
     signature_file: str | None = None
     summary: dict = field(default_factory=dict)  # flat "{cond}_H{d}_{stat}" -> float

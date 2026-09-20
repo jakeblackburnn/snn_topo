@@ -1,9 +1,19 @@
 """Search over the 4-axis SNN model space for one task, under a wall-clock budget (D3-D5).
 
-Matched tasks (bio_match set) search two objectives with NSGA-II: maximize accuracy and
-minimize objective_distance to their dataset's reference sessions. Generic tasks search
-accuracy alone with TPE (D4); their topology is still measured against every dataset's
-reference sessions, so the atlas gets nearest_bio.
+Matched tasks (bio_match set) search a single objective with TPE: minimize
+objective_distance to their dataset's reference sessions (objective.py), subject to an
+accuracy-floor feasibility constraint (D17). Generic tasks search accuracy alone with
+TPE (D4); their topology is still measured against every dataset's reference sessions,
+so the atlas gets nearest_bio.
+
+D17: matched search used to be two-objective NSGA-II (maximize accuracy, minimize
+distance), with degenerate trials kept off the useful end of the Pareto front by their
+honest near-chance accuracy. E1 (192 trials, steinmetz_2afc) saturated accuracy (median
+1.000, min 0.956), collapsing the Pareto front to a single point -- accuracy carried no
+information. Single-objective distance minimization plus an explicit accuracy-floor
+constraint (ACCURACY_FLOOR, via Optuna's constraints_func) replaces it: trials below the
+floor are infeasible to the sampler, but their objective_distance is still the real
+measured number, never fabricated.
 
 Every trial is an atlas entry (atlas.snn_entry always appends one). Bad configs are
 routine, so each outcome reaches Optuna in a way that neither crashes the study nor
@@ -11,11 +21,11 @@ feeds the sampler a made-up number:
   ok, timeout  -> COMPLETE with the measured values. A timed-out run keeps its best
                   checkpoint, so its numbers are real, just under-trained.
   degenerate   -> COMPLETE with the measured values: accuracy is the honest near-chance
-                  score of a one-action policy, and objective_distance is the mean over
-                  the action conditions that exist. Near-chance accuracy keeps it off the
-                  useful end of the Pareto front without inventing a penalty.
+                  score of a one-action policy (usually below ACCURACY_FLOOR, so the
+                  constraint marks it infeasible), and objective_distance is the
+                  objective over the action conditions that exist.
   failed       -> FAIL (build error, non-finite loss, crash in eval/topology). Nothing
-                  was measured; NSGA-II and TPE skip failed trials.
+                  was measured; TPE skips failed trials.
   matched, but no bio distance could be computed -> FAIL, for the same reason.
 
 Run directory: search.db (Optuna sqlite) next to the atlas files (see atlas.py).
@@ -29,6 +39,7 @@ import optuna
 import torch
 from optuna.trial import TrialState
 
+from . import objective
 from .atlas import bio_entry, read_records, snn_entry, write_tables
 from .contracts import AtlasRecord, BioSession, ModelConfig, Task, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
@@ -37,16 +48,14 @@ from .models import MIN_POPULATION, valid_triples
 from .tasks import TASKS
 
 MIN_TRAIN_S = 60.0  # don't start a trial that would get less training time than this
-# D5 budgets allow roughly 50-150 trials per task; Optuna's default population of 50
-# would spend most of that on the random first generation.
-POPULATION = 20
+ACCURACY_FLOOR = 0.7  # D17: matched trials below this are constrained-infeasible, not penalized
 MAX_LAYERS = 3
 MAX_MODULES = 8
 
 
 def sample_model(trial: optuna.Trial, families: list[tuple[str, str, str]]) -> ModelConfig:
     # One categorical over valid triples, so invalid combos are never proposed and
-    # NSGA-II/TPE model the family as a single always-present parameter.
+    # TPE models the family as a single always-present parameter.
     arch, neuron, connectivity = trial.suggest_categorical("family", ["/".join(f) for f in families]).split("/")
     n_hidden = trial.suggest_int("n_hidden", 64, 1024, log=True)
     # models.validate rejects fewer than MIN_POPULATION neurons per layer/module, so the
@@ -55,8 +64,8 @@ def sample_model(trial: optuna.Trial, families: list[tuple[str, str, str]]) -> M
     n_layers = trial.suggest_int("n_layers", 1, min(MAX_LAYERS, max_groups)) if arch == "feedforward" else 1
     n_modules = trial.suggest_int("n_modules", 2, min(MAX_MODULES, max_groups)) if arch == "modular" else 1
     # Prototype: of radius {0.5, 0.8, 1.0, 1.2, 1.5} only 1.0 trained, so stay inside
-    # (0.8, 1.2). Sampled for every arch so NSGA-II evolves it (conditional parameters
-    # fall back to random sampling); feedforward has no recurrent weight to rescale.
+    # (0.8, 1.2). Sampled for every arch (conditional parameters fall back to independent
+    # sampling); feedforward has no recurrent weight to rescale.
     spectral_radius = trial.suggest_float("spectral_radius", 0.85, 1.15)
     beta = trial.suggest_float("beta", 0.8, 0.97)
     return ModelConfig(arch=arch, neuron=neuron, connectivity=connectivity, n_hidden=n_hidden, n_layers=n_layers,
@@ -78,7 +87,11 @@ def objective_values(task: Task, record: AtlasRecord) -> list[float] | None:
         return [record.accuracy]
     if record.objective_distance is None:
         return None
-    return [record.accuracy, record.objective_distance]
+    return [record.objective_distance]
+
+
+def _constraint(trial: optuna.trial.FrozenTrial) -> tuple[float]:
+    return (trial.user_attrs.get("accuracy_gap", 0.0),)  # Optuna convention: <=0 is feasible
 
 
 def open_study(task: Task, run_dir: Path, seed: int) -> optuna.Study:
@@ -87,10 +100,10 @@ def open_study(task: Task, run_dir: Path, seed: int) -> optuna.Study:
     if task.name in optuna.get_all_study_names(storage):
         n_prior = len(optuna.load_study(study_name=task.name, storage=storage).trials)
     # Offset the sampler seed on resume, or it would replay the random draws it
-    # already made (the whole first NSGA-II generation is random).
+    # already made.
     if task.bio_match:
-        sampler = optuna.samplers.NSGAIISampler(population_size=POPULATION, seed=seed + n_prior)
-        directions = ["maximize", "minimize"]
+        sampler = optuna.samplers.TPESampler(seed=seed + n_prior, constraints_func=_constraint)
+        directions = ["minimize"]
     else:
         sampler = optuna.samplers.TPESampler(seed=seed + n_prior)
         directions = ["maximize"]
@@ -104,7 +117,8 @@ def open_study(task: Task, run_dir: Path, seed: int) -> optuna.Study:
 
 def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials: int | None = None,
                train_cfg: TrainConfig = TrainConfig(), topo: TopoConfig = TopoConfig(),
-               device: str | None = None) -> optuna.Study:
+               device: str | None = None, accuracy_floor: float = ACCURACY_FLOOR,
+               weight: float = objective.STRUCTURE_WEIGHT) -> optuna.Study:
     """Sample, train and measure model configs for `task_name` until the budget can't fit
     another trial (or the study holds n_trials). Returns the study."""
     log = get_logger()
@@ -115,10 +129,16 @@ def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials
     t_start = time.time()
 
     refs = reference_sessions(task)
-    done = {r.entry_id for r in read_records(run_dir)}
+    existing = {r.entry_id: r for r in read_records(run_dir)}
+    bio_records = []
     for ref in refs:
-        if f"bio:{ref.dataset}:{ref.session_id}" not in done:
-            bio_entry(ref, topo, run_dir)
+        ref_id = f"bio:{ref.dataset}:{ref.session_id}"
+        if ref_id in existing:
+            bio_records.append(existing[ref_id])
+        else:
+            siblings = [s for s in refs if s is not ref and s.dataset == ref.dataset]
+            bio_records.append(bio_entry(ref, topo, run_dir, siblings))
+    target_counts = {r.entry_id: objective.feature_counts(r.summary) for r in bio_records}
 
     study = open_study(task, run_dir, seed)
     elapsed_before = study.user_attrs.get("elapsed_s", 0.0)
@@ -139,10 +159,11 @@ def run_search(task_name: str, run_dir, budget_s: float, seed: int = 0, n_trials
         entry_id = f"snn:{task.name}:t{trial.number:04d}"
         t_trial = time.time()
         record = snn_entry(entry_id, task, cfg, replace(train_cfg, max_seconds=train_s, seed=seed + trial.number),
-                           topo, refs, run_dir, device)
+                           topo, refs, run_dir, device, target_counts=target_counts, weight=weight)
         overhead_s = max(overhead_s, time.time() - t_trial - record.meta.get("train_elapsed_s", 0.0))
         trial.set_user_attr("entry_id", entry_id)
         trial.set_user_attr("status", record.status)
+        trial.set_user_attr("accuracy_gap", accuracy_floor - record.accuracy if record.accuracy is not None else 0.0)
         values = objective_values(task, record)
         if values is None:
             study.tell(trial, state=TrialState.FAIL)

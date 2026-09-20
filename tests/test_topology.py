@@ -5,6 +5,8 @@ import gudhi
 import numpy as np
 import pytest
 
+from snntopo import objective
+from snntopo.atlas import signature_summary
 from snntopo.contracts import Activity, TopoConfig
 from snntopo.topology.pipeline import compute_signature, persistence, unit_diameter
 from snntopo.topology.stats import METRICS, compare, diagram_distance, split_half_null
@@ -140,3 +142,27 @@ def test_compare_different_process_is_significant():
     assert all(r.distance > r.null_q95 for r in h1)
     # halves are cached, so a repeat call is identical
     assert compare(a, b, "b", ["all", "a"], TOPO_FAST) == res
+
+
+def test_objective_prefers_matching_shape():
+    """The objective's premise, checked against ground truth rather than synthetic
+    DistanceResults: a same-shape candidate (circle vs. circle) must score better than a
+    different-shape one (segment vs. circle, no loop) under the real pipeline."""
+    bio_activity = curve_activity(circle(60), 80, 40, seed=0)
+    close_activity = curve_activity(circle(60), 80, 40, seed=1)   # same shape, different draw
+    far_activity = curve_activity(segment(60), 80, 40, seed=2)    # no loop
+
+    target_counts = {"bio:x:1": objective.feature_counts(
+        signature_summary(compute_signature(bio_activity, TOPO_FAST)))}
+    assert target_counts["bio:x:1"][("all", 1)] > 0  # the circle must actually have an H1 feature to gate on
+
+    close_dist = compare(close_activity, bio_activity, "bio:x:1", ["all"], TOPO_FAST)
+    far_dist = compare(far_activity, bio_activity, "bio:x:1", ["all"], TOPO_FAST)
+    close_summary = signature_summary(compute_signature(close_activity, TOPO_FAST))
+    far_summary = signature_summary(compute_signature(far_activity, TOPO_FAST))
+
+    close_score = objective.score(close_dist, close_summary, target_counts)
+    far_score = objective.score(far_dist, far_summary, target_counts)
+
+    assert close_score is not None and far_score is not None
+    assert close_score["objective_distance"] < far_score["objective_distance"]
