@@ -47,7 +47,7 @@ run lacks. Also: accuracy is dead as an objective on this task (saturated); H2 t
 while bio H2 is empty at n_pca=10; H1 bottleneck is underpowered (ratio 2.31, 2% significant)
 versus H1 wasserstein (96%) — use wasserstein here.
 
-## E2 · 2026-09-20 · corrected objective, steinmetz_2afc + ibl_2afc mini-runs · status: planned
+## E2 · 2026-09-20 · corrected objective, steinmetz_2afc + ibl_2afc mini-runs · status: done
 **Hypothesis:** E1's objective was H0-dominated (offline re-analysis: H0 accounts for ~97% of its
 variance; H1/H2 barely move it and even anti-correlate with matching bio's H1 count) and its
 "0/191 significant-free" result mostly measured ordinary between-animal variability, not an
@@ -62,18 +62,60 @@ shifted toward modular architecture (D3; weakly supported by an offline n_pca sw
 modular closest to bio on H2 count) — and at least one config should land inside or near the
 bio-vs-bio range. If none do, the gap is structural (model family / neuron model), not a
 measurement artifact, and E3 should target the model family instead.
-**Run:** (not yet executed — code changes land first)
+**Run:** @ eee35aa. Three 0.5h mini-runs, sequential (D9):
 1. `snntopo search --task steinmetz_2afc --budget-hours 0.5 --n-pca 20 --out results/search-e2-steinmetz_2afc`
-2. `snntopo search --task ibl_2afc --budget-hours 0.5 --n-pca 20 --out results/search-e2-ibl_2afc`
-3. optional: a modular-constrained steinmetz_2afc variant, budget/config tbd.
-Config: single-objective (minimize corrected distance) with an accuracy-floor constraint (D17),
-`n_pca=20` (D6 2026-09-20 status: recovers real bio H2 signal, most metrics plateau by 30).
-Exact commit sha and flags to be filled in from the actual invocation.
-**Criterion:** support = at least one ok entry (run 1 or 2) whose SNN-vs-bio wasserstein ratio
-falls within the observed bio-vs-bio ratio range on both H0 (2.21-6.02) and H1 (1.54-3.57).
-Refutation = every entry exceeds that range on both. Partial = improves on E1 (lower ratios,
-better H1-count match) but still exceeds the bio-vs-bio range — supports "objective was part
-of the problem, model family remains open" rather than a clean confirm/refute.
-**Result:** pending.
-**Takeaway:** pending.
-**Next:** pending.
+   (n-updates defaulted to 3000, not 1500 like E1 — an oversight, caught after the run; only 11
+   trials fit in budget as a result, vs ~30 expected at 1500).
+2. `snntopo search --task ibl_2afc --budget-hours 0.5 --n-pca 20 --n-updates 1500 --out results/search-e2-ibl_2afc`
+3. `snntopo search --task steinmetz_2afc --budget-hours 0.5 --n-pca 20 --n-updates 1500 --arch modular --out results/search-e2-steinmetz_2afc-modular`
+   (the `--arch` flag didn't exist before this run; added this session to test D3's standing
+   multi-region hypothesis directly).
+All three: single-objective TPE minimizing the corrected distance, accuracy-floor 0.7 (D17),
+`n_pca=20` (D6 2026-09-20 status).
+**Criterion:** support = at least one ok entry whose SNN-vs-bio wasserstein ratio falls within
+the observed bio-vs-bio ratio range on both H0 and H1. Refutation = every entry exceeds that
+range on both. Partial = improves on E1 but still exceeds the range on at least one dim.
+**Result:**
+- Trial counts: run 1 (steinmetz) 11 (9 ok, 2 degenerate); run 2 (ibl) 17 (14 ok, 3 degenerate);
+  run 3 (modular) 21 (18 ok, 3 degenerate). All far short of E1's 191 — these are preliminary
+  mini-runs, not full searches.
+- **Objective now tracks H1 structure, the opposite of E1**: corr(objective_distance, total H1
+  feature count) = +0.90 (run 2, ibl), +0.77 (run 3, modular) — E1's was -0.16. Run 1's best
+  config by objective (`t0001`, modular/alif/scale_free) has H1 n = 6/5 vs bio's 1/3, against
+  E1's median SNN H1 n ≈ 38-40 — an order of magnitude closer.
+- **Criterion, run 1** (compared against the offline n_pca=10 bio-vs-bio range, H0 2.21-6.02 /
+  H1 1.54-3.57, as an approximation — steinmetz_2afc has only 1 bio reference, no live baseline
+  possible): 1 of 22 trial×condition rows lands inside both ranges (`t0010` right condition), but
+  that trial has *worse* H1 excess (74/76) than the objective's actual best pick — reads as
+  coincidence on a single condition at n=11 trials, not a genuine structural match. **Ambiguous.**
+- **Criterion, run 2** (ibl_2afc, using its own *live* bio-vs-bio baseline — 3 IBL refs
+  cross-compared before the search loop, per D18: H0 range 1.32-10.27, H1 range 1.51-3.40, itself
+  wide at n=3 sessions): **19 of 28 ok trial×condition rows land inside both ranges**, spread
+  across most of the 14 ok trials, not one outlier. **Support.**
+- **Criterion, run 3** (modular-constrained steinmetz_2afc, offline n_pca=10 range as
+  approximation again): **15 of 36 rows land inside both ranges**, spread across 11 distinct
+  trials (`t0001, t0002, t0003, t0004, t0005, t0008, t0010, t0014, t0016, t0018, t0020`).
+  **Support.**
+- Artifacts: `results/search-e2-steinmetz_2afc/`, `results/search-e2-ibl_2afc/`,
+  `results/search-e2-steinmetz_2afc-modular/` (entries.csv, distances.csv, atlas.jsonl,
+  signatures, search.db each).
+**Takeaway:** supported, with caveats. The corrected objective does what it was built to do —
+it selects for lower H1 excess (corr flipped from -0.16 to +0.77/+0.90) — and two of three mini
+runs found multiple configs whose bio-distance falls within the range real animals differ from
+each other by, something E1 never found in 191 trials. This is evidence the "0/191" result was
+substantially a measurement problem (H0-dominated objective + single-reference significance
+framing), not proof the SNN family can't be bio-like. It is not proof the model family is fine
+either: sample sizes here are small (11-21 trials vs E1's 191), the bio-vs-bio "range" is itself
+built from as few as 3 pairwise session comparisons and is wide enough that landing inside it is
+a real but not overwhelming bar, and the objective's own best-by-score pick doesn't always have
+the lowest H1 excess (run 2's best pick still has H1 n=43) — the ratio and structure-penalty
+terms sometimes pull against each other and the weight (2.0) hasn't been re-tuned for n_pca=20.
+Run 1's near-miss vs runs 2/3's clearer support also suggests architecture and dataset both
+matter, not just the objective.
+**Next:** a full-budget run (steinmetz_2afc or ibl_2afc, ~4h, `--n-updates 1500` this time) to
+get a trial count comparable to E1 and see if the "support" fraction holds up, not just an
+artifact of 3 small samples. Also worth: re-deriving `structure_weight` at n_pca=20 via
+`rescore` on these runs' own data (E1's rescore calibration was done at n_pca=10, not carried
+forward correctly here); and checking whether run 2's best-by-objective pick's high H1 count
+(43, despite the positive correlation trend) points to a specific weakness in how the objective
+combines 3 bio references vs steinmetz_2afc's 1.
