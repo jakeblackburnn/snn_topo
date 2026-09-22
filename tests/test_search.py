@@ -178,6 +178,12 @@ def test_sampled_configs_are_all_buildable():
     assert max(m for a, _, m in seen if a == "modular") > 2
 
 
+def test_search_rejects_arch_without_valid_family(fakes, tmp_path):
+    with pytest.raises(ValueError, match="no valid .* arch='unknown'"):
+        search.run_search("steinmetz_2afc", tmp_path, budget_s=600, train_cfg=TINY, topo=TOPO,
+                          device="cpu", arch="unknown")
+
+
 def shown_symbols(spk_in, slots):
     """Most-active channel group per slot -> (batch, len(slots)) symbol ids."""
     n_symbols = spk_in.shape[2] // CHANNELS_PER_SYMBOL
