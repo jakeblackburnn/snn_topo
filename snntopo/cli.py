@@ -1,19 +1,22 @@
 """Command-line entry point: `snntopo <command> ...`."""
 import argparse
+import random
 from pathlib import Path
 
 import torch
 
-from . import objective
-from .atlas import bio_entry, rescore, snn_entry, write_tables
+from . import controls, objective
+from .atlas import bio_entry, control_entry, rescore, snn_entry, write_tables
 from .config import RESULTS_DIR
 from .contracts import ModelConfig, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
 from .logging_utils import setup_logging
-from .models import ARCHS
+from .models import ARCHS, valid_triples
 from .report import write_report
 from .search import ACCURACY_FLOOR, run_search
 from .tasks import TASKS
+
+CONTROL_N_HIDDEN = 128  # simplest fixed width for controls -- not a search axis here
 
 
 def add_topo_args(p):
@@ -51,6 +54,35 @@ def cmd_snn(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     snn_entry(f"snn:{task.name}:single", task, cfg, TrainConfig(n_updates=args.n_updates), topo_from_args(args),
               refs, run_dir, device)
+    write_tables(run_dir)
+
+
+def cmd_control(args):
+    """Surrogate-activity controls (untrained SNN / shuffled bio), measured the same
+    way as an SNN trial but never trained or searched -- a floor for the search's
+    bio-distance objective, not a search itself."""
+    run_dir = Path(args.out)
+    setup_logging("control", run_dir / "logs")
+    task = TASKS[args.task]
+    datasets = [task.bio_match] if task.bio_match else list(DATASETS)
+    refs = [load_session(d, s) for d in datasets for s in DATASETS[d].reference_sessions]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    topo = topo_from_args(args)
+    if args.kind == "untrained":
+        rng = random.Random(args.seed)
+        families = valid_triples()
+        for i in range(args.n):
+            arch, neuron, connectivity = rng.choice(families)
+            cfg = ModelConfig(arch=arch, neuron=neuron, connectivity=connectivity, n_hidden=args.n_hidden,
+                              n_modules=2 if arch == "modular" else 1)
+            activity = controls.untrained(cfg, task, args.seed + i, device)
+            control_entry(f"control:{task.name}:untrained:{i:04d}", "untrained", task, activity, topo, refs,
+                          run_dir, model_cfg=cfg)
+    else:  # shuffled: destroy population structure in a bio reference's own activity
+        for i in range(args.n):
+            ref = refs[i % len(refs)]
+            activity = controls.shuffled(ref.activity, args.seed + i)
+            control_entry(f"control:{task.name}:shuffled:{i:04d}", "shuffled", task, activity, topo, refs, run_dir)
     write_tables(run_dir)
 
 
@@ -97,6 +129,16 @@ def main(argv=None):
     s.add_argument("--out", default=str(RESULTS_DIR / "snn_single"))
     add_topo_args(s)
     s.set_defaults(fn=cmd_snn)
+
+    c = sub.add_parser("control", help="measure a surrogate control (untrained SNN / shuffled bio) for one task")
+    c.add_argument("--task", required=True, choices=list(TASKS))
+    c.add_argument("--kind", required=True, choices=["untrained", "shuffled"])
+    c.add_argument("--n", type=int, required=True, help="number of control entries to produce")
+    c.add_argument("--n-hidden", type=int, default=CONTROL_N_HIDDEN, help="untrained only: hidden width")
+    c.add_argument("--seed", type=int, default=0)
+    c.add_argument("--out", default=str(RESULTS_DIR / "control"))
+    add_topo_args(c)
+    c.set_defaults(fn=cmd_control)
 
     r = sub.add_parser("search", help="search model configs for one task under a wall-clock budget")
     r.add_argument("--task", required=True, choices=list(TASKS))

@@ -102,7 +102,7 @@ def rescore(run_dir, weight: float = objective.STRUCTURE_WEIGHT) -> pd.DataFrame
     rows = []
     for r in records:
         if r.kind != "snn":
-            continue
+            continue  # bio has no objective to rescore; controls are diagnostic floors, not search trials
         result = objective.score(r.distances, r.summary, target_counts, weight)
         row = {
             "entry_id": r.entry_id, "accuracy": r.accuracy, "status": r.status,
@@ -197,6 +197,25 @@ def measure_activity(record: AtlasRecord, activity, task: Task, topo: TopoConfig
         if wass:
             by_target = pd.DataFrame([asdict(d) for d in wass]).groupby("target")["distance"].mean()
             record.nearest_bio = str(by_target.idxmin())
+
+
+def control_entry(entry_id: str, kind_label: str, task: Task, activity, topo: TopoConfig,
+                   bio_refs: list[BioSession], run_dir,
+                   target_counts: dict[str, dict] | None = None,
+                   weight: float = objective.STRUCTURE_WEIGHT,
+                   model_cfg: ModelConfig | None = None) -> AtlasRecord:
+    """One surrogate control (controls.py's untrained/shuffled) measured and appended
+    the same way as an SNN trial, so its distances/objective sit in the same tables --
+    a floor for "how close to bio is close" that the search doesn't otherwise measure.
+    `source` is "{task}:{kind_label}" (e.g. "ibl_2afc:untrained"); `model` is set only
+    when the control came from an actual built model (untrained), None otherwise
+    (shuffled has no ModelConfig, whether it shuffled bio or SNN activity)."""
+    run_dir = Path(run_dir)
+    record = AtlasRecord(entry_id=entry_id, kind="control", source=f"{task.name}:{kind_label}", status="ok",
+                         model=model_cfg.to_dict() if model_cfg else None)
+    measure_activity(record, activity, task, topo, bio_refs, run_dir, target_counts, weight)
+    append_record(run_dir, record)
+    return record
 
 
 def snn_entry(entry_id: str, task: Task, model_cfg: ModelConfig, train_cfg: TrainConfig, topo: TopoConfig,
