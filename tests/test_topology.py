@@ -58,7 +58,7 @@ def test_noisy_circle_has_one_dominant_h1():
 
 def test_noisy_sphere_has_one_dominant_h2():
     # smoothing off: consecutive Fibonacci points are not neighbours on the sphere
-    sig = compute_signature(curve_activity(fibonacci_sphere(120), 120, 60, seed=0), TopoConfig(smooth_win=1))
+    sig = compute_signature(curve_activity(fibonacci_sphere(120), 120, 60, seed=0), TopoConfig(smooth_win=1, maxdim=2))
     pers = sorted_persistence(sig.diagrams["all"][2])
     assert pers[0] > 0.2
     assert len(pers) == 1 or pers[1] < 0.2 * pers[0]
@@ -106,7 +106,9 @@ def test_distance_sanity():
         diagram_distance(d1, d2, "euclid")
 
 
-TOPO_FAST = TopoConfig(maxdim=1, n_resamples=20)
+TOPO_FAST = TopoConfig(maxdim=1, n_resamples=20, metrics=METRICS)  # both metrics: several
+# tests below assert result counts/behavior across both (the compare/split_half_null shape
+# tests predate the wasserstein-only default and exercise the full METRICS space on purpose
 
 
 def test_split_half_null_shape():

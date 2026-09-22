@@ -74,7 +74,8 @@ from threadpoolctl import threadpool_limits
 from ..contracts import Activity, DistanceResult, TopoConfig
 from .pipeline import build_trajectories, persistence, unit_diameter
 
-METRICS = ("wasserstein", "bottleneck")
+METRICS = ("wasserstein", "bottleneck")  # every metric diagram_distance supports; which of
+# these actually get computed per call is TopoConfig.metrics (default: wasserstein only)
 
 # (activity fingerprint, trial mask, trials per half, topo fields, seed) -> split-half diagrams.
 # 32 entries covers 3 bio references x 3 conditions with room for recent SNN activities.
@@ -99,10 +100,11 @@ def _fingerprint(activity: Activity) -> str:
     return h.hexdigest()
 
 
-def _half_pair(points1: np.ndarray, points2: np.ndarray, maxdim: int) -> tuple[list, list, dict]:
+def _half_pair(points1: np.ndarray, points2: np.ndarray, maxdim: int,
+               metrics: tuple[str, ...]) -> tuple[list, list, dict]:
     """Pool worker: diagrams of one split-half pair and the distances between them."""
     dgms1, dgms2 = persistence(points1, maxdim), persistence(points2, maxdim)
-    within = {m: [diagram_distance(dgms1[d], dgms2[d], m) for d in range(maxdim + 1)] for m in METRICS}
+    within = {m: [diagram_distance(dgms1[d], dgms2[d], m) for d in range(maxdim + 1)] for m in metrics}
     return dgms1, dgms2, within
 
 
@@ -116,7 +118,7 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
         if id(activity) not in fingerprints:
             fingerprints[id(activity)] = _fingerprint(activity)
         keys.append((fingerprints[id(activity)], activity.conditions[cond].tobytes(), h,
-                     topo.n_pca, topo.smooth_win, topo.maxdim, topo.n_resamples, seed))
+                     topo.n_pca, topo.smooth_win, topo.maxdim, topo.n_resamples, topo.metrics, seed))
 
     todo = {}
     for key, request in zip(keys, requests):
@@ -139,11 +141,12 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
     if todo:
         with ProcessPoolExecutor(max_workers=min(os.cpu_count(), len(halves1)),
                                  mp_context=multiprocessing.get_context("forkserver")) as pool:
-            results = list(pool.map(_half_pair, halves1, halves2, repeat(topo.maxdim), chunksize=4))
+            results = list(pool.map(_half_pair, halves1, halves2, repeat(topo.maxdim), repeat(topo.metrics),
+                                     chunksize=4))
         for i, key in enumerate(todo):
             chunk = results[i * topo.n_resamples:(i + 1) * topo.n_resamples]
             _CACHE[key] = {"pairs": [(r[0], r[1]) for r in chunk],
-                           "within": {m: np.array([r[2][m] for r in chunk]) for m in METRICS}}
+                           "within": {m: np.array([r[2][m] for r in chunk]) for m in topo.metrics}}
 
     out = []
     for key in keys:
@@ -176,14 +179,14 @@ def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: 
     halves = _split_halves([(a, c, h[c]) for c in conds] + [(b, c, h[c]) for c in conds], topo, seed)
     results = []
     for cond, ha, hb in zip(conds, halves[:len(conds)], halves[len(conds):]):
-        cross = {m: np.zeros((topo.n_resamples, 2, topo.maxdim + 1)) for m in METRICS}
+        cross = {m: np.zeros((topo.n_resamples, 2, topo.maxdim + 1)) for m in topo.metrics}
         for r, ((a1, a2), (b1, b2)) in enumerate(zip(ha["pairs"], hb["pairs"])):
             for k, (da, db) in enumerate(((a1, b1), (a2, b2))):
                 for d in range(topo.maxdim + 1):
-                    for m in METRICS:
+                    for m in topo.metrics:
                         cross[m][r, k, d] = diagram_distance(da[d], db[d], m)
         for d in range(topo.maxdim + 1):
-            for m in METRICS:
+            for m in topo.metrics:
                 distance = float(cross[m][:, :, d].mean())
                 null = np.concatenate([ha["within"][m][:, d], hb["within"][m][:, d]])
                 p_value = (1 + int((null >= distance).sum())) / (1 + len(null))
@@ -201,7 +204,7 @@ def split_half_null(a: Activity, conditions: list[str], topo: TopoConfig, seed: 
     halves = _split_halves([(a, c, int(a.conditions[c].sum()) // 2) for c in conds], topo, seed)
     for cond, ha in zip(conds, halves):
         for d in range(topo.maxdim + 1):
-            for m in METRICS:
+            for m in topo.metrics:
                 null = ha["within"][m][:, d]
                 results.append(_result("self", cond, d, m, float(null.mean()), null, float("nan")))
     return results

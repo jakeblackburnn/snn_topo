@@ -15,6 +15,7 @@ from .models import ARCHS, valid_triples
 from .report import write_report
 from .search import ACCURACY_FLOOR, run_search
 from .tasks import TASKS
+from .topology.stats import METRICS
 
 CONTROL_N_HIDDEN = 128  # simplest fixed width for controls -- not a search axis here
 
@@ -26,11 +27,15 @@ def add_topo_args(p):
     p.add_argument("--n-resamples", type=int, default=d.n_resamples)
     p.add_argument("--smooth-win", type=int, default=d.smooth_win)
     p.add_argument("--min-trials", type=int, default=d.min_trials)
+    p.add_argument("--metrics", nargs="+", choices=list(METRICS), default=list(d.metrics),
+                   help="diagram distance metrics to compute (default: wasserstein only -- "
+                        "objective.py never reads bottleneck)")
 
 
 def topo_from_args(args) -> TopoConfig:
     return TopoConfig(n_pca=args.n_pca, smooth_win=args.smooth_win, maxdim=args.maxdim,
-                      min_trials=args.min_trials, n_resamples=args.n_resamples)
+                      min_trials=args.min_trials, n_resamples=args.n_resamples,
+                      metrics=tuple(args.metrics))
 
 
 def cmd_bio(args):

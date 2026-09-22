@@ -46,7 +46,7 @@ def test_signature_on_ring_trajectory():
     spikes = np.repeat(rates[:, None, :], 10, axis=1).astype(np.float32)
     mask = np.ones(10, dtype=bool)
     sig = compute_signature(Activity(spikes, {"all": mask, "none": ~mask}, slice(0, 150), 1.0),
-                            TopoConfig(smooth_win=1))
+                            TopoConfig(smooth_win=1, maxdim=2))
     assert "none" in sig.skipped
     h1 = sig.diagrams["all"][1]
     pers = np.sort(h1[:, 1] - h1[:, 0])[::-1]

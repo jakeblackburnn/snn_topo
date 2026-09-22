@@ -154,3 +154,53 @@ the corrected objective for a direct E1 comparison.
 **Next:** re-derive `structure_weight` at `n_pca=20` via `snntopo rescore` (no GPU needed); a
 comparable full-budget steinmetz_2afc run under the corrected objective, both for direct E1
 comparison and to check if the modular convergence seen here also happens on that dataset.
+
+## Cost & rescore analysis · 2026-09-22
+
+**maxdim/metric defaults changed.** `TopoConfig.maxdim` default 2 -> 1; `TopoConfig.metrics`
+(new field) default `("wasserstein",)` instead of always computing both wasserstein and
+bottleneck. Both changes are evidence-driven, not speculative:
+- H2 is empty (`sum.all_H2_n == 0`) at every bio reference session measured at the default
+  `n_pca=10` — Steinmetz session 11 and all 3 current IBL references (`results/search-steinmetz_2afc/entries.csv`,
+  `results/search-ibl_2afc-2h/entries.csv`). Computing H2 buys nothing for the bio comparison
+  it exists to support, and it's the most expensive dim (ripser at H2, run on every split-half
+  resample). Note D6's 2026-09-20 status found H2 goes nonzero at `n_pca>=20` on some
+  session×condition cells — this default change is about the package's `n_pca=10` default, not
+  a claim H2 is worthless in general; `--maxdim 2` still works for `n_pca>=20` exploration.
+- `objective.py`'s `METRIC = "wasserstein"` has only ever read wasserstein; bottleneck was
+  computed on every trial and never consumed. It's also underpowered where it's been measured
+  (E1: H1 bottleneck ratio 2.31 / 2% significant vs. H1 wasserstein ratio 2.58 / 96%
+  significant). `--metrics wasserstein bottleneck` restores both for exploration.
+- `TopoConfig.metrics` is threaded through `topology/stats.py`'s `_half_pair`, `_split_halves`
+  (including the resample cache key, so a metrics change can't silently reuse a stale cache
+  entry), `compare`, and `split_half_null`, mirroring how `maxdim`/`n_resamples`/etc. already
+  flow from `TopoConfig` into those functions. The module-level `METRICS = ("wasserstein",
+  "bottleneck")` constant stays as the full supported set (used by `diagram_distance`'s
+  validation and by tests that intentionally exercise both metrics).
+
+**Measured per-trial timing** (steinmetz_2afc, arch=recurrent/lif/random, n_hidden=256,
+n_updates=200, n_eval=340, seed=0, GPU training, same trained activity reused for both topology
+timings so training time isn't re-measured or a source of noise in the comparison; 2 runs):
+| config | topology-only | train | total |
+|---|---|---|---|
+| OLD (maxdim=2, wasserstein+bottleneck) | 61-63 s | 14-18 s | 77-79 s |
+| NEW (maxdim=1, wasserstein-only) | 12-15 s | 14-18 s | 26-33 s |
+
+Topology-only cost drops ~4-5x; per-trial wall clock drops ~2.4-3x (train time is unchanged and
+now the larger share of a trial, roughly matching the original ~13s training estimate). Measured
+directly with `time.perf_counter()` around `atlas.measure_activity`, not estimated.
+
+**E1 rescore.** `snntopo rescore --run results/search-steinmetz_2afc --out <csv>`
+(`--structure-weight` defaulted to `objective.STRUCTURE_WEIGHT`=2.0) recomputed
+`objective.score` for all 191 stored E1 snn records (192 total with 1 bio) against their
+original `n_pca=10` distances/signatures — no retraining, no GPU. `corr(rescored_objective_distance,
+total H1 feature count)` (`sum.left_H1_n + sum.right_H1_n` from `entries.csv`, matching the
+objective's own per-condition terms for this matched task) = **+0.46** (n=191), vs. E1's
+originally reported **-0.16**. Recomputing `corr(objective_distance, total H1 feature count)`
+from E1's own already-stored objective values (not rescored) gave -0.12, close enough to E1's
+-0.16 to trust this measurement's methodology matches E1's. This isolates the objective-formula
+change as the driver of the corr sign flip reported in E2/E3 — same `n_pca=10` data, same
+dataset, only the scoring formula changed, and the sign already flips from negative to positive.
+The magnitude here (+0.46) is smaller than E2/E3's `n_pca=20` search results (+0.90/+0.91), so
+`n_pca` (or the live search vs. static rescore difference) also contributes to the strength of
+the effect — but the sign flip itself does not depend on it.
