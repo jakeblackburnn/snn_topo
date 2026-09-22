@@ -1,47 +1,46 @@
-# Handoff · 2026-09-20 14:10 · main
+# Handoff · 2026-09-21 17:45 · main
 ## State
-- v2 build + E1 (negative, objective-flawed) were prior sessions. This session: rebuilt the
-  search objective (D17/D18), then ran E2, all merged to `main` @ `15bfee0`.
-- `pytest -q` → 101 passed, 7 deselected. `pytest -m data` → 7 passed.
-- **E2 supports the fix, provisionally.** 3 mini-runs (0.5h each, `n_pca=20`, new objective):
-  steinmetz_2afc (11 trials), ibl_2afc (17), modular-constrained steinmetz_2afc (21). Full
-  numbers + caveats in `dev/experiments.md` E2. Headline: corr(objective_distance, H1 feature
-  count) flipped from E1's -0.16 to +0.77 (modular run) / +0.90 (ibl run) — the objective now
-  tracks the thing that actually differs from bio. 2 of 3 runs found several configs whose
-  SNN-vs-bio distance falls inside the bio-vs-bio distance range; E1 found zero in 191 trials.
-- These are mini-runs (11-21 trials), not comparable in power to E1's 191. Don't over-read them.
+- v2 pipeline + corrected objective (D17/D18) from prior sessions, on `main` @ `667fa4b`.
+- This session: full-budget (2h) `ibl_2afc` search (E3) — confirms E2's mini-run at full power.
+  `pytest -q` → 101 passed, 7 deselected (unchanged, no code touched this session).
+- **E3 result:** corr(objective_distance, H1 feature count) = +0.91 (E2 mini-run: +0.90; E1:
+  -0.16). 79/124 trial×condition rows land inside the live bio-vs-bio distance range, across
+  48/62 ok trials (77%) — was 19/28 rows across 14 trials in E2. Best-by-objective pick now has
+  H1 n=11 (bio: 1-3), resolving E2's anomaly where the best pick still had H1 n=43. Top-3 picks
+  are all modular/alif/scale_free — informal new support for D3.
+- Full numbers, methodology (ratio = distance/null_mean, averaged across the 3 IBL bio targets)
+  and caveats in `dev/experiments.md` E3.
 ## In flight
-Nothing uncommitted except pre-existing untracked `.nodeterm/` (canvas state, leave it, per prior
-handoffs). `results/search-e2-*` (3 dirs, gitignored) hold the raw trial data.
+Nothing uncommitted except pre-existing untracked `.nodeterm/` (leave it, per prior handoffs).
+`dev/SPEC.md` and `dev/experiments.md` have uncommitted doc edits from this session — not yet
+committed to git (user hasn't asked to commit). `results/search-ibl_2afc-2h/` (gitignored) holds
+the raw trial data.
 ## Next
-1. Full-budget (~4h) run under the corrected objective — `steinmetz_2afc` for direct E1
-   comparison, or `ibl_2afc` since it's the one with a live bio-vs-bio baseline built in. Use
-   `--n-updates 1500` (E2's steinmetz run forgot this and only got 11 trials in 30 min at the
-   3000 default — don't repeat that).
+1. Full-budget (~2-4h) `steinmetz_2afc` run under the corrected objective, same flags
+   (`--n-updates 1500 --n-pca 20`) — direct E1 comparison, and check whether the modular-arch
+   convergence seen in E3 repeats on that dataset.
 2. Re-derive `structure_weight` (`snntopo/objective.py`, default 2.0) at `n_pca=20` via
-   `snntopo rescore` on one of the E2 run dirs — it was only validated at `n_pca=10` against E1.
-3. ibl_2afc's best-by-objective trial (run 2) still had H1 n=43 despite the positive correlation
-   trend — worth checking whether averaging the objective across 3 bio refs (vs steinmetz's 1)
-   is diluting the structure penalty somewhere.
+   `snntopo rescore` on `results/search-ibl_2afc-2h` or an E2 run dir — still only validated at
+   `n_pca=10`, unchanged since E2.
+3. Commit the `dev/SPEC.md` / `dev/experiments.md` changes from this session (docs only, no code).
+4. **Idea, not started:** unify `recurrent`/`modular` under one continuous "modularity strength"
+   knob instead of a discrete `arch` choice, by reparametrizing `INTER_MODULE_DENSITY`/`n_modules`
+   in `snntopo/models/connectivity.py` (currently `modular` is just `RecurrentSNN` with a
+   block-structured mask — see D3's standing hypothesis, and E3's finding that modular configs
+   cluster at low bio-distance). Would let the search sample a scalar and might find an optimum
+   between "uniform recurrent" and "fully modular" instead of only testing the two endpoints.
+   `feedforward` can't join this continuum (no recurrence to modulate) — would stay a separate,
+   discrete axis alongside it. Raised in conversation 2026-09-21, not evaluated or scoped further.
 ## Traps
-- `search.py`'s matched-task objective is now single-value minimize (D17) — old code/scripts
-  expecting `study.directions == 2` or `trial.values == [accuracy, distance]` will break.
-- `TopoConfig` used to be invisible from the CLI (hardcoded `n_pca=10` everywhere); it's now
-  `--n-pca`/`--maxdim`/`--n-resamples`/`--smooth-win`/`--min-trials` on `bio`/`snn`/`search`.
-  Old commands with no flags still get the same defaults — only new runs can differ.
-- `--n-updates` still defaults to 3000, not E1's 1500 — pass it explicitly for anything meant to
-  compare against E1 (see Next #1).
-- The bio-vs-bio distance "range" used as the E2 yardstick is built from very few pairs (1 for
-  steinmetz's offline n_pca=10 approximation reused across runs, 3 live pairs for ibl_2afc) —
-  it's a real baseline (D18) but not a tight one. Don't treat "inside the range" as a strict pass.
-- `snntopo rescore --run <dir>` recomputes the objective from saved diagrams with no GPU — use
-  it before spending GPU on any further objective-weight changes.
+- Same as before: `search.py`'s objective is single-value minimize (D17) — don't expect 2-value
+  `study.directions`. `--n-updates` defaults to 3000, not 1500 — always pass it explicitly for
+  anything meant to compare against E1/E3. `snntopo rescore --run <dir>` needs no GPU.
+- The live bio-vs-bio range for `ibl_2afc` (H0 1.32-10.27, H1 1.51-3.40) is built from only 3
+  pairwise session comparisons — a real baseline (D18) but not a tight one.
 ## Pointers
-- `dev/experiments.md` E1, E2. `dev/DECISIONS.md` D17 (accuracy-floor constraint, amends D3),
-  D18 (bio-vs-bio baseline), D6's 2026-09-20 status (H2 real-but-sparse, not empty, at
-  `n_pca>=20` — reverses the 2026-09-19 note).
-- `snntopo/objective.py` — the whole new objective. `snntopo/atlas.py:96-141` — `rescore()`,
-  `bio_entry` siblings. `snntopo/search.py:82-115` — single-objective + constraint wiring.
-- No new decisions from this session are unrecorded — D17/D18 already in `dev/DECISIONS.md`.
+- `dev/experiments.md` E3 (this session), E1, E2. `dev/SPEC.md`'s "Done when" checklist was
+  stale (said multi-objective search, 89 tests) — fixed this session to match D17 and the
+  current 101-passed count.
+- No new decisions from this session are unrecorded — E3 is a confirmation run, not a decision.
 
 handoff written. Safe to /clear.

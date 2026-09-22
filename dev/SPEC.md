@@ -105,18 +105,19 @@ entries plus bio split-half rows; the complete table stays in `distances.csv`.
 
 ## Done when
 
-Every item below was checked against a real command and its output on 2026-09-19.
+Every item below was checked against a real command and its output on 2026-09-19, except
+where noted (updated 2026-09-21 for D17/D18's corrected objective).
 
 - [x] Installable package with bio-dataset, model and task registries — `pip show snntopo` → 2.0.0 editable; all four subcommands ran; registries listed above.
 - [x] H0/H1/H2 persistence with both Wasserstein and bottleneck distance — `tests/test_topology.py`.
 - [x] Every bio dataset has a stored characteristic signature — `snntopo bio --dataset {steinmetz,ibl,allen}` → 5 entries ok.
-- [x] Multi-objective search proven end-to-end by a mini-run per matched task — `--n-trials 4 --n-updates 300`: steinmetz_2afc 4 ok; ibl_2afc 3 ok + 1 degenerate.
+- [x] Single-objective search (D17) proven end-to-end, including at full budget — matched-task mini-runs (`--n-trials 4 --n-updates 300`: steinmetz_2afc 4 ok; ibl_2afc 3 ok + 1 degenerate) plus full 2h `ibl_2afc` runs (E2 mini at 17 trials, E3 at 77 trials/62 ok — see `dev/experiments.md`).
 - [x] Generic tasks run single-objective with topology still recorded — `nback` mini-run: `objective_distance` empty, `nearest_bio` set, 300 distance rows over 6 targets.
 - [x] Significance testing backs every reported distance — every `DistanceResult` carries `null_mean`, `null_q95`, `p_value`, `n_resamples`.
 - [x] Atlas as structured data plus generated reports, no dashboard — `report.md` (631 lines) + 9 figures + CSV/Parquet.
 - [x] IBL ONE API auth and a working loader — 459 brain-wide-map sessions listed, 3 loaded.
-- [x] Tests, docs and registry extension points — `pytest -q` → 89 passed; `pytest -m data` → 7 passed; `README.md`, `docs/architecture.md`.
-- [x] `dev/` populated — this file, `DECISIONS.md`, `HANDOFF.md`, `devlog/`.
+- [x] Tests, docs and registry extension points — `pytest -q` → 101 passed, 7 deselected; `pytest -m data` → 7 passed; `README.md`, `docs/architecture.md`.
+- [x] `dev/` populated — this file, `DECISIONS.md`, `journal.md`, `experiments.md`.
 
 ## Out of scope
 

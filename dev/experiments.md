@@ -119,3 +119,38 @@ artifact of 3 small samples. Also worth: re-deriving `structure_weight` at n_pca
 forward correctly here); and checking whether run 2's best-by-objective pick's high H1 count
 (43, despite the positive correlation trend) points to a specific weakness in how the objective
 combines 3 bio references vs steinmetz_2afc's 1.
+
+## E3 · 2026-09-21 · full-budget ibl_2afc under corrected objective · status: done
+**Hypothesis:** E2's ibl_2afc mini-run (17 trials) found support for the corrected objective
+(corr(objective_distance, H1 n) = +0.90; 19/28 trial×condition rows inside the live bio-vs-bio
+range), but at 4x lower power than E1's 191 trials. At a trial count comparable to E1, the same
+pattern should hold, not turn out to be a small-sample artifact — and the anomaly in E2 where
+the objective's best-by-score pick still had a high H1 count (43) should either resolve or
+persist consistently.
+**Run:** `snntopo search --task ibl_2afc --budget-hours 2 --n-updates 1500 --n-pca 20 --out results/search-ibl_2afc-2h` @ 667fa4b. 15:39:49-17:37:58 (full 2h budget, self-stopped: "111s of
+budget left, 52s overhead per trial").
+**Criterion:** same as E2 run 2 — support = multiple ok trials whose SNN-vs-bio wasserstein
+ratio falls inside the live bio-vs-bio ratio range on both H0 and H1, spread across trials
+rather than one outlier.
+**Result:**
+- 77 trials attempted: 62 ok SNN entries, 15 degenerate, plus 3 bio reference entries.
+- Live bio-vs-bio range (9 pairwise condition×dim rows from the 3 IBL reference sessions): H0
+  ratio 1.32-10.27, H1 ratio 1.51-3.40 — identical to E2 (deterministic bio data).
+- corr(objective_distance, total H1 feature count) = +0.91 (E2: +0.90; E1: -0.16).
+- 79/124 trial×condition rows (ratios averaged across the 3 bio targets, per the objective's
+  own averaging) land inside the range on both H0 and H1 — 64%, across 48/62 ok trials (77%).
+  E2: 19/28 rows, 14 trials.
+- Best-by-objective trial (`t0049`, objective_distance=5.61, accuracy=0.89): modular/alif/
+  scale_free, H1 n=11 vs bio's 1-3. Top-3 best-by-objective trials are all modular/alif/
+  scale_free. E2's best pick had H1 n=43.
+- Artifacts: `results/search-ibl_2afc-2h/` (entries.csv, distances.csv, atlas.jsonl, signatures,
+  search.db, logs).
+**Takeaway:** E2's support result holds and strengthens at full trial count — not a small-sample
+artifact. The E2 anomaly (best-by-score pick keeping a high H1 count) is gone at full budget:
+the top picks now have low H1 excess and consistently converge on modular architecture, new
+(if informal) evidence for D3's multi-region hypothesis. `structure_weight` (2.0) is still only
+validated at `n_pca=10`, unchanged from E2. steinmetz_2afc still has no full-budget run under
+the corrected objective for a direct E1 comparison.
+**Next:** re-derive `structure_weight` at `n_pca=20` via `snntopo rescore` (no GPU needed); a
+comparable full-budget steinmetz_2afc run under the corrected objective, both for direct E1
+comparison and to check if the modular convergence seen here also happens on that dataset.
