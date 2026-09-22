@@ -143,20 +143,69 @@ def bio_entry(session: BioSession, topo: TopoConfig, run_dir, siblings: list[Bio
     return record
 
 
+def measure_activity(record: AtlasRecord, activity, task: Task, topo: TopoConfig,
+                      bio_refs: list[BioSession], run_dir,
+                      target_counts: dict[str, dict] | None = None,
+                      weight: float = objective.STRUCTURE_WEIGHT) -> None:
+    """Signature, distances and (for matched tasks) the search objective for one
+    already-produced activity trace -- the shared tail of `snn_entry` and any other
+    producer of an Activity (controls.py's untrained/shuffled surrogates). Mutates
+    `record` in place: signature_file, summary, status (bumped to "degenerate" if a
+    needed condition got skipped), distances, and objective_distance/nearest_bio.
+    Does not append the record -- the caller decides when it's ready to save.
+
+    `target_counts` is bio-reference feature counts keyed by "bio:{dataset}:{session_id}"
+    (objective.feature_counts of each ref's summary); pass a precomputed map to avoid
+    recomputing ref signatures on every trial (run_search does this). None recomputes it
+    here as a fallback for direct/manual calls. Generic tasks are compared on the "all"
+    condition against every ref (normally all datasets' references) and get nearest_bio
+    instead of an objective."""
+    run_dir = Path(run_dir)
+    sig = compute_signature(activity, topo)
+    sig_path = run_dir / "signatures" / f"{file_id(record.entry_id)}.npz"
+    save_signature(sig_path, sig)
+    record.signature_file = str(sig_path.relative_to(run_dir))
+    record.summary = signature_summary(sig)
+    record.meta["skipped_conditions"] = sig.skipped
+    if any(c in sig.skipped for c in task.action_names):
+        record.status = "degenerate"
+
+    conditions = [c for c in task.action_names if c in sig.diagrams] if task.bio_match else ["all"]
+    record.distances = split_half_null(activity, list(sig.diagrams), topo)
+    for ref in bio_refs:
+        target = f"bio:{ref.dataset}:{ref.session_id}"
+        record.distances += compare(activity, ref.activity, target, conditions, topo)
+
+    if task.bio_match:
+        counts = target_counts
+        if counts is None:
+            counts = {}
+            for ref in bio_refs:
+                ref_sig = compute_signature(ref.activity, topo)
+                counts[f"bio:{ref.dataset}:{ref.session_id}"] = objective.feature_counts(signature_summary(ref_sig))
+        result_score = objective.score(record.distances, record.summary, counts, weight)
+        if result_score is not None:
+            record.objective_distance = result_score["objective_distance"]
+            record.distance_ratio = result_score["distance_ratio"]
+            record.structure_penalty = result_score["structure_penalty"]
+            record.objective_terms = result_score["objective_terms"]
+            record.objective_version = result_score["objective_version"]
+    else:
+        # D4: generic tasks stay accuracy-only; no structural penalty applies here,
+        # just the closest bio target by raw mean distance.
+        wass = [d for d in record.distances if d.target != "self" and d.metric == "wasserstein"]
+        if wass:
+            by_target = pd.DataFrame([asdict(d) for d in wass]).groupby("target")["distance"].mean()
+            record.nearest_bio = str(by_target.idxmin())
+
+
 def snn_entry(entry_id: str, task: Task, model_cfg: ModelConfig, train_cfg: TrainConfig, topo: TopoConfig,
               bio_refs: list[BioSession], run_dir, device: str, n_eval: int = 340,
               target_counts: dict[str, dict] | None = None,
               weight: float = objective.STRUCTURE_WEIGHT) -> AtlasRecord:
     """Build, train, evaluate and measure one SNN config; always returns (and appends)
-    a record, whatever happens. Matched tasks are compared per action condition against
-    `bio_refs` (their dataset's reference sessions) and get objective_distance from
-    objective.score (null-normalized distance + a structural penalty; see objective.py).
-    `target_counts` is bio-reference feature counts keyed by "bio:{dataset}:{session_id}"
-    (objective.feature_counts of each ref's summary); pass a precomputed map to avoid
-    recomputing ref signatures on every trial (run_search does this). None recomputes it
-    here as a fallback for direct/manual calls (e.g. cli.cmd_snn). Generic tasks are
-    compared on the "all" condition against every ref (normally all datasets'
-    references) and get nearest_bio instead of an objective."""
+    a record, whatever happens. See `measure_activity` for how distances/objective are
+    computed once activity exists."""
     log = get_logger()
     run_dir = Path(run_dir)
     record = AtlasRecord(entry_id=entry_id, kind="snn", source=task.name, status="failed",
@@ -175,41 +224,8 @@ def snn_entry(entry_id: str, task: Task, model_cfg: ModelConfig, train_cfg: Trai
             return record
 
         record.accuracy, activity = evaluate(model, task, n_eval, device)
-        sig = compute_signature(activity, topo)
-        sig_path = run_dir / "signatures" / f"{file_id(entry_id)}.npz"
-        save_signature(sig_path, sig)
-        record.signature_file = str(sig_path.relative_to(run_dir))
-        record.summary = signature_summary(sig)
-        record.meta["skipped_conditions"] = sig.skipped
-        record.status = "degenerate" if any(c in sig.skipped for c in task.action_names) else result["status"]
-
-        conditions = [c for c in task.action_names if c in sig.diagrams] if task.bio_match else ["all"]
-        record.distances = split_half_null(activity, list(sig.diagrams), topo)
-        for ref in bio_refs:
-            target = f"bio:{ref.dataset}:{ref.session_id}"
-            record.distances += compare(activity, ref.activity, target, conditions, topo)
-
-        if task.bio_match:
-            counts = target_counts
-            if counts is None:
-                counts = {}
-                for ref in bio_refs:
-                    ref_sig = compute_signature(ref.activity, topo)
-                    counts[f"bio:{ref.dataset}:{ref.session_id}"] = objective.feature_counts(signature_summary(ref_sig))
-            result_score = objective.score(record.distances, record.summary, counts, weight)
-            if result_score is not None:
-                record.objective_distance = result_score["objective_distance"]
-                record.distance_ratio = result_score["distance_ratio"]
-                record.structure_penalty = result_score["structure_penalty"]
-                record.objective_terms = result_score["objective_terms"]
-                record.objective_version = result_score["objective_version"]
-        else:
-            # D4: generic tasks stay accuracy-only; no structural penalty applies here,
-            # just the closest bio target by raw mean distance.
-            wass = [d for d in record.distances if d.target != "self" and d.metric == "wasserstein"]
-            if wass:
-                by_target = pd.DataFrame([asdict(d) for d in wass]).groupby("target")["distance"].mean()
-                record.nearest_bio = str(by_target.idxmin())
+        record.status = result["status"]
+        measure_activity(record, activity, task, topo, bio_refs, run_dir, target_counts, weight)
     except Exception as e:
         record.status = "failed"
         record.error = f"{type(e).__name__}: {e}"
