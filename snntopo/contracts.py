@@ -105,9 +105,16 @@ class TrainConfig:
 class TopoConfig:
     n_pca: int = 10
     smooth_win: int = 5
-    maxdim: int = 2
+    maxdim: int = 1  # every bio reference session measured (Steinmetz 11, all 3 IBL refs) has
+                      # zero H2 features on "all", so H2 costs real compute (ripser on every
+                      # split-half resample) for no bio target to compare against; --maxdim 2
+                      # re-enables it for exploration
     min_trials: int = 5  # conditions with fewer trials are skipped, not computed on noise
     n_resamples: int = 50  # split-half resamples per significance test; see topology/stats.py for cost
+    metrics: tuple[str, ...] = ("wasserstein",)  # objective.py only ever reads wasserstein
+                      # (objective.METRIC); bottleneck is supported but off by default since it's
+                      # both unread and underpowered (dev/DECISIONS.md D6) -- pass
+                      # --metrics wasserstein bottleneck to compute both
 
 
 @dataclass
