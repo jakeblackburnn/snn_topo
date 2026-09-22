@@ -72,13 +72,13 @@ def plot_comparison_bars(distances: pd.DataFrame, path, dims: tuple[int, ...] = 
     plt.close(fig)
 
 
-def plot_accuracy_distance(entries: pd.DataFrame, path, title: str, pareto_ids: set[str]) -> None:
-    """Plot accuracy against topology objective and mark nondominated entries."""
+def plot_accuracy_distance(entries: pd.DataFrame, path, title: str, best_ids: set[str]) -> None:
+    """Plot accuracy against topology objective and highlight the best feasible entries."""
     fig, ax = plt.subplots(figsize=(6, 5))
     ax.scatter(entries["objective_distance"], entries["accuracy"], color="0.65", label="evaluated")
-    front = entries[entries["entry_id"].isin(pareto_ids)].sort_values("objective_distance")
-    if not front.empty:
-        ax.plot(front["objective_distance"], front["accuracy"], "o-", color="C3", label="Pareto front")
+    best = entries[entries["entry_id"].isin(best_ids)].sort_values("objective_distance")
+    if not best.empty:
+        ax.plot(best["objective_distance"], best["accuracy"], "o-", color="C3", label="best feasible entries")
     ax.set(xlabel="bio topology objective distance (lower is better)", ylabel="accuracy (higher is better)", title=title)
     ax.legend()
     fig.tight_layout()

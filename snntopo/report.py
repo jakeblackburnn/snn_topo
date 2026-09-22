@@ -8,7 +8,10 @@ import pandas as pd
 from .atlas import load_signature_diagrams, read_tables
 from .figures import (plot_accuracy_distance, plot_accuracy_distribution,
                       plot_comparison_bars, plot_signature_diagrams)
+from .search import ACCURACY_FLOOR
 from .tasks import TASKS
+
+N_REPRESENTATIVES = 5
 
 
 def _markdown_table(frame: pd.DataFrame, columns: list[str]) -> str:
@@ -53,18 +56,10 @@ def _signature_table(rows: pd.DataFrame) -> pd.DataFrame:
     return table.sort_values(["entry_id", "condition", "dim"])
 
 
-def _pareto_front(entries: pd.DataFrame) -> pd.DataFrame:
-    """Nondominated rows for maximize-accuracy, minimize-distance objectives."""
-    usable = entries.dropna(subset=["accuracy", "objective_distance"]).copy()
-    keep = []
-    for index, row in usable.iterrows():
-        dominates = ((usable["accuracy"] >= row.accuracy)
-                     & (usable["objective_distance"] <= row.objective_distance)
-                     & ((usable["accuracy"] > row.accuracy)
-                        | (usable["objective_distance"] < row.objective_distance))).any()
-        if not dominates:
-            keep.append(index)
-    return usable.loc[keep].sort_values(["objective_distance", "accuracy"], ascending=[True, False])
+def _best_objective_entries(entries: pd.DataFrame) -> pd.DataFrame:
+    """Lowest-distance matched entries that meet the search accuracy floor."""
+    feasible = entries.dropna(subset=["accuracy", "objective_distance"])
+    return feasible[feasible["accuracy"] >= ACCURACY_FLOOR].sort_values("objective_distance").head(N_REPRESENTATIVES)
 
 
 def _is_matched_task(source: str) -> bool:
@@ -141,21 +136,21 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
     matched = snn[is_matched]
     representatives: dict[str, pd.DataFrame] = {}
     for task, rows in matched.groupby("source"):
-        front = _pareto_front(rows)
-        representatives[task] = front
+        best = _best_objective_entries(rows)
+        representatives[task] = best
         lines.extend([f"## Matched task: {task}", ""])
         scored = rows.dropna(subset=["accuracy", "objective_distance"])
         if not scored.empty:
             name = f"{task}_accuracy_distance.png"
-            plot_accuracy_distance(scored, figures / name, f"{task}: accuracy versus topology", set(front.entry_id))
-            lines.extend([f"![{task} Pareto plot](figures/{name})", ""])
-        lines.extend(["### Pareto front", "", _markdown_table(front, ["entry_id", "accuracy", "objective_distance", "status"])])
+            plot_accuracy_distance(scored, figures / name, f"{task}: accuracy versus topology", set(best.entry_id))
+            lines.extend([f"![{task} objective ranking](figures/{name})", ""])
+        lines.extend(["### Best feasible entries", "", _markdown_table(best, ["entry_id", "accuracy", "objective_distance", "status"])])
 
     generic = snn[~is_matched]
     for task, rows in generic.groupby("source"):
         lines.extend([f"## Generic task: {task}", ""])
         usable = rows.dropna(subset=["accuracy"])
-        representatives[task] = usable.nlargest(5, "accuracy")
+        representatives[task] = usable.nlargest(N_REPRESENTATIVES, "accuracy")
         if not usable.empty:
             name = f"{task}_accuracy_distribution.png"
             plot_accuracy_distribution(usable, figures / name, f"{task}: accuracy distribution")
@@ -166,7 +161,7 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
     if not distances.empty:
         lines.extend([
             "## Distance results", "", "Every distance includes its resampling null mean and p-value (D7). "
-            "This report shows Pareto-front matched entries, the top five generic entries by accuracy, "
+            "This report shows the best feasible matched entries by topology objective, the top five generic entries by accuracy, "
             "and bio split-half rows; the complete table is [`distances.csv`](distances.csv).", "",
         ])
         bio_ids = set(bio["entry_id"])

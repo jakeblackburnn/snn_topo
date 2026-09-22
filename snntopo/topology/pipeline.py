@@ -37,11 +37,11 @@ def unit_diameter(points: np.ndarray) -> tuple[np.ndarray, float]:
     return (points / diameter if diameter > 0 else points), diameter
 
 
-def persistence(points: np.ndarray, maxdim: int) -> list[np.ndarray]:
+def persistence(points: np.ndarray, maxdim: int, threshold: float | None = None) -> list[np.ndarray]:
     """Rips persistence with the full-diameter threshold (local-neighbor thresholds
     truncated genuine large loops in the prototype)."""
     import ripser
-    thresh = float(pdist(points).max())
+    thresh = float(pdist(points).max()) if threshold is None else threshold
     return [np.asarray(d, dtype=np.float64).reshape(-1, 2) for d in ripser.ripser(points, maxdim=maxdim, thresh=thresh)["dgms"]]
 
 
@@ -59,5 +59,5 @@ def compute_signature(activity: Activity, topo: TopoConfig) -> Signature:
             sig.skipped[cond] = "zero-diameter trajectory (no activity variation)"
             continue
         sig.raw_diameter[cond] = diameter
-        sig.diagrams[cond] = persistence(points, topo.maxdim)
+        sig.diagrams[cond] = persistence(points, topo.maxdim, threshold=1.0)
     return sig

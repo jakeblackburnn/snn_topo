@@ -16,6 +16,6 @@ run directories and writes tables, markdown, and figures.
 ## Build versus run
 
 The build supplies registries, contracts, topology, training, search machinery, and
-fast smoke tests. It does not run the wall-clock-limited multi-objective searches or
-long training jobs. Those are a later user-initiated run: each evaluated configuration
-is appended to its atlas directory as it finishes, so interrupted runs remain reportable.
+fast smoke tests. It does not run the wall-clock-limited searches or long training
+jobs. Those are a later user-initiated run: each evaluated configuration is appended to
+its atlas directory as it finishes, so interrupted runs remain reportable.

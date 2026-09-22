@@ -97,15 +97,11 @@ def open_study(task: Task, run_dir: Path, seed: int) -> optuna.Study:
         n_prior = len(optuna.load_study(study_name=task.name, storage=storage).trials)
     # Offset the sampler seed on resume, or it would replay the random draws it
     # already made.
-    if task.bio_match:
-        # TPESampler reads trial.constraints (set via trial.set_constraint in the loop
-        # below) at sampling time regardless of how it was constructed -- no
-        # constraints_func needed (that path is deprecated as of optuna 5.0.0).
-        sampler = optuna.samplers.TPESampler(seed=seed + n_prior)
-        directions = ["minimize"]
-    else:
-        sampler = optuna.samplers.TPESampler(seed=seed + n_prior)
-        directions = ["maximize"]
+    # TPESampler reads trial.constraints (set via trial.set_constraint in the loop
+    # below) at sampling time regardless of how it was constructed -- no
+    # constraints_func needed (that path is deprecated as of optuna 5.0.0).
+    sampler = optuna.samplers.TPESampler(seed=seed + n_prior)
+    directions = ["minimize" if task.bio_match else "maximize"]
     study = optuna.create_study(study_name=task.name, storage=storage, sampler=sampler, directions=directions,
                                 load_if_exists=True)
     # A trial left RUNNING by an interrupted run will never finish.

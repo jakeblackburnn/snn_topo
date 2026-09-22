@@ -75,6 +75,13 @@ def test_signature_is_scale_invariant():
             np.testing.assert_allclose(d1, d2, atol=1e-9)
 
 
+def test_unit_diameter_preserves_zero_diameter_cloud():
+    points = np.ones((4, 3))
+    normalized, diameter = unit_diameter(points)
+    assert diameter == 0
+    np.testing.assert_array_equal(normalized, points)
+
+
 def test_ripser_matches_gudhi():
     points, _ = unit_diameter(np.random.default_rng(0).normal(size=(40, 3)))
     ours = persistence(points, maxdim=2)
