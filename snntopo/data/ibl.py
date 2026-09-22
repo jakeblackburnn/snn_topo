@@ -15,10 +15,33 @@ from ..contracts import Activity, BioSession
 # Public BWM sessions tagged by the release's iblsort rerun.  The loader uses
 # probe00 from each: every probe traverses multiple regions, while one probe per
 # session keeps the source cache to a few GB rather than downloading all probes.
+# 20 sessions, evenly spaced through list_sessions()'s sorted ~459-session release
+# (index i*458//19 for i in range(20)), for a bio-vs-bio reference wide enough to
+# give a meaningful null range rather than 3 sessions' worth of noise. One evenly-spaced
+# pick (index 434, "f5591ac5-...") sits in a run of sessions whose file records point at
+# an S3 host ONE's public client rejects (HTTP_DATA_SERVER mismatch); it and its immediate
+# neighbors all fail the same way, so index 430 ("f359281f-...") stands in for it here.
 REFERENCE_SESSIONS = (
-    "ebce500b-c530-47de-8cb1-963c552703ea",
-    "a7eba2cf-427f-4df9-879b-e53e962eae18",
-    "5ae68c54-2897-4d3a-8120-426150704385",
+    "004d8fd5-41e7-4f1b-a45b-0d4ad76fe446",
+    "0deb75fb-9088-42d9-b744-012fb8fc4afb",
+    "1a507308-c63a-4e02-8f32-3239a07dc578",
+    "25f77e81-c1af-46ab-8686-73ac3d67c4a7",
+    "36280321-555b-446d-9b7d-c2e17991e090",
+    "465c44bd-2e67-4112-977b-36e1ac7e3f8c",
+    "53738f95-bd08-4d9d-9133-483fdb19e8da",
+    "5d6aa933-4b00-4e99-ae2d-5003657592e9",
+    "6a601cc5-7b79-4c75-b0e8-552246532f82",
+    "746d1902-fa59-4cab-b0aa-013be36060d5",
+    "8207abc6-6b23-4762-92b4-82e05bed5143",
+    "90c61c38-b9fd-4cc3-9795-29160d2f8e55",
+    "9e9c6fc0-4769-4d83-9ea4-b59a1230510e",
+    "aa20388b-9ea3-4506-92f1-3c2be84b85db",
+    "be164a14-6e73-42c3-ab60-d29c48693c0f",
+    "d0ea3148-948d-4817-94f8-dcaf2342bbbe",
+    "dd87e278-999d-478b-8cbd-b5bf92b84763",
+    "eacc49a9-f3a1-49f1-b87f-0972f90ee837",
+    "f359281f-6941-4bfd-90d4-940be22ed3c3",
+    "ffef0311-8ffa-49e3-a857-b3adf6d86e12",
 )
 BIN_SIZE_S = 0.01
 N_BINS = 200

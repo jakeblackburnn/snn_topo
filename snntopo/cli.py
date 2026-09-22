@@ -34,8 +34,29 @@ def cmd_bio(args):
     run_dir = Path(args.out)
     setup_logging("bio", run_dir / "logs")
     sessions = args.session or list(DATASETS[args.dataset].reference_sessions)
+    # Cross-dataset siblings (e.g. Allen vs Steinmetz/IBL): loaded once, compared
+    # against every --dataset session below.
+    compare_refs = [load_session(d, s) for d in (args.compare_dataset or [])
+                     for s in DATASETS[d].reference_sessions]
     for s in sessions:
-        bio_entry(load_session(args.dataset, s), topo_from_args(args), run_dir)
+        bio_entry(load_session(args.dataset, s), topo_from_args(args), run_dir, compare_refs)
+    write_tables(run_dir)
+
+
+def cmd_baseline(args):
+    """Every bio dataset's reference-session signatures in one run, fully cross-compared
+    -- the single-command version of the E4-style validity check (is Allen's topology
+    distance from Steinmetz/IBL inside or outside the IBL-vs-IBL bio-vs-bio range)."""
+    run_dir = Path(args.out)
+    setup_logging("baseline", run_dir / "logs")
+    topo = topo_from_args(args)
+    processed = []  # compare() is symmetric, so only already-processed sessions (across
+                    # all datasets) are passed as siblings, per bio_entry's docstring (D18)
+    for name, entry in DATASETS.items():
+        for s in entry.reference_sessions:
+            session = load_session(name, s)
+            bio_entry(session, topo, run_dir, list(processed))
+            processed.append(session)
     write_tables(run_dir)
 
 
@@ -81,9 +102,16 @@ def main(argv=None):
     b = sub.add_parser("bio", help="compute bio atlas entries")
     b.add_argument("--dataset", required=True, choices=list(DATASETS))
     b.add_argument("--session", action="append", help="session id (repeatable); default: reference sessions")
+    b.add_argument("--compare-dataset", action="append", choices=list(DATASETS),
+                   help="also compare --dataset sessions against this dataset's reference sessions (repeatable)")
     b.add_argument("--out", default=str(RESULTS_DIR / "bio"))
     add_topo_args(b)
     b.set_defaults(fn=cmd_bio)
+
+    bl = sub.add_parser("baseline", help="every bio dataset's reference sessions, fully cross-compared")
+    bl.add_argument("--out", default=str(RESULTS_DIR / "baseline"))
+    add_topo_args(bl)
+    bl.set_defaults(fn=cmd_baseline)
 
     s = sub.add_parser("snn", help="train and measure one SNN config")
     s.add_argument("--task", required=True, choices=list(TASKS))

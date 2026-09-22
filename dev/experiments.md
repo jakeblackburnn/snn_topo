@@ -154,3 +154,15 @@ the corrected objective for a direct E1 comparison.
 **Next:** re-derive `structure_weight` at `n_pca=20` via `snntopo rescore` (no GPU needed); a
 comparable full-budget steinmetz_2afc run under the corrected objective, both for direct E1
 comparison and to check if the modular convergence seen here also happens on that dataset.
+
+## Baseline widening (bio reference session count) · 2026-09-22
+`ibl.REFERENCE_SESSIONS` widened 3 -> 20 (evenly spaced through `list_sessions()`'s sorted
+~459-session release; 1 of 20 failed to load on a bad S3 host record and was swapped for its
+nearest working neighbor — 19/20 of the original picks loaded). `snntopo baseline --out
+results/baseline-wide` (new command, cross-compares every bio dataset's reference sessions
+against every other, `distances.csv`/`entries.csv`): within-IBL wasserstein ratio range widened,
+not tightened, going from 3 to 20 sessions (190 pairs x 3 conditions = 570 rows/dim) — H0
+0.851-15.402 (was 1.32-10.27 at n=3), H1 0.941-14.313 (was 1.51-3.40 at n=3). Allen-vs-Steinmetz
+("all" condition, 1 pair): H0 ratio 7.983 (p<0.05), H1 ratio 2.052 (p<0.05). Allen-vs-IBL ("all"
+condition, 20 pairs): H0 range 1.945-13.877 (mean 8.394, 19/20 p<0.05), H1 range 1.242-4.327
+(mean 2.143, 3/20 p<0.05) — both ranges sit inside the widened within-IBL range above.

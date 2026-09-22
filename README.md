@@ -15,6 +15,8 @@ pip install -e .[test]
 
 ```sh
 snntopo bio --dataset steinmetz --out results/bio
+snntopo bio --dataset allen --compare-dataset steinmetz --compare-dataset ibl --out results/bio-allen
+snntopo baseline --out results/baseline
 snntopo snn --task steinmetz_2afc --out results/snn-mini
 snntopo search --task T --budget-hours H --out DIR
 snntopo report --run results/bio --run results/search-T --out results/report
