@@ -263,3 +263,59 @@ this only adds a second reported baseline for interpreting the distance, not a n
 **Revisit if:** more bio reference sessions become available per dataset and the bio-vs-bio
 distribution needs recomputing; or if bio-vs-bio distance turns out unstable enough (e.g.
 new sessions land far outside the 3-session range) that it's not a reliable yardstick.
+**Revisited 2026-09-22:** triggered — see D20.
+
+## D19 · 2026-09-22 · Controls (untrained SNN, shuffled bio) are first-class atlas records
+**Decision:** Add `snntopo/controls.py` (`untrained`, `shuffled`) and `atlas.control_entry()`,
+using the same `measure_activity()` tail `snn_entry` uses, so a control's distances/objective
+are computed identically to a real trial and land in the same `atlas.jsonl`/`entries.csv` with
+`kind="control"`. `rescore()` still filters to `kind == "snn"` — controls are diagnostic floors,
+not search trials, and don't get re-optimized.
+**Why:** no experiment run so far (E1-E3) had measured a floor. E2/E3's headline claim — SNN
+configs land inside the bio-vs-bio range — has no meaning without knowing whether *nothing*
+(an untrained network, or bio with its own cross-neuron structure destroyed) also lands there.
+It does (E4): untrained objective_distance 9.5-14.4 and shuffled-bio 5.3-10.8 both fall inside
+E3's trained-SNN range (6.45-9.53 by arch median).
+**Rejected:** computing controls ad hoc per analysis script instead of as atlas records — would
+have made every future run redo this by hand instead of `snntopo control --kind ...` once.
+**Revisit if:** the measurement is fixed per D20's Next steps and controls need re-running to
+confirm the floor moves with it.
+
+## D20 · 2026-09-22 · The bio-vs-bio range is not currently a valid yardstick (D18, revisited)
+**Decision:** Do not treat "an SNN config's distance falls inside the bio-vs-bio range" as
+supporting evidence until the measurement passes a discriminative-validity check. E2/E3's
+"supported" conclusions stand as historical record but are **not** confirmation the SNN family
+can produce bio-like topology — they're pending re-derivation.
+**Why:** E4, preregistered before running: Allen Visual Coding (passive viewing, no
+choice/reward, deliberately a different paradigm from 2AFC) was compared against Steinmetz/IBL
+for the first time this session. Both Allen-vs-Steinmetz (H0 7.983, H1 2.052) and Allen-vs-IBL
+(H0 mean 8.394, H1 mean 2.143) land entirely inside the within-IBL bio-vs-bio range (H0
+0.851-15.402, H1 0.941-14.313, n=20 sessions) despite being individually significant against the
+split-half null. Widening the IBL reference set 3->20 widened this range, not tightened it. D19's
+controls corroborate: untrained and shuffled-bio both land in the same range trained SNNs do.
+Three independent checks (Allen, untrained, shuffled) all say the same thing: this range doesn't
+separate bio-like from not-bio-like at the current `n_pca`/metric/sample size.
+**Rejected:** discarding the atlas/search infrastructure — the pipeline (contracts, registries,
+significance testing, search harness) is sound; the specific distance range built on top of it
+isn't validated yet. Also rejected: quietly re-deriving `structure_weight` or re-running the
+search at higher budget before fixing this — either would produce a result this same gap makes
+uninterpretable.
+**Revisit if:** a candidate fix (tighter session matching, a less nuisance-dominated
+metric/normalization, a power analysis at the current `n_resamples`) passes the same Allen
+contrast E4 used, i.e. Allen lands **outside** the bio-vs-bio range on both H0 and H1.
+
+## D21 · 2026-09-22 · Default `maxdim=1`, wasserstein-only metrics
+**Decision:** `TopoConfig.maxdim` default 2 -> 1; new `TopoConfig.metrics` field defaults to
+`("wasserstein",)`. Both remain overridable (`--maxdim 2`, `--metrics wasserstein bottleneck`).
+**Why:** H2 is empty (`_H2_n == 0`) at every bio reference session measured at `n_pca=10` —
+Steinmetz session 11 and all IBL references — so computing it (the most expensive dim, run on
+every split-half resample) buys nothing for the bio comparison it exists to support. Bottleneck
+distance was computed for every dim/resample but `objective.py`'s `METRIC` has only ever read
+wasserstein, and bottleneck is underpowered where measured (E1: H1 bottleneck 2.31 ratio / 2%
+significant vs. H1 wasserstein 2.58 / 96%). Measured effect: topology-only cost ~4-5x faster,
+per-trial wall clock ~2.4-3x faster.
+**Rejected:** deleting H2/bottleneck support entirely — D6's 2026-09-20 status found H2 goes
+nonzero at `n_pca>=20` on some cells, so it's a default change for the package's `n_pca=10`
+default, not a claim H2 is worthless in general.
+**Revisit if:** a run at `n_pca>=20` (or a different bio dataset) shows H2 reliably nonzero and
+informative enough to justify its cost as the default rather than an opt-in.

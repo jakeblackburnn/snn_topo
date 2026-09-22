@@ -216,3 +216,45 @@ not tightened, going from 3 to 20 sessions (190 pairs x 3 conditions = 570 rows/
 ("all" condition, 1 pair): H0 ratio 7.983 (p<0.05), H1 ratio 2.052 (p<0.05). Allen-vs-IBL ("all"
 condition, 20 pairs): H0 range 1.945-13.877 (mean 8.394, 19/20 p<0.05), H1 range 1.242-4.327
 (mean 2.143, 3/20 p<0.05) — both ranges sit inside the widened within-IBL range above.
+
+## E4 · 2026-09-22 · held-out discriminative-validity check (Allen contrast) · status: done
+**Hypothesis, preregistered before the run:** the objective (`objective.py`) never sees Allen
+Visual Coding — it's passive viewing with no choice/reward, deliberately unmatched to the 2AFC
+task family, included from the start as a contrast (`dev/context/research.md`). E2/E3's entire
+"support" result rests on SNN configs landing inside the IBL-vs-IBL bio-vs-bio distance range;
+that range is only a meaningful bar if it excludes something that obviously isn't bio-2AFC-like.
+**Criterion, fixed in advance:** the topology signature has discriminative validity iff
+`distance(allen, 2AFC-bio) > distance(2AFC-bio, 2AFC-bio)` on both H0 and H1, beyond the
+split-half null. Landing inside the range = FAIL — the range is noise, not a bar.
+**Run:** `snntopo baseline --out results/baseline-wide` (widened to 20 IBL references; see the
+baseline-widening note above for the full numbers this reads from).
+**Result: FAIL.** Allen-vs-Steinmetz (H0 ratio 7.983, H1 ratio 2.052) and Allen-vs-IBL (H0 mean
+8.394, range 1.945-13.877; H1 mean 2.143, range 1.242-4.327) both sit **entirely inside** the
+within-IBL bio-vs-bio range (H0 0.851-15.402, H1 0.941-14.313) — despite being individually
+significant versus the split-half null (p<0.05) on both dims. A dataset that is not the same
+task, not the same choice structure, not the same reward loop, lands in the same distance range
+two IBL sessions land in relative to each other.
+**Corroborating, from the controls workstream (same session):** an untrained SNN (no training at
+all) scores objective_distance 9.5-14.4 on `ibl_2afc` (n=3, small model) — inside the range of
+E3's *trained* arch medians (feedforward 9.53, recurrent 7.55, modular 6.45). A shuffled-bio
+control (cross-neuron structure destroyed, per-neuron rate preserved) scores 5.3-10.8 (n=3) —
+also inside E3's trained-SNN range. Neither control was expected to look bio-like; both do, by
+the same measure E2/E3 used to claim SNNs do.
+**Takeaway: the bio-vs-bio range has no demonstrated discriminative power at the current
+population size, `n_pca`, and metric.** It doesn't separate a categorically different bio
+paradigm (Allen) from within-dataset variability, and it doesn't separate untrained networks or
+shuffled bio from trained ones. E2/E3's "support" conclusion — SNN configs land inside the range
+real animals differ by — is not evidence of anything under this reading; it would have been
+satisfied by noise. This does not mean the SNN family can't be made bio-like, or that D3's
+modular hypothesis is wrong — the E3 modular-architecture convergence may still be a real signal
+about *what the search prefers*, independent of whether "prefers" means anything biologically.
+It means the current measurement can't yet tell the difference.
+**Next:** before spending more GPU on search, the measurement needs to actually discriminate —
+candidates, not yet evaluated: (a) a distance metric/normalization less dominated by session-level
+nuisance variance (the within-IBL range widened, not tightened, at 4x the reference sessions,
+suggesting the noise floor itself scales with something other than sampling error); (b) restrict
+the bio-vs-bio comparison to sessions matched on region coverage/trial count, rather than any two
+brain-wide-map sessions; (c) a proper power analysis of what effect size this pipeline could
+detect at n_resamples=50, given E1 already flagged effects below ~2x the null mean are often
+missed. The fourth Next item from E3 (full-budget `steinmetz_2afc` search) should wait behind
+this — running it now would produce a result this same validity gap would make uninterpretable.

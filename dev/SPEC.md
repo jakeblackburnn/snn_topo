@@ -20,7 +20,11 @@ architecture family exists to test exactly that (D3).
 
 The goal is to find SNN configurations that are both performant and topologically
 bio-like, and to characterise how and where topology diverges when no single configuration
-is both.
+is both. In practice, accuracy saturates near-ceiling on every matched task tried so far and
+carries no gradient once it does — D17 made it a feasibility floor rather than a traded-off
+objective, so the search is single-objective (minimize bio-topology distance) subject to
+clearing that floor, not a Pareto search over the two. See "Validity" below before treating
+any distance result as evidence either way.
 
 ## Boundary: this package is the instrument, not the experiment
 
@@ -46,7 +50,7 @@ task's `action_names` must equal its dataset's condition names.
 | dataset | reference sessions | conditions |
 | --- | --- | --- |
 | `steinmetz` | 1 (session 11) | all / left / right, split by the animal's choice |
-| `ibl` | 3 (of 459 brain-wide-map sessions) | all / left / right |
+| `ibl` | 20 (of 459 brain-wide-map sessions, D20 2026-09-22) | all / left / right |
 | `allen` | 1 (719161530) | all + one per drifting-grating orientation |
 
 Steinmetz loads from the NMA `.npz` parts; IBL through the ONE API against public
@@ -84,8 +88,14 @@ still recorded per entry, since bio counts per 10 ms bin versus SNN 0/1 spikes p
 inflated the prototype's H0 gap on scale alone.
 
 ### Atlas (`snntopo/atlas.py`)
-`bio_entry()` and `snn_entry()` are the two producers, and every evaluated config becomes a
-record — including degenerate, failed and timed-out ones. Per run directory:
+`bio_entry()`, `snn_entry()` and `control_entry()` (D19) are the three producers, and every
+evaluated config becomes a record — including degenerate, failed, timed-out, and control ones.
+`snn_entry` and `control_entry` share `measure_activity()`'s signature/distance/objective tail;
+`control_entry` skips training (`snntopo/controls.py`: `untrained` builds a model and evaluates
+it unfit; `shuffled` destroys cross-neuron structure in an existing Activity via a per-neuron
+circular time-shift). `snntopo control --kind {untrained,shuffled}` measures either from the
+CLI; `snntopo baseline` computes every bio dataset's reference signatures fully cross-compared
+(the source of the E4 check — see Validity). Per run directory:
 `atlas.jsonl` (append-only, crash-safe), `signatures/<id>.npz`, `curves/<id>.csv`, and
 flattened `entries`/`distances` CSV + Parquet.
 
@@ -100,7 +110,7 @@ crashes the study nor invents a number — see the module docstring for the stat
 
 ### Reports (`snntopo/report.py`, `snntopo/figures.py`)
 `write_report()` merges any number of run directories into combined tables, a static
-`report.md` and PNG figures. Distance detail is bounded to Pareto-front and top-accuracy
+`report.md` and PNG figures. Distance detail is bounded to best-by-objective and top-accuracy
 entries plus bio split-half rows; the complete table stays in `distances.csv`.
 
 ## Done when
@@ -108,15 +118,15 @@ entries plus bio split-half rows; the complete table stays in `distances.csv`.
 Every item below was checked against a real command and its output on 2026-09-19, except
 where noted (updated 2026-09-21 for D17/D18's corrected objective).
 
-- [x] Installable package with bio-dataset, model and task registries — `pip show snntopo` → 2.0.0 editable; all four subcommands ran; registries listed above.
+- [x] Installable package with bio-dataset, model and task registries — `pip show snntopo` → 2.0.0 editable; all seven subcommands (`bio`, `baseline`, `snn`, `control`, `search`, `report`, `rescore`) ran; registries listed above.
 - [x] H0/H1/H2 persistence with both Wasserstein and bottleneck distance — `tests/test_topology.py`.
 - [x] Every bio dataset has a stored characteristic signature — `snntopo bio --dataset {steinmetz,ibl,allen}` → 5 entries ok.
 - [x] Single-objective search (D17) proven end-to-end, including at full budget — matched-task mini-runs (`--n-trials 4 --n-updates 300`: steinmetz_2afc 4 ok; ibl_2afc 3 ok + 1 degenerate) plus full 2h `ibl_2afc` runs (E2 mini at 17 trials, E3 at 77 trials/62 ok — see `dev/experiments.md`).
 - [x] Generic tasks run single-objective with topology still recorded — `nback` mini-run: `objective_distance` empty, `nearest_bio` set, 300 distance rows over 6 targets.
 - [x] Significance testing backs every reported distance — every `DistanceResult` carries `null_mean`, `null_q95`, `p_value`, `n_resamples`.
 - [x] Atlas as structured data plus generated reports, no dashboard — `report.md` (631 lines) + 9 figures + CSV/Parquet.
-- [x] IBL ONE API auth and a working loader — 459 brain-wide-map sessions listed, 3 loaded.
-- [x] Tests, docs and registry extension points — `pytest -q` → 101 passed, 7 deselected; `pytest -m data` → 7 passed; `README.md`, `docs/architecture.md`.
+- [x] IBL ONE API auth and a working loader — 459 brain-wide-map sessions listed, 20 loaded (D20 2026-09-22, widened from 3).
+- [x] Tests, docs and registry extension points — `pytest -q` → 109 passed, 7 deselected (2026-09-22); `pytest -m data` → 7 passed; `README.md`, `docs/architecture.md`.
 - [x] `dev/` populated — this file, `DECISIONS.md`, `journal.md`, `experiments.md`.
 
 ## Out of scope
@@ -124,13 +134,36 @@ where noted (updated 2026-09-21 for D17/D18's corrected objective).
 Interactive dashboard or viewer. Running the full experiment suite. A fourth
 (motor/reaching) bio dataset — a plausible extension, not built now.
 
+## Validity
+
+D20 (2026-09-22): **the bio-vs-bio distance range is not currently a validated yardstick.**
+E4 preregistered a held-out check the search objective never sees — Allen Visual Coding
+(passive viewing, no choice/reward) compared against Steinmetz/IBL — and it failed: Allen's
+distance from 2AFC bio lands entirely inside the range two IBL sessions land in relative to
+each other, on both H0 and H1, despite each being individually significant against the
+split-half null. D19's controls corroborate: an untrained SNN and a shuffled-bio surrogate
+(cross-neuron structure destroyed) both land in the same range trained SNNs do (E3). Widening
+the IBL reference set 3→20 sessions widened the range, not tightened it.
+
+**Practical consequence**: don't cite "an SNN config's distance fell inside the bio-vs-bio
+range" (E2, E3) as evidence the SNN family can produce bio-like topology. Those results stand
+as historical record, not confirmation. `snntopo control` (D19) and `snntopo baseline`
+(cross-dataset comparison) exist so any future distance claim can be checked against a floor
+before being reported. See `dev/experiments.md` E4 and `dev/DECISIONS.md` D18/D20 for the full
+numbers and candidate next steps (tighter session matching, a less nuisance-dominated distance
+normalization, a power analysis at the current `n_resamples`).
+
 ## Known limits before a full run
 
 - **nback sat at chance** across a 300-update mini-run. Working-memory tasks need far more
   updates than the 2AFC pair; budget accordingly.
-- **H2 is empty** (zero features) for every bio condition at `n_pca=10`. D6 anticipated
-  this as a reason to drop H2 later rather than carry dead weight.
+- **H2 is dropped from the default** (`maxdim=1`, D21) — it was empty for every bio condition
+  measured at `n_pca=10`. Still available via `--maxdim 2` (e.g. at `n_pca>=20`, where D6 found
+  it sometimes goes nonzero).
+- **Bottleneck distance is opt-in** (`--metrics wasserstein bottleneck`, D21) — never read by
+  `objective.py` and underpowered where measured (E1).
 - **Significance power**: effects below roughly 2× the null mean are often missed at
   `n_resamples=50`.
-- Timing: about 13 s per 300 updates plus about 40 s of topology per trial, so a one-hour
-  budget on a matched task lands near 25–30 trials.
+- Timing: about 13–18 s of training per 200-300 updates plus about 12–15 s of topology per
+  trial under the current defaults (D21; was ~40 s before), so a one-hour budget on a matched
+  task lands well above the original 25–30-trial estimate.
