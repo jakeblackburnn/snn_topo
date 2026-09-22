@@ -319,3 +319,56 @@ nonzero at `n_pca>=20` on some cells, so it's a default change for the package's
 default, not a claim H2 is worthless in general.
 **Revisit if:** a run at `n_pca>=20` (or a different bio dataset) shows H2 reliably nonzero and
 informative enough to justify its cost as the default rather than an opt-in.
+
+## D22 · 2026-09-22 · Region-matching (D20 candidate b) rejected; D20 stands
+**Decision:** shared brain-region coverage is not the fix for D20's discriminative-validity gap.
+Do not adopt region-matched reference sessions as the bio-vs-bio yardstick. D20's block on
+full-budget `steinmetz_2afc` search stays in place.
+**Why:** E5 (preregistered before computing): restricting the bio-vs-bio range to the 48 of 231
+session pairs sharing ≥1 normalized brain region barely narrowed it (H0 ratio [0.955, 13.457] vs.
+unrestricted [0.898, 14.246]; H1 [0.966, 12.695] vs. [0.943, 14.313]), and Allen's ratios
+(7.98-9.32 H0, 2.05-2.21 H1) still land in the middle of it, not outside — FAIL by the same
+criterion E4 used. A power check (matched-pair `null_q95/null_mean` median ~2.0-2.2, well below
+both Allen's ratios and the matched range's own mean) rules out "underpowered" as the reason —
+this is a genuine absence of separation, which also answers D20 candidate (c) (power analysis):
+not the bottleneck. Sessions sharing actual regions down to CA1/DG still vary by more than Allen
+differs from 2AFC bio, so the nuisance variance isn't primarily about which regions were sampled.
+**Rejected:** loosening the matching threshold to search for a rule that does narrow the range —
+would be tuning the criterion to the answer after seeing it, the exact thing E4/E5's
+preregistration discipline exists to prevent.
+**Revisit if:** candidate (a) (a normalization/metric less dominated by session-level nuisance
+variance — per-session unit count spans 32-698, a 20x range, and was never controlled for) is
+tried and narrows the range enough for Allen to land outside it on both H0/H1.
+
+## D23 · 2026-09-22 · Unit-count matching narrows H1 substantially but not enough; D20 stands
+**Decision:** unit-count is a real nuisance-variance driver (D22's revisit condition, tested) —
+but only for H1, and not enough on its own. D20's block on full-budget `steinmetz_2afc` search
+stays in place. Do not adopt unit-count-matched sessions as the bio-vs-bio yardstick by itself.
+**Why:** E6 (preregistered before running): subsampling every bio session to a fixed n=50 units
+(21 of 22 sessions kept, 1 dropped below threshold) narrowed the within-IBL H1 ratio range's max
+from 14.313 to 5.278 (63%) — a genuine, large effect — but barely moved H0's max (14.246 to
+11.792, 17%). Allen's ratios (H0 7.98-9.32, H1 2.05-2.73) still land inside both narrowed ranges,
+comfortably on H0, and on H1 despite the big narrowing (Allen's H1 mean 2.24 is under half the
+matched max 5.278). Net: FAIL by the same criterion as E4/E5, but the H1 result is the first
+positive signal in three attempts (D18/D20 region-matching, D22, D23) that *some* nuisance axis
+moves the range at all.
+**Rejected:** treating H1's narrowing as sufficient on its own to unblock search — the criterion
+(preregistered, same as E4) requires both dims to pass; H1 alone does not meet it, and H0's near-
+total insensitivity to unit-count means whatever dominates H0 is still unaddressed.
+**Revisit if:** a trial-count-matched or trial+unit-jointly-matched range (same session set,
+already downloaded — no new ONE calls) is tried and narrows H0 similarly to how unit-count
+narrowed H1; or a distance-construction change (candidate (a) proper) is tried instead.
+
+## D24 · 2026-09-22 · D23 confirmed robust across 5 independent subsample draws
+**Decision:** no change to D23/D20 — this closes the "was it a fluke of one seed" question D23
+left open, in D23's favor.
+**Why:** E7: repeated E6's n=50 unit-count-matching procedure at 4 more independent seeds
+(1300.4s total, ~22 min). Across all 5 seeds (E6's original 0, plus 1-4): H0 within-IBL max is
+tight (mean 12.230, range [11.614, 13.811]) — unit-count's near-null effect on H0 is a stable
+property, not seed noise. H1 within-IBL max is noisier (mean 5.560, range [3.075, 8.530]) but
+never approaches the original unmatched value (14.313) in any seed — the narrowing itself is
+robust even though its exact magnitude varies. 0 of 5 seeds passed the Allen discriminative-
+validity check on either dim.
+**Rejected:** nothing new — this run doesn't introduce a new candidate, it verifies D23's.
+**Revisit if:** the planned trial-count check (E6/E7's "Next") is tried and needs the same
+seed-robustness treatment before being trusted on a single draw.

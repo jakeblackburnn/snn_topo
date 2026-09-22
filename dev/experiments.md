@@ -258,3 +258,153 @@ brain-wide-map sessions; (c) a proper power analysis of what effect size this pi
 detect at n_resamples=50, given E1 already flagged effects below ~2x the null mean are often
 missed. The fourth Next item from E3 (full-budget `steinmetz_2afc` search) should wait behind
 this — running it now would produce a result this same validity gap would make uninterpretable.
+
+## E5 · 2026-09-22 · region-matched bio-vs-bio range (D20 candidate b) · status: done
+**Hypothesis, preregistered before computing:** E4's bio-vs-bio range mixes session pairs with
+almost disjoint brain-region coverage (IBL sessions range 32-288 units, spanning visual cortex,
+hippocampus, midbrain, cerebellum, striatum with little pairwise overlap) as if they were
+comparable replicates. If that region mismatch — not sampling noise — is what's inflating the
+range (D20: "widened, not tightened, at 4x sessions"), then restricting the bio-vs-bio yardstick
+to region-matched session pairs should narrow it enough for Allen to land outside on both H0/H1,
+where the unrestricted range does not (E4: FAIL).
+**Matching rule, fixed in advance:** for each bio session, normalize `meta.brain_regions`
+(Allen CCF acronyms) by stripping layer suffixes (regex `[0-9]+(/[0-9]+)?[ab]?$`, e.g.
+`VISam2/3`→`VISam`, `RSPd6a`→`RSPd`) and dropping fiber-tract/non-region entries (fully-lowercase
+acronyms, `void`, `root`). Two sessions are a **matched pair** iff their normalized region sets
+have non-empty intersection. The matched bio-vs-bio range = wasserstein H0/H1 distances
+(condition `all`) over all matched pairs among the 22 cached `results/baseline-wide/` sessions —
+symmetric, not restricted to pairs involving Steinmetz/Allen specifically.
+**Criterion, fixed in advance:** same as E4 — PASS iff both Allen-vs-Steinmetz and Allen-vs-IBL
+distances land entirely above the matched range's max on H0 and H1. Landing inside on either =
+FAIL. Separately (not gating pass/fail, diagnostic only): report the min detectable distance
+ratio implied by existing `null_q95`/`null_mean` at `n_resamples=50` for the matched pairs, to
+say whether a FAIL would be power-limited or a genuine absence of separation.
+**Data:** no new session loads or training — reanalysis of `results/baseline-wide/{entries,
+distances}.csv` (E4's cached all-pairs run) only.
+**Run:** normalized `meta.brain_regions` for all 22 cached sessions (layer-suffix strip, drop
+fiber-tract/lowercase acronyms and `void`/`root`); found 48 of 231 possible session pairs share
+≥1 normalized region (steinmetz shares with 9 IBL sessions; allen with only 2 IBL sessions,
+`6a601cc5` on VISam and `90c61c38` on VISp, plus steinmetz on VISam+VISp). Distances pulled from
+the cached triangular `distances.csv` (all 48 pairs had a cached row; no gaps).
+**Result: FAIL, and not power-limited.**
+- Matched bio-vs-bio range: H0 ratio [0.955, 13.457] (n=48, mean 5.32), H1 ratio [0.966, 12.695]
+  (mean 1.84) — barely narrower than the unrestricted all-pairs range (H0 [0.898, 14.246], H1
+  [0.943, 14.313]). Region-matching removed almost none of the spread.
+- Allen-vs-bio ratios (H0: Steinmetz 7.983, IBL-VISam 8.958, IBL-VISp 9.321; H1: 2.052/2.151/2.208)
+  land in the *middle* of the matched range, not the edges — several matched IBL-IBL pairs exceed
+  Allen's ratios on both dims (e.g. `d0ea3148`↔`746d1902` H0=13.457 despite sharing 8 regions
+  including CA1/DG; `steinmetz`↔`746d1902` H0=9.353 despite sharing CA1). PASS required Allen's
+  ratios to sit entirely above the matched range's max on both dims — they don't, on either.
+- Power check: matched-pair `null_q95/null_mean` median 2.05 (H0) / 2.16 (H1), range
+  [1.49, 4.24]. Allen's ratios (7.98-9.32 H0, 2.05-2.21 H1) are well above this detectability
+  floor, as is most of the matched bio-vs-bio range itself (mean ratio 5.32 H0) — the range is
+  wide because bio-vs-bio pairs are *genuinely, significantly* variable at this `n_pca`/metric,
+  not because the test lacks power to resolve them. A FAIL here means real absence of separation,
+  not an underpowered null.
+**Takeaway:** candidate (b) rejected — shared brain-region coverage is not the dominant nuisance
+source behind the wide bio-vs-bio range. Sessions sharing actual regions (down to CA1/DG overlap)
+still differ by more than Allen differs from 2AFC bio. The D19 controls (untrained 9.5-14.4,
+shuffled 5.3-10.8 objective_distance, not recomputed here — no local raw data for that run) were
+already consistent with this: they overlap the *unrestricted* range too, and now also overlap the
+region-matched one. Two of D20's three candidates remain: (a) a normalization/metric less
+dominated by session-level nuisance variance, (c) a power analysis — but (c) is now answered by
+this run's power check (not power-limited), so the live candidate is (a), or a matching axis other
+than region identity (e.g. unit count, recording quality, or something not in `meta` at all).
+**Next:** try candidate (a) — the raw wasserstein distance is dominated by something that has
+nothing to do with which regions were recorded (per-session unit count 32-698 is a 20x spread and
+was never controlled for; worth checking first, being the cheapest to test, before a new metric).
+If a per-unit-count-normalized or -matched analysis doesn't tighten the range either, that's
+evidence the instrument itself (not the reference-session selection) needs to change.
+
+## E6 · 2026-09-22 · unit-count-matched bio-vs-bio range (D20/D22 candidate a) · status: done
+**Hypothesis, preregistered before running:** per-session unit count is a 20x, uncontrolled
+spread across the 22 cached bio sessions (32-698 units) and a more direct driver of raw
+wasserstein-distance magnitude than region identity (E5 ruled out region overlap). Subsampling
+every session's activity to a fixed n=50 units before computing topology should narrow the
+bio-vs-bio range enough for Allen to land entirely outside it on both H0/H1.
+**Matching rule, fixed in advance:** for every bio session with `meta.n_units >= 50`, subsample
+exactly 50 neurons (fixed seed per session, `np.random.default_rng(0)`, without replacement,
+before any other processing). Sessions with `meta.n_units < 50` are dropped (only
+`bio:ibl:f359281f-...` at 32 units qualifies) rather than backfilled or padded. 21 of 22 sessions
+retained: Steinmetz, Allen, 19 IBL.
+**Criterion, fixed in advance:** identical to E4/E5 — PASS iff Allen-vs-Steinmetz and
+Allen-vs-IBL wasserstein ratios (distance/null_mean, condition `all`) land entirely above the
+matched bio-vs-bio range's max on both H0 and H1. Landing inside on either dim = FAIL.
+**Run:** reuses `snntopo/atlas.py:bio_entry`/`compare` unmodified (current `TopoConfig` defaults:
+n_pca=10, maxdim=1, wasserstein-only, n_resamples=50, D21) on pre-subsampled `Activity` objects,
+via a standalone script (no package changes) — mirrors `cli.py:cmd_baseline`'s all-pairs loop.
+Raw data for 19 of the 20 IBL reference sessions required a fresh ONE download (not cached in
+this checkout — the E4/E5 cache lived in a now-cleaned-up subagent worktree). Output:
+`results/baseline-matched-n50/`. Downloads + topology finished in 703.9s (~11.7 min) — much
+faster than E4's ~1h37m, mostly D21's maxdim=1/wasserstein-only defaults (that run predated D21
+and used maxdim=2 + both metrics) plus smaller point clouds at n=50 units.
+**Note on scoring:** "the range" must be strict within-IBL pairs only (excludes Steinmetz and
+Allen), matching E4's original definition — Allen-vs-Steinmetz and Allen-vs-IBL are the test
+statistics, not part of the yardstick. An earlier draft of this analysis (and of E5) pooled
+Allen-involving pairs into the candidate range before separately extracting the same pairs as the
+test statistic; re-checked both under the strict definition — it changed E6's H0 max by 0.15 and
+nothing else, so neither result's conclusion depends on the distinction, but the strict
+definition is what's reported below and should be used going forward.
+**Result: FAIL, but with a real partial effect on H1.**
+- n=50 within-IBL range (n=171 pairs): H0 [0.919, 11.792] (mean 5.28), H1 [0.964, 5.278]
+  (mean 1.75).
+- Original-units within-IBL range (baseline-wide, recomputed under the same strict definition):
+  H0 [0.898, 14.246], H1 [0.943, 14.313].
+- **H1 max dropped 14.313 → 5.278, a 63% narrowing** — unit-count is a real, substantial driver
+  of H1's nuisance variance. **H0 max barely moved, 14.246 → 11.792 (17%)** — unit-count is
+  nearly irrelevant to H0's spread.
+- Allen-vs-Steinmetz: H0=8.747, H1=2.075. Allen-vs-IBL (n=19): H0 [0.902, 11.942] (mean 8.95),
+  H1 [0.955, 2.727] (mean 2.24). Both still land inside the matched range on both dims — H0
+  comfortably (near the range's own upper half), H1 also inside despite the range's big
+  narrowing (Allen's H1 mean 2.24 is still under half the matched range's max 5.278).
+**Takeaway:** unit-count is *a* real nuisance-variance driver — the strongest single lever found
+across E5/E6, and enough to cut H1's spread by more than half — but not sufficient alone, and it
+explains almost none of H0's spread. Two live threads: (1) H0 needs a different lever entirely
+(trial count, which was never controlled and varies 420-1014 across cached sessions — a ~2.4x
+spread, smaller than the unit-count spread but untested; or the raw-diameter normalization,
+D21's comment notwithstanding); (2) even a further-narrowed H1 range (say, matching both unit AND
+trial count) may still not clear Allen's mean ratio (2.24) given the current floor sits at half
+that already. Candidate (a) (a different normalization/metric) remains open and is now better
+motivated: something in the wasserstein-on-unit-diameter-point-cloud construction is
+inflating H0 in particular, independent of how many units or which regions went in.
+**Next:** trial-count-matched range (same mechanics as this run, subsample trials instead of/in
+addition to units) is the next cheap, preregistrable test — cheap because it reuses this run's
+already-downloaded raw data with no new ONE calls. If that doesn't move H0 either, the
+nuisance variance is probably intrinsic to the metric construction, not any per-session sampling
+axis, and candidate (a) (a genuinely different normalization) stops being optional.
+
+## E7 · 2026-09-22 · seed robustness of E6's unit-count-matching result · status: done
+**Hypothesis, preregistered before running:** E6's n=50 unit-count-matched result (within-IBL H1
+max 14.313→5.278, H0 max 14.246→11.792, both still FAIL) came from one random draw of which 50
+neurons survive subsampling per session (`seed=0`). Timing check: one full repeat (subsample +
+signature + split-half null + all-pairs compare, 21 sessions, ≤210 pairs, all raw data now
+locally cached from E6, no new ONE calls) takes 844s (~14.1 min) on this machine. Budget: 4
+more independent seeds (1,2,3,4) ≈ 56.3 min, comfortably inside a 1h budget run in background.
+**Criterion, fixed in advance:** per seed, same PASS/FAIL as E4/E5/E6 (Allen ratios entirely
+above the within-IBL matched range's max on both H0/H1 = PASS). Report across the 5 seeds
+(E6's original 0, plus 1-4): the within-IBL H0/H1 max distribution (mean, range across seeds),
+the PASS/FAIL fraction, and whether E6's specific numbers (H1 max 5.278) are typical of the
+5-seed distribution or an outlier — i.e. whether D23's "H1 narrows substantially, H0 doesn't"
+finding is a stable property of unit-count matching or an artifact of one draw.
+**Run:** same subsample/`bio_entry` mechanics as E6, seeds 1-4, output
+`results/baseline-matched-n50-seed{1,2,3,4}/`. Actual per-seed cost was 320-331s once raw data
+was warm (the 844s timing estimate came from a run immediately after a different foreground
+timing test — some contention, not representative); all 4 seeds finished in 1300.4s (~21.7 min),
+well under the 56 min budgeted, let alone 1h.
+**Result: FAIL, robustly — 0/5 seeds pass on either dim.**
+- H0 within-IBL max across 5 seeds (0, 1-4): mean 12.230, range [11.614, 13.811], stdev 0.903 —
+  **tight and stable**. Unit-count matching's near-null effect on H0 (D23) is confirmed, not a
+  fluke of seed 0.
+- H1 within-IBL max across 5 seeds: mean 5.560, range [3.075, 8.530], stdev 2.183 — **noisier**,
+  varying by >2.5x across seeds, but every seed's H1 max stays far below the original
+  unmatched-units H1 max (14.313, E4/baseline-wide). Seed 0's value (5.278, E6) sits close to the
+  5-seed mean, not an outlier. So: the *qualitative* finding (unit-count matching substantially
+  narrows H1) is robust across draws; the *exact magnitude* of that narrowing is not — a single
+  seed shouldn't be quoted as "the" effect size for H1 without this spread in mind.
+- Allen's ratios varied per seed too (H0 mean 8.4-9.8, H1 mean ~2.1-2.5 across seeds, not shown
+  in full here — see each `results/baseline-matched-n50-seed*/distances.csv`), but never once,
+  in 5 independent draws, landed outside the matched range on both dims. 0/5 PASS.
+**Takeaway:** D23 stands, now on firmer footing — this isn't a single-draw artifact. Unit-count
+is a real, repeatable, substantial H1 nuisance-variance driver, and a real, repeatable non-driver
+of H0. Confirms E6's "Next": H0 needs a different lever (trial count is still untested and free —
+data already local) or the metric construction itself is what's inflating H0's spread.
