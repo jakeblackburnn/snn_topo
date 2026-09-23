@@ -153,6 +153,23 @@ before being reported. See `dev/experiments.md` E4 and `dev/DECISIONS.md` D18/D2
 numbers and candidate next steps (tighter session matching, a less nuisance-dominated distance
 normalization, a power analysis at the current `n_resamples`).
 
+**Update, 2026-09-22/23 (D22-D26):** all four candidate session-matching fixes tried — region
+overlap (D22), unit count (D23/D24), trial count (D25), and raw trajectory diameter (D26, the
+strongest single lever found, r=+0.64 H0 / +0.57 H1 against pairwise distance, E9) — each
+narrowed the bio-vs-bio range somewhat (raw-diameter matching narrowed H1 by 82%) but **none**
+closed it enough for Allen to clear the held-out discriminative-validity bar on both dims. Every
+one of these was a *session-selection* fix (restrict/subsample which sessions form the yardstick)
+implemented as a standalone, uncommitted reanalysis script against cached `results/baseline-wide/`
+CSVs — none touched `snntopo/topology/`. D26 concludes the fix now needs to live in the distance
+*construction* itself (e.g. residualizing the pairwise distance on raw_diameter, rather than
+restricting to matched pairs) — a design-bearing change to `topology/pipeline.py` /
+`topology/stats.py` / `TopoConfig`, not another analysis script. **This is not yet built.** The
+codebase's current validation-check pattern (`snntopo baseline` + hand-written matching scripts
+per candidate) was fine for testing five independent session-selection rules but doesn't have a
+place to hang a genuinely new distance normalization as a first-class, testable `TopoConfig`
+option — that plumbing is the next session's prerequisite work, before candidate (a) itself can
+be tried and re-validated against E4's Allen check the same way every prior candidate was.
+
 ## Known limits before a full run
 
 - **nback sat at chance** across a 300-update mini-run. Working-memory tasks need far more

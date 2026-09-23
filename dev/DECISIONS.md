@@ -372,3 +372,61 @@ validity check on either dim.
 **Rejected:** nothing new — this run doesn't introduce a new candidate, it verifies D23's.
 **Revisit if:** the planned trial-count check (E6/E7's "Next") is tried and needs the same
 seed-robustness treatment before being trusted on a single draw.
+
+## D25 · 2026-09-23 · Trial-count matching (D20 candidate, third and final single-axis test)
+rejected; all three exhausted; candidate (a) now required
+**Decision:** trial-count matching is not the fix for D20's discriminative-validity gap either.
+Do not adopt trial-count-matched reference sessions as the bio-vs-bio yardstick. With region
+(D22), unit-count (D23/D24), and now trial-count all rejected as single-axis session-matching
+fixes, D22's revisit condition is triggered: candidate (a) — a distance construction/
+normalization change, not a session-matching rule — is now the required next step, not one
+option among several.
+**Why:** E8 (preregistered before running, 5-seed robustness per D24's precedent): subsampling
+every cached bio session to a fixed n=340 trials (the true minimum, uniquely Steinmetz session
+11's own count, so no session was dropped unlike E6's unit-count rule) narrowed the within-IBL
+H0 max by only ~10.2% (14.246→mean 12.793, weaker than unit-count's 17%) and H1 max by ~42.5%
+(14.313→mean 8.222, weaker than unit-count's 63%), stable across 5 seeds (H0 std 0.743, H1 std
+1.005). Allen's ratios sit around half the matched range's max on both dims at every seed — 0/10
+seed×dim PASS, not a borderline result. Trial-count is a real but weak nuisance driver on both
+dims — the opposite profile from unit-count (negligible H0 effect, large H1 effect) — and neither
+axis individually gets close to separating Allen from within-IBL variability.
+**Rejected:** a joint trial+unit-count matching test — out of scope per E8's preregistration
+(mirrors E6 isolating unit-count alone first); given how weak trial-count's H0 effect is alone,
+a joint test is unlikely to close a ~40-50%-remaining H0 gap and isn't the next-cheapest lever
+now that all single axes are exhausted.
+**Revisit if:** a joint trial+unit-count match is tried later and moves H0 more than either alone
+(would reopen the session-matching approach); more directly, this decision is superseded once
+candidate (a) is tried (see E9 for the diagnostic pass motivating its design) — whatever E9 finds
+driving the residual spread determines what candidate (a) should actually change.
+
+## D26 · 2026-09-23 · raw_diameter identified as the dominant nuisance driver (E9); matching on
+it alone still insufficient (E10); D20 stands
+**Decision:** `raw_diameter` (the pre-normalization trajectory diameter, recorded per D11 but
+never previously used in the distance computation) is the strongest nuisance-variance driver
+found across every candidate tried (region D22, unit-count D23/D24, trial-count D25) — but
+restricting the bio-vs-bio yardstick to raw-diameter-matched pairs still doesn't clear the Allen
+discriminative-validity bar. D20's block on full-budget `steinmetz_2afc` search stays in place.
+**Why:** E9 (diagnostic, preregistered): of five candidate covariates checked against within-IBL
+pairwise wasserstein distance, `\|Δraw_diameter\|` was the only one clearing `\|r\|>0.5` on both
+dims (r=+0.639 H0, +0.569 H1) — well ahead of `\|Δn_units\|` (0.244/0.045, consistent with D23's
+H1-only finding) or `\|Δn_trials\|` (-0.179/-0.151, consistent with D25's weak effect). E10
+(preregistered, median-split threshold 0.538 across all 231 possible session pairs): restricting
+to raw-diameter-matched pairs narrowed H1's within-IBL max by 82.1% (14.313→2.568) and H0's by
+27.2% (14.246→10.369) — the largest single-lever effect found on both dims, especially H1. Still
+FAIL: Allen-vs-IBL's H0 ratios (mean 6.361) remain well inside the matched range, and H1's
+(mean 1.824, max 2.208) remain inside though much closer to the matched max (2.568) than any
+prior candidate got. Separately, Allen-vs-Steinmetz has **zero** raw-diameter-matched partners at
+this threshold (`\|1.264-0.318\|=0.946>0.538`) — Steinmetz's own raw trajectory scale isn't
+"close" to Allen's by this measure either, so raw_diameter is a genuine property some bio
+sessions share with Allen and others don't, not an Allen-specific artifact.
+**Rejected:** a threshold sweep or joint raw-diameter+unit-count matching in this pass — flagged
+as open follow-ups (E10's Next), not run here, to keep E10's one preregistered cutoff free of
+after-the-fact tuning.
+**Revisit if:** a threshold sweep, a joint raw-diameter+unit-count match, or (more likely, given
+matching alone hasn't closed either gap after four tries) a direct normalization change —
+regressing/residualizing the pairwise distance on raw_diameter difference rather than restricting
+to matched pairs — is tried and clears the Allen bar. The residualization approach is now the
+best-motivated version of candidate (a): four session-selection matching rules (region, unit
+count, trial count, raw diameter) have each narrowed the range somewhat without closing it,
+suggesting the fix belongs in the distance construction itself, not in which sessions get
+compared.

@@ -408,3 +408,159 @@ well under the 56 min budgeted, let alone 1h.
 is a real, repeatable, substantial H1 nuisance-variance driver, and a real, repeatable non-driver
 of H0. Confirms E6's "Next": H0 needs a different lever (trial count is still untested and free —
 data already local) or the metric construction itself is what's inflating H0's spread.
+
+## E8 · 2026-09-23 · trial-count-matched bio-vs-bio range (D20/E6 "Next", H0 lever) · status: done
+**Hypothesis, preregistered before running:** trial count varies 340-1014 across the 22 cached
+bio sessions (E6/E7's flagged untested lever) — a ~3x spread, smaller than unit count's 20x, but
+never controlled for. Unit-count matching (E6/E7) narrowed H1 substantially (63%) but barely
+moved H0 (17%). If trial count is what's driving H0's spread instead, subsampling every session's
+trials to a fixed common count should narrow H0 enough for Allen to land entirely outside the
+matched range on both H0/H1, where unit-count matching alone did not.
+**Matching rule, fixed in advance:** subsample every bio session's trials to a fixed n=340 (the
+minimum `meta.n_trials` across all 22 cached sessions — itself Steinmetz session 11's full trial
+count, so all 22 sessions qualify, none dropped, unlike E6's unit-count rule which dropped 1).
+Fixed seed per session (`np.random.default_rng(0)`), without replacement, applied to
+`Activity.spikes` along the trial axis and identically to every condition mask (same selected
+trial indices), before any other processing. Steinmetz needs no subsampling (already at n=340).
+**Criterion, fixed in advance:** identical to E4/E5/E6 — PASS iff Allen-vs-Steinmetz and
+Allen-vs-IBL wasserstein ratios (distance/null_mean, condition `all`) land entirely above the
+matched within-IBL bio-vs-bio range's max on both H0 and H1. Landing inside on either dim = FAIL.
+**Scope:** trial-count alone, not joint with E6's unit-count matching — mirrors E6 isolating
+unit-count alone before any joint test was considered. If trial-count alone fails on H0 too, a
+5-seed robustness check (D24 precedent) follows before concluding; if it fails robustly, D22's
+revisit condition (candidate (a), a genuinely different normalization/metric) becomes the
+required next step, not optional.
+**Run:** standalone script (`snntopo/atlas.py:bio_entry`/`DATASETS` reused unmodified, mirrors
+`cli.py:cmd_baseline`'s loop with a trial-subsample step inserted before `bio_entry`; not
+committed, scratchpad-only). Seed 0: `results/baseline-matched-trial340/`, 8m41s (all raw data
+already cached locally, no new ONE calls). Then, per the preregistered follow-up, seeds 1-4:
+`results/baseline-matched-trial340-seed{1,2,3,4}/`, 1004-1009s each (67m7s total, sequential in
+one process to avoid E7's cross-process contention).
+**Result: FAIL, robustly — 0/10 (5 seeds × 2 dims) PASS.**
+- All 22 sessions retained at every seed (n=340 is the true minimum, uniquely held by Steinmetz
+  session 11 — no session dropped, unlike E6's unit-count rule).
+- H0 within-IBL max across 5 seeds: mean 12.793, range [11.750, 13.605], std 0.743 — narrowed
+  from the unmatched baseline-wide max (14.246) by only ~10.2%, *weaker* than unit-count's 17%
+  (D23). Trial count is, if anything, an even smaller H0 lever than unit count.
+- H1 within-IBL max across 5 seeds: mean 8.222, range [7.060, 9.492], std 1.005 — narrowed from
+  the unmatched max (14.313) by ~42.5%, a real effect but weaker than unit-count's 63% (D23).
+- Allen's ratios (H0: Steinmetz 7.29-7.62, IBL mean 6.43-7.81; H1: Steinmetz 2.02-2.13, IBL mean
+  1.94-2.16) sit around half the matched range's max on both dims at every seed, not close to the
+  boundary — not a borderline miss, a clear FAIL.
+**Takeaway:** trial-count is a real but weak nuisance-variance driver on both dims — the opposite
+profile from unit-count (near-zero on H0, large on H1). Neither single axis, alone, gets close to
+separating Allen from within-IBL variability, and combining them (untested) is unlikely to close
+a ~40-50% remaining H0 gap given how little either lever moves H0 individually. This is the third
+single-axis matching candidate to fail (region E5/D22, unit-count E6/E7/D23/D24, trial-count E8) —
+per D22's revisit condition, candidate (a) (a distance construction/normalization change, not a
+session-matching rule) stops being optional.
+**Next:** candidate (a) — first diagnose *what* in the distance construction is driving the
+residual spread (not yet known to be region/unit/trial identity) before designing a specific
+fix; a regression/correlation pass over available per-session covariates (raw_diameter, each
+session's own diagram magnitude, etc.) against pairwise distance, from cached data, is the
+cheapest next step (see E9).
+
+## E9 · 2026-09-23 · diagnostic: what drives within-IBL pairwise-distance spread? · status: pending
+**Hypothesis, preregistered before computing:** three matched-covariate deltas (region overlap
+E5, |Δn_units| E6/E7, |Δn_trials| E8) have all failed to substantially narrow the within-IBL H0
+range, and unit-count barely moved it at all (D23: 17%). One code fact rules out a fourth
+matching-style candidate outright: `WINDOW = slice(50, 200)` is a hardcoded 150-bin constant in
+all three of `snntopo/data/{steinmetz,ibl,allen}.py` — every session's point cloud has exactly
+150 points regardless of session, so point-cloud size cannot be a within-dataset nuisance driver
+(checked by reading the loaders, not run). If matched-*covariate* deltas aren't the driver, the
+next candidate is each session's own diagram magnitude (raw_diameter after unit-diameter
+normalization, and each session's own H0/H1 total persistence/feature count, already stored in
+`entries.csv` from every prior run) — i.e. some sessions may just be intrinsically "busier" or
+noisier in their own topology, independent of how any two sessions are paired, which would push
+candidate (a) toward a per-session normalization (e.g. z-scoring against each session's own
+split-half null, already computed) rather than another session-matching rule.
+**Method, fixed in advance:** reanalysis of `results/baseline-wide/{entries,distances}.csv`
+only (no new sessions/compute). For every within-IBL pair (condition `all`, wasserstein, dims
+H0/H1; n=190 pairs, the strict definition from E6), compute Pearson r between the pairwise
+distance ratio and: |Δn_units|, |Δn_trials|, |Δraw_diameter|, and the pair-sum of each session's
+own {H0,H1}_total_persistence and {H0,H1}_n (using the matching dim). Rank by |r|; report
+whichever feature(s) exceed |r|=0.5 as the leading candidate(s) for candidate (a) to target. This
+is diagnostic, not a fourth PASS/FAIL matching test against Allen — its output informs what
+candidate (a) changes, it doesn't stand in for E4's criterion.
+**Run:** pure pandas/scipy reanalysis of `results/baseline-wide/{entries,distances}.csv`, no new
+compute. `sum.all_H0_n` confirmed constant (150) across all 22 sessions before correlating —
+matches the `WINDOW = slice(50, 200)` code-reading finding (150-bin point cloud, always) exactly,
+so it was dropped from the correlation (undefined for a constant).
+**Result:**
+| feature (H0, n=190) | r | p |
+|---|---|---|
+| `\|Δraw_diameter\|` | **+0.639** | 3.6e-23 |
+| sum of own `H0_total_persistence` | +0.480 | 2.4e-12 |
+| `\|Δn_units\|` | +0.244 | 7.0e-04 |
+| `\|Δn_trials\|` | -0.179 | 1.4e-02 |
+
+| feature (H1, n=190) | r | p |
+|---|---|---|
+| `\|Δraw_diameter\|` | **+0.569** | 1.1e-17 |
+| sum of own `H1_total_persistence` | +0.394 | 1.9e-08 |
+| `\|Δn_trials\|` | -0.151 | 3.8e-02 |
+| `\|Δn_units\|` | +0.045 | 5.4e-01 |
+
+`\|Δraw_diameter\|` is the only feature clearing the preregistered `\|r\|>0.5` bar, on **both**
+dims, and by a wide margin over every previously-tested covariate (unit-count E6/E7's own driver,
+`\|Δn_units\|`, correlates only 0.244/0.045 here — consistent with D23's H1-only, weak-H0 finding).
+Each session's own diagram "busyness" (`H0_total_persistence`) is a distant second on H0 (0.480,
+just under the bar) and weaker still on H1 (0.394).
+**Takeaway:** the strongest single lever found across E5/E6/E8/E9 is `raw_diameter` — the
+pre-normalization trajectory diameter, recorded but never used in the distance computation itself
+(D11). Two sessions whose raw trajectory scale differs a lot end up topologically far apart even
+after unit-diameter normalization, more than region, unit-count, or trial-count predict.
+**Next:** test whether restricting to raw-diameter-matched pairs narrows the range enough for
+Allen to clear the bar (E10) — the natural, cheap, preregistrable follow-up, same reanalysis-only
+shape as E5.
+
+## E10 · 2026-09-23 · raw-diameter-matched bio-vs-bio range (D20 candidate a, from E9) · status: done
+**Hypothesis, preregistered before computing:** E9 found `\|Δraw_diameter\|` is the strongest
+correlate of within-IBL pairwise distance found so far (r=+0.639 H0, +0.569 H1), well ahead of
+region/unit/trial-count. Restricting the bio-vs-bio yardstick to pairs matched on raw_diameter
+should narrow the range more than any prior candidate (E5/E6/E8) did, and possibly enough for
+Allen to land outside on both H0/H1 — Allen's own raw_diameter (0.318) sits near the low end but
+inside the IBL distribution (0.148-2.455, n=20), so it has raw-diameter-matched partners to be
+tested against.
+**Matching rule, fixed in advance:** two sessions are a matched pair iff
+`\|raw_diameter_a - raw_diameter_b\| <= 0.538` (the median `\|Δraw_diameter\|` across all
+C(22,2)=231 possible pairs among the 22 cached sessions — a median split, not a threshold chosen
+after seeing the matched range, mirrors E5's non-arbitrary-cutoff discipline). The matched
+bio-vs-bio range = within-IBL pairs only (strict definition, E6's convention) that clear this
+threshold.
+**Criterion, fixed in advance:** same as E4-E8 — PASS iff Allen-vs-Steinmetz and Allen-vs-IBL
+wasserstein ratios, restricted to only the matched (raw-diameter-close) targets per the same
+threshold, land entirely above the matched within-IBL range's max on both H0 and H1. If Allen has
+no matched partner on one side (Steinmetz or IBL) under the threshold, report that explicitly as
+a small-matched-n finding (E5's risk), not a silent pass/fail.
+**Run:** pure pandas reanalysis of `results/baseline-wide/{entries,distances}.csv`, no new
+compute.
+**Result: FAIL by the strict criterion, but the largest single-axis narrowing found so far,
+especially on H1.**
+- Matched within-IBL range (n=96 of 190 pairs clear the threshold): H0 [0.943, 10.369] (mean
+  3.414) — **27.2% narrower than unrestricted (14.246→10.369)**, better than unit-count's 17%
+  (D23) or trial-count's 10.2% (D25). H1 [0.943, 2.568] (mean 1.309) — **82.1% narrower than
+  unrestricted (14.313→2.568)**, far beyond unit-count's 63% or trial-count's 42.5% — the biggest
+  single-lever effect found across E5/E6/E8/E10.
+- **Allen-vs-Steinmetz has zero matched partners**: `\|1.264 - 0.318\| = 0.946 > 0.538` threshold.
+  Steinmetz's raw_diameter isn't close enough to Allen's to test under this matching rule at all —
+  reported per the preregistered small-matched-n condition, not silently dropped.
+- Allen-vs-IBL (9 of 20 IBL sessions matched): H0 range [1.945, 9.602] (mean 6.361) — well inside
+  the matched max (10.369), same qualitative FAIL as every prior H0 result. H1 range [1.242, 2.208]
+  (mean 1.824) — inside the matched max (2.568) but now much closer to it than any prior
+  candidate: Allen's H1 max ratio (2.208) sits at 86% of the matched range's own max, versus
+  Allen's H1 mean sitting at under half the unit-count-matched max in E6/E7.
+**Takeaway:** raw-diameter matching is the strongest lever tried, especially for H1 (82% range
+narrowing) — but the criterion (Allen's full distribution above the matched max on both dims)
+still isn't met, and the H0 gap remains wide (Allen's ratios still land in the matched range's
+lower-middle, not near its edge). The Steinmetz null-partner result is itself informative: at
+this threshold, Steinmetz's raw trajectory scale isn't "close" to Allen's own recorded dataset
+by this metric either, so raw-diameter isn't just separating Allen from bio — it's a real
+property some IBL/Steinmetz sessions share with Allen and others don't.
+**Next:** raw_diameter is a genuine, substantial driver (E9/E10) but not sufficient alone to
+close the gap, particularly on H0. Two live threads: (1) a looser or tighter threshold sweep
+(not run here — E10 used one preregistered median-split cutoff) to check whether H1's near-miss
+tightens further; (2) joint raw-diameter + unit-count matching, since unit-count's H1 effect and
+raw-diameter's H1 effect might be capturing overlapping or complementary variance — worth
+checking before concluding candidate (a) needs a deeper normalization change (e.g. residualizing
+distance on raw_diameter directly, rather than restricting to matched pairs).
