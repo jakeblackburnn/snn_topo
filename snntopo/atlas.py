@@ -17,7 +17,7 @@ import pandas as pd
 
 from . import objective
 from .contracts import AtlasRecord, BioSession, DistanceResult, ModelConfig, Signature, Task, TopoConfig, TrainConfig
-from .evaluate import evaluate
+from .evaluate import N_EVAL, evaluate
 from .logging_utils import get_logger
 from .models import build_model
 from .topology.pipeline import compute_signature
@@ -219,7 +219,7 @@ def control_entry(entry_id: str, kind_label: str, task: Task, activity, topo: To
 
 
 def snn_entry(entry_id: str, task: Task, model_cfg: ModelConfig, train_cfg: TrainConfig, topo: TopoConfig,
-              bio_refs: list[BioSession], run_dir, device: str, n_eval: int = 340,
+              bio_refs: list[BioSession], run_dir, device: str, n_eval: int = N_EVAL,
               target_counts: dict[str, dict] | None = None,
               weight: float = objective.STRUCTURE_WEIGHT) -> AtlasRecord:
     """Build, train, evaluate and measure one SNN config; always returns (and appends)

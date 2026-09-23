@@ -108,6 +108,7 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
         return report
 
     snn = entries[entries["kind"] == "snn"].copy()
+    controls = entries[entries["kind"] == "control"].copy()
     lines.extend(["## Status by task", ""])
     if snn.empty:
         lines.append("_No SNN task rows._\n")
@@ -115,6 +116,17 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
         status = (snn.groupby(["source", "status"]).size().unstack(fill_value=0)
                   .reindex(columns=["ok", "degenerate", "failed", "timeout"], fill_value=0).reset_index())
         lines.append(_markdown_table(status, list(status.columns)))
+
+    lines.extend(["## Controls", ""])
+    if controls.empty:
+        lines.append("_No control rows._\n")
+    else:
+        status = (controls.groupby(["source", "status"]).size().unstack(fill_value=0)
+                  .reindex(columns=["ok", "degenerate", "failed", "timeout"], fill_value=0).reset_index())
+        lines.append(_markdown_table(status, list(status.columns)))
+        lines.extend(["### Entries", "", _markdown_table(
+            controls, ["entry_id", "source", "status", "accuracy", "objective_distance"]
+        )])
 
     # A reference session is recomputed in every run that needs it (a generic task pulls
     # all three datasets'), and its entry_id is dataset+session, so duplicates are the
@@ -171,6 +183,15 @@ def write_report(run_dirs: list[Path], out_dir: Path) -> Path:
             lines.extend(["### Bio split-half nulls", "", _markdown_table(
                 bio_distances, ["entry_id", "target", "condition", "dim", "metric", "distance", "null_mean", "null_q95", "p_value", "n_resamples"]
             )])
+        control_distances = distances[(distances["entry_id"].isin(controls["entry_id"])) &
+                                      (distances["target"] != "self")]
+        if not control_distances.empty:
+            lines.extend(["### Controls", "", _markdown_table(
+                control_distances, ["entry_id", "target", "condition", "dim", "metric", "distance", "null_mean", "null_q95", "p_value", "n_resamples"]
+            )])
+            name = "controls_distance_bars.png"
+            plot_comparison_bars(control_distances, figures / name)
+            lines.extend([f"![controls distances](figures/{name})", ""])
         for source, representative_rows in representatives.items():
             task_distances = distances[distances["entry_id"].isin(representative_rows["entry_id"])]
             if task_distances.empty:

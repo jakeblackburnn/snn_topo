@@ -6,6 +6,8 @@ import torch
 from .contracts import Activity, Task
 from .training import policy_logits
 
+N_EVAL = 340
+
 
 def evaluate(model, task: Task, n_eval: int, device: str, seed: int = 1) -> tuple[float, Activity]:
     """-> (greedy accuracy, Activity). Conditions are "all" plus one mask per action

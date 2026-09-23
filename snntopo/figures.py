@@ -9,26 +9,6 @@ import numpy as np
 import pandas as pd
 
 
-def plot_trajectories(trajectories: dict[str, np.ndarray], path, title: str,
-                      time_label: str = "time bin") -> None:
-    """Plot PC1/PC2 trajectories, with points coloured in temporal order."""
-    fig, ax = plt.subplots(figsize=(6, 5))
-    scatter = None
-    for label, points in trajectories.items():
-        if len(points) == 0:
-            continue
-        scatter = ax.scatter(points[:, 0], points[:, 1], c=np.arange(len(points)),
-                             cmap="viridis", s=8, alpha=0.7, label=label)
-        ax.plot(points[:, 0], points[:, 1], alpha=0.25, lw=0.6)
-    ax.set(xlabel="PC1", ylabel="PC2", title=title)
-    if scatter is not None:
-        ax.legend()
-        fig.colorbar(scatter, ax=ax, label=time_label)
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-
-
 def plot_signature_diagrams(diagrams_by_label: dict[str, dict[str, np.ndarray]], path,
                             title: str | None = None) -> None:
     """Plot saved signature NPZ diagrams, whose keys are ``{condition}_H{dim}``."""

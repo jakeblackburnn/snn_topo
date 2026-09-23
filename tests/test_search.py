@@ -58,6 +58,15 @@ def snn_records(run_dir):
     return [r for r in atlas.read_records(run_dir) if r.kind == "snn"]
 
 
+def test_reference_sessions_matches_the_previous_inline_loading(fakes):
+    task = TASKS["nback"]
+    expected = [search.load_session(dataset, session_id)
+                for dataset in search.DATASETS
+                for session_id in search.DATASETS[dataset].reference_sessions]
+    assert [(session.dataset, session.session_id) for session in search.reference_sessions(task)] == \
+        [(session.dataset, session.session_id) for session in expected]
+
+
 def test_matched_search_records_every_trial(fakes, tmp_path):
     study = search.run_search("steinmetz_2afc", tmp_path, budget_s=600, n_trials=3, train_cfg=TINY, topo=TOPO,
                               device="cpu")

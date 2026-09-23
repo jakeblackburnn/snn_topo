@@ -8,11 +8,11 @@ import numpy as np
 import torch
 
 from .contracts import Activity, ModelConfig, Task
-from .evaluate import evaluate
+from .evaluate import N_EVAL, evaluate
 from .models import build_model
 
 
-def untrained(model_cfg: ModelConfig, task: Task, seed: int, device: str, n_eval: int = 340) -> Activity:
+def untrained(model_cfg: ModelConfig, task: Task, seed: int, device: str, n_eval: int = N_EVAL) -> Activity:
     """Build the model and evaluate it as-initialized, with no training at all. Answers
     "does training move bio-likeness at all, or is it just the architecture skeleton?"""
     torch.manual_seed(seed)
