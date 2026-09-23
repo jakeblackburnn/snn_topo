@@ -115,6 +115,7 @@ class TopoConfig:
                       # (objective.METRIC); bottleneck is supported but off by default since it's
                       # both unread and underpowered (dev/DECISIONS.md D6) -- pass
                       # --metrics wasserstein bottleneck to compute both
+    residualize_raw_diameter: bool = False  # subtract the D26/D27 raw-diameter nuisance fit
 
 
 @dataclass

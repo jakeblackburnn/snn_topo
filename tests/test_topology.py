@@ -9,7 +9,8 @@ from snntopo import objective
 from snntopo.atlas import signature_summary
 from snntopo.contracts import Activity, TopoConfig
 from snntopo.topology.pipeline import compute_signature, persistence, unit_diameter
-from snntopo.topology.stats import METRICS, compare, diagram_distance, split_half_null
+from snntopo.topology.stats import (_RAW_DIAMETER_FIT, METRICS, _raw_diameter, compare,
+                                    diagram_distance, split_half_null)
 
 
 def curve_activity(curve: np.ndarray, n_neurons: int, n_trials: int, seed: int) -> Activity:
@@ -151,6 +152,25 @@ def test_compare_different_process_is_significant():
     assert all(r.distance > r.null_q95 for r in h1)
     # halves are cached, so a repeat call is identical
     assert compare(a, b, "b", ["all", "a"], TOPO_FAST) == res
+
+
+def test_raw_diameter_residualization_changes_only_cross_distance():
+    a = curve_activity(circle(40), 60, 30, seed=0)
+    b = curve_activity(segment(40), 90, 50, seed=1)
+    base = compare(a, b, "b", ["all"], TOPO_FAST)
+    assert base == compare(a, b, "b", ["all"],
+                           TopoConfig(maxdim=1, n_resamples=20, metrics=METRICS,
+                                      residualize_raw_diameter=False))
+    residualized = compare(a, b, "b", ["all"],
+                           TopoConfig(maxdim=1, n_resamples=20, metrics=METRICS,
+                                      residualize_raw_diameter=True))
+    delta = abs(_raw_diameter(a, "all", TOPO_FAST) - _raw_diameter(b, "all", TOPO_FAST))
+    for plain, corrected in zip(base, residualized):
+        assert (corrected.null_mean, corrected.null_q95, corrected.p_value) == (
+            plain.null_mean, plain.null_q95, plain.p_value)
+        intercept, slope = _RAW_DIAMETER_FIT[plain.dim]
+        assert corrected.distance == pytest.approx(
+            (plain.distance / plain.null_mean - (intercept + slope * delta)) * plain.null_mean)
 
 
 def test_objective_prefers_matching_shape():

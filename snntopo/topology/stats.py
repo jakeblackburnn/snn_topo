@@ -77,6 +77,14 @@ from .pipeline import build_trajectories, persistence, unit_diameter
 METRICS = ("wasserstein", "bottleneck")  # every metric diagram_distance supports; which of
 # these actually get computed per call is TopoConfig.metrics (default: wasserstein only)
 
+# Linear fit of within-IBL pairwise wasserstein distance/null_mean on |Δraw_diameter| (dev/experiments.md
+# E9 methodology, n=190 within-IBL pairs, condition "all", refit for D27):
+# ratio ≈ intercept + slope * |Δraw_diameter|. dim -> (intercept, slope).
+_RAW_DIAMETER_FIT: dict[int, tuple[float, float]] = {
+    0: (2.2687743994178406, 4.471255887696472),
+    1: (0.24584879637964763, 3.0950539405016997),
+}
+
 # (activity fingerprint, trial mask, trials per half, topo fields, seed) -> split-half diagrams.
 # 32 entries covers 3 bio references x 3 conditions with room for recent SNN activities.
 _CACHE: dict[tuple, dict] = {}
@@ -168,6 +176,12 @@ def _usable(activity: Activity, cond: str, topo: TopoConfig) -> bool:
     return cond in activity.conditions and int(activity.conditions[cond].sum()) >= topo.min_trials
 
 
+def _raw_diameter(activity: Activity, cond: str, topo: TopoConfig) -> float:
+    trials = np.flatnonzero(activity.conditions[cond])
+    trajectory = build_trajectories(activity.spikes, [trials], activity.window, topo)[0]
+    return unit_diameter(trajectory)[1]
+
+
 def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: TopoConfig,
             seed: int = 0) -> list[DistanceResult]:
     """Distance between a's and b's signatures for each condition x dim x metric, each
@@ -179,6 +193,8 @@ def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: 
     halves = _split_halves([(a, c, h[c]) for c in conds] + [(b, c, h[c]) for c in conds], topo, seed)
     results = []
     for cond, ha, hb in zip(conds, halves[:len(conds)], halves[len(conds):]):
+        delta = (abs(_raw_diameter(a, cond, topo) - _raw_diameter(b, cond, topo))
+                 if topo.residualize_raw_diameter else None)
         cross = {m: np.zeros((topo.n_resamples, 2, topo.maxdim + 1)) for m in topo.metrics}
         for r, ((a1, a2), (b1, b2)) in enumerate(zip(ha["pairs"], hb["pairs"])):
             for k, (da, db) in enumerate(((a1, b1), (a2, b2))):
@@ -190,6 +206,10 @@ def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: 
                 distance = float(cross[m][:, :, d].mean())
                 null = np.concatenate([ha["within"][m][:, d], hb["within"][m][:, d]])
                 p_value = (1 + int((null >= distance).sum())) / (1 + len(null))
+                if delta is not None and d in _RAW_DIAMETER_FIT:
+                    intercept, slope = _RAW_DIAMETER_FIT[d]
+                    null_mean = float(null.mean())
+                    distance = (distance / null_mean - (intercept + slope * delta)) * null_mean
                 results.append(_result(target, cond, d, m, distance, null, p_value))
     return results
 
