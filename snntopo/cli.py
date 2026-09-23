@@ -13,7 +13,7 @@ from .data import DATASETS, load_session
 from .logging_utils import setup_logging
 from .models import ARCHS, valid_triples
 from .report import write_report
-from .search import ACCURACY_FLOOR, run_search
+from .search import ACCURACY_FLOOR, reference_sessions, run_search
 from .tasks import TASKS
 from .topology.stats import METRICS
 
@@ -73,8 +73,7 @@ def cmd_snn(args):
     run_dir = Path(args.out)
     setup_logging("snn", run_dir / "logs")
     task = TASKS[args.task]
-    datasets = [task.bio_match] if task.bio_match else list(DATASETS)
-    refs = [load_session(d, s) for d in datasets for s in DATASETS[d].reference_sessions]
+    refs = reference_sessions(task)
     cfg = ModelConfig(arch=args.arch, neuron=args.neuron, connectivity=args.connectivity, n_hidden=args.n_hidden,
                       n_layers=args.n_layers, n_modules=args.n_modules)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -90,8 +89,7 @@ def cmd_control(args):
     run_dir = Path(args.out)
     setup_logging("control", run_dir / "logs")
     task = TASKS[args.task]
-    datasets = [task.bio_match] if task.bio_match else list(DATASETS)
-    refs = [load_session(d, s) for d in datasets for s in DATASETS[d].reference_sessions]
+    refs = reference_sessions(task)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     topo = topo_from_args(args)
     if args.kind == "untrained":

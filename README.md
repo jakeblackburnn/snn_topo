@@ -11,15 +11,21 @@ The project specification is in `dev/SPEC.md`.
 pip install -e .[test]
 ```
 
+By default, biological data is cached under `data/raw/` and command outputs under
+`results/` in this checkout. Set `SNNTOPO_DATA_DIR` or `SNNTOPO_RESULTS_DIR` to
+share those locations across worktrees.
+
 ## CLI
 
 ```sh
-snntopo bio --dataset steinmetz --out results/bio
-snntopo bio --dataset allen --compare-dataset steinmetz --compare-dataset ibl --out results/bio-allen
-snntopo baseline --out results/baseline
-snntopo snn --task steinmetz_2afc --out results/snn-mini
-snntopo search --task T --budget-hours H --out DIR
-snntopo report --run results/bio --run results/search-T --out results/report
+python -m snntopo.cli bio --dataset steinmetz --out results/bio
+python -m snntopo.cli bio --dataset allen --compare-dataset steinmetz --compare-dataset ibl --out results/bio-allen
+python -m snntopo.cli baseline --out results/baseline
+python -m snntopo.cli snn --task steinmetz_2afc --out results/snn-mini
+python -m snntopo.cli control --task steinmetz_2afc --kind untrained --n 5 --out results/control
+python -m snntopo.cli search --task T --budget-hours H --out DIR
+python -m snntopo.cli report --run results/bio --run results/search-T --out results/report
+python -m snntopo.cli rescore --run results/search-T
 ```
 
 `search` is the full atlas-population command; use `snn` only for a small single
@@ -30,8 +36,8 @@ files, optional training `curves/`, and flattened `entries`/`distances` CSV and
 Parquet tables. `report` combines any number of those runs into the same tables plus
 a static `report.md` and PNG figures.
 
-Run the default fast suite with `pytest`; tests marked `data` are skipped because
-they fetch or read biological data. Run those explicitly with `pytest -m data`.
+Run the default fast suite with `python -m pytest -q`; data-marked tests are skipped
+because they fetch or read biological data.
 
 ## Extending
 

@@ -5,6 +5,8 @@ topology.stats (compare/split_half_null) is owned by another workstream and is h
 (process-pool resampling), so it's replaced by fakes here exactly as test_search.py
 does; compute_signature itself is real but cheap enough at the tasks' 150-bin window
 to run in a fraction of a second (see topology/pipeline.py's docstring)."""
+from inspect import signature
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -12,10 +14,16 @@ import pytest
 import snntopo.atlas as atlas
 from snntopo import controls
 from snntopo.contracts import Activity, BioSession, DistanceResult, ModelConfig, TopoConfig
+from snntopo.evaluate import N_EVAL
 from snntopo.tasks import TASKS
 
 TOPO = TopoConfig(n_pca=4, smooth_win=1, maxdim=1, min_trials=3, n_resamples=2)
 TINY_MODEL = ModelConfig(arch="recurrent", neuron="lif", connectivity="random", n_hidden=32)
+
+
+def test_snn_and_untrained_share_the_evaluation_default():
+    assert signature(atlas.snn_entry).parameters["n_eval"].default == N_EVAL
+    assert signature(controls.untrained).parameters["n_eval"].default == N_EVAL
 
 
 def fake_bio_session(dataset="ibl", session_id="0", n_trials=20, n_units=6):

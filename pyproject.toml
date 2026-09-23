@@ -7,8 +7,8 @@ name = "snntopo"
 version = "2.0.0"
 requires-python = ">=3.12"
 dependencies = [
-    "numpy", "scipy", "pandas", "pyarrow", "scikit-learn", "matplotlib", "requests",
-    "torch", "snntorch", "ripser", "persim", "gudhi", "POT", "networkx", "optuna", "threadpoolctl",
+    "numpy", "scipy", "pandas", "pyarrow", "matplotlib", "requests",
+    "torch", "snntorch", "ripser", "gudhi", "POT", "networkx", "optuna", "threadpoolctl",
     "ONE-api", "iblatlas", "h5py", "remfile",
 ]
 

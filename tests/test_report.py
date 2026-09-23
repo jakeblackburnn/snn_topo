@@ -36,6 +36,10 @@ def test_report_from_synthetic_atlas(tmp_path: Path):
         entry_id="snn:n_back:0", kind="snn", source="n_back", status="ok", accuracy=0.7,
         nearest_bio="bio:steinmetz:11", distances=[_distance("self", 0.2)],
     ))
+    append_record(run, AtlasRecord(
+        entry_id="control:steinmetz_2afc:untrained:0", kind="control", source="steinmetz_2afc:untrained",
+        status="ok", objective_distance=0.4, distances=[_distance("bio:steinmetz:11", 0.4)],
+    ))
 
     report = write_report([run], tmp_path / "report")
     text = report.read_text()
@@ -43,12 +47,15 @@ def test_report_from_synthetic_atlas(tmp_path: Path):
     assert "Bio signature: steinmetz" in text
     assert "Matched task: steinmetz_2afc" in text
     assert "Generic task: n_back" in text
+    assert "Controls" in text
+    assert "control:steinmetz_2afc:untrained:0" in text
     assert "Best feasible entries" in text
     assert "Pareto" not in text
     assert "Distance results" in text
     for name in ("entries.csv", "entries.parquet", "distances.csv", "distances.parquet"):
         assert (report.parent / name).exists()
     assert (report.parent / "figures" / "steinmetz_reference_diagrams.png").exists()
+    assert (report.parent / "figures" / "controls_distance_bars.png").exists()
 
 
 def test_bio_signature_table_is_long_form_and_deduped_across_runs(tmp_path: Path):

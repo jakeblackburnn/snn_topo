@@ -3,15 +3,18 @@
 The package moves one common representation through both domains:
 
 ```text
-bio loader / task + model -> Activity -> Signature -> DistanceResult -> AtlasRecord -> static report
+bio loader / task + trained model / control -> Activity -> Signature -> DistanceResult -> AtlasRecord -> static report
 ```
 
 Loaders turn recordings into `Activity`; trained models are evaluated into the same
-neuron × trial × time-bin layout. The topology pipeline makes a per-condition,
-diameter-normalized persistence `Signature` (H0/H1/H2). Statistics compare signatures
-and emit significance-bearing `DistanceResult` rows. `atlas` stores each bio session or
-evaluated SNN configuration as an append-only `AtlasRecord`; `report` reads one or more
-run directories and writes tables, markdown, and figures.
+neuron × trial × time-bin layout, while controls supply untrained-SNN or shuffled-bio
+activity in that same layout. The topology pipeline makes a per-condition,
+diameter-normalized persistence `Signature` (H0/H1 by default; H2 is opt-in with
+`--maxdim 2`). Statistics compare signatures and emit significance-bearing
+`DistanceResult` rows. `atlas` stores each bio session, evaluated SNN configuration, or
+control as an append-only `AtlasRecord`; `search` and `objective` select and score model
+configurations; `report` reads one or more run directories and writes tables, markdown,
+and figures.
 
 ## Build versus run
 

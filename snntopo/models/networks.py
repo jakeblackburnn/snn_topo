@@ -11,8 +11,7 @@ from . import neurons
 
 
 def set_spectral_radius(weight: torch.Tensor, target: float) -> float:
-    """Rescale a square weight in place to spectral radius `target`; returns the
-    pre-rescale radius (the default init's radius is itself diagnostic)."""
+    """Rescale a square weight in place to spectral radius `target`."""
     with torch.no_grad():
         current = torch.linalg.eigvals(weight).abs().max().item()
         if current > 0:
@@ -75,9 +74,8 @@ class RecurrentSNN(nn.Module):
         zero_readout(self.readout)
         with torch.no_grad():
             self.recurrent.weight.mul_(rec_mask)
-        self.init_spectral_radius = None
         if spectral_radius is not None:
-            self.init_spectral_radius = set_spectral_radius(self.recurrent.weight, spectral_radius)
+            set_spectral_radius(self.recurrent.weight, spectral_radius)
 
     def forward(self, spk_in):
         T, B, _ = spk_in.shape
