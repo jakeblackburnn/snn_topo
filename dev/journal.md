@@ -45,24 +45,48 @@ candidate (c) is answered: lack of power is **not** why E5-E11 failed.
 Caveat: the generator's Poisson noise is not calibrated to bio SNR, so ratio *scales* are not
 strictly comparable; the robust claim is the two orders of magnitude, not the exact numbers.
 
+## Close (part 2) · 2026-09-23 17:30 · c1636ce..b0bd084 — branches merged
+- **changed:** all 4 station branches merged into `main` (`33d83a6`, `7dbef2f`, `89ecf03`,
+  `2791165`, all `--no-ff`); `tests/test_atlas.py` path fix (`b0bd084`); poster tooling-status
+  paragraph + corrected controls claim.
+- **why:** the four branches were the session's deliverable and were left unmerged.
+- **verified:** `python -m pytest -q` → **127 passed, 9 deselected** (base 110 passed / 7
+  deselected), 0 failures, 0 skipped. **Zero merge conflicts** — all four touch `cli.py` but in
+  disjoint regions. `python -m pytest -q -m data -k steinmetz` → 5 passed (cached, no download).
+  `python -m snntopo.cli synthetic --generator torus ... --maxdim 2` → one atlas entry written
+  end-to-end. `load_session('steinmetz','11/passive')` → `(698, 110, 250)`, conditions
+  `['all','left','right']`, same 698 neurons as active — so it is directly `compare`-able.
+  `snntopo baseline --help` shows `--residualize-raw-diameter` (D27 now reachable from the CLI).
+- **by:** claude
+- `b0bd084` topo: fix legacy-row compat test resolving its path from a worktree only
+- 1 file, +3 −1 (plus 4 merge commits)
+- ⚠ uncommitted: none. `.nodeterm/` untracked, pre-existing.
+
+**One real bug found while merging.** `test_existing_baseline_wide_rows_keep_raw_distance_when_
+the_schema_grows` resolved `results/baseline-wide` via `parents[3]/"snn_topo"` — a path that only
+works from inside a worktree, so it **silently skipped in the main checkout**, which is the only
+place it matters. It is the load-bearing test proving the 4338 pre-provenance rows still read back
+with raw distances unchanged. Fixed to resolve from the repo root; it now runs and passes.
+
+**Note on the synthetic entries' schema:** `snntopo synthetic` records `kind="control"` with
+`source="synthetic:<generator>"` and `entry_id="synthetic:<generator>:NNNN"`. Distinguishable, but
+synthetic manifolds and D19 surrogate controls now share a `kind`. Fine for now; revisit if the
+atlas grows a lot of both.
+
 ### Next
-1. **Merge the 4 branches** (each green, none merged, in `../snn_topo.worktrees/`):
-   `refactor-cleanup` (123ad7d), `refactor-provenance` (d2fff47),
-   `feat-synthetic-controls` (100fcf9), `feat-steinmetz-passive` (4ae25fe). All 4 touch `cli.py`
-   in different regions — expect small conflicts there and nowhere else. Merge cleanup first
-   (it deletes `io_utils.py`), then provenance, then the two features.
-2. **Calibrate the synthetic generator's noise to bio split-half null magnitudes**, so the table
+1. **Calibrate the synthetic generator's noise to bio split-half null magnitudes**, so the table
    above becomes quantitative instead of order-of-magnitude. This is the single highest-value
    next experiment and needs no new data.
-3. **Characterise the anticonservative null**: measure the false-positive rate over many
+2. **Characterise the anticonservative null**: measure the false-positive rate over many
    same-topology generator pairs at `n_resamples=50`, rather than the single p=0.030 observed.
    This is a real finding about `stats.py` and probably wants its own E-entry.
-4. **Run the confound-free E4**: `steinmetz:11` vs `steinmetz:11/passive` (same 698 neurons, same
-   animal/probes, only task engagement varies) — loader landed on `feat-steinmetz-passive`.
-5. **Preregister E12 before computing anything further.** The AUC/paired-control findings in
+3. **Run the confound-free E4**: `steinmetz:11` vs `steinmetz:11/passive` (same 698 neurons, same
+   animal/probes, only task engagement varies). Loader is merged and verified `compare`-able;
+   deliberately **not run** this session so its criterion can be preregistered first.
+4. **Preregister E12 before computing anything further.** The AUC/paired-control findings in
    `dev/brainstorm/mega-forward-plan/index.md` §1-2 are **post-hoc**; adopting AUC now because
    AUC is the framing that passes is the exact error this project's discipline prevents.
-6. D20/full-budget `steinmetz_2afc` search stays blocked. Nothing this session unblocks it, and
+5. D20/full-budget `steinmetz_2afc` search stays blocked. Nothing this session unblocks it, and
    the positive-control result arguably makes the search less interesting, not more.
 
 ### Traps
@@ -90,10 +114,18 @@ strictly comparable; the robust claim is the two orders of magnitude, not the ex
 - `dev/brainstorm/mega-forward-plan/index.md` — start here; synthesis + links to all 6 angles.
   `verify_auc_criterion.py` in that dir reruns the three post-hoc numbers from cached CSVs.
 - `dev/2026-09-22-poster-report.md` Panel 8 — the four findings in poster form.
-- `snntopo/generators.py` + `tests/test_generators.py` (on `feat-synthetic-controls`) — the
-  positive control. `snntopo/data/steinmetz.py` (on `feat-steinmetz-passive`) — `load("11/passive")`.
-- `snntopo/topology/stats.py` docstring's false-positive-rate claim is contradicted by this
-  session's circle-vs-circle result — worth correcting when item 3 above is done.
-- **No `/decide` written this session** — brainstorm produces options, not decisions. Items 2-5
+- `snntopo/generators.py` + `tests/test_generators.py` — the positive control (`snntopo synthetic`).
+  `snntopo/data/steinmetz.py` — `load("11/passive")`, `load("11/VISp")`, sessions 0-12.
+- `snntopo/topology/stats.py:_RAW_DIAMETER_FIT` is now `snntopo/topology/raw_diameter_fit.json`,
+  refit by `scripts/refit_raw_diameter_fit.py`. The refit **reproduced D27's stored constants
+  exactly** (H0 r=0.638770, H1 r=0.568739), so E11's numbers are confirmed, not merely inherited.
+- `snntopo/contracts.py` `DistanceResult` now carries `distance_residual` + `construction`;
+  `distance` is always the raw measured value. 4338 legacy rows verified readable and unchanged
+  (`tests/test_atlas.py::test_existing_baseline_wide_rows_keep_raw_distance_when_the_schema_grows`).
+- `snntopo/topology/stats.py`'s module docstring claims a 0-8% false-positive rate at α=0.05;
+  this session's circle-vs-circle result (p=0.030 on *identical* topology) contradicts it. Correct
+  the docstring when Next item 2 is done — don't leave a wrong number in the file that everything
+  else cites.
+- **No `/decide` written this session** — brainstorm produces options, not decisions. Items 1-4
   above are candidates for `/decide` once you pick a direction; the reframe of D20 in particular
   (instrument sound, difference absent) would supersede D20's own wording and deserves an entry.

@@ -501,12 +501,23 @@ the two orders of magnitude between them, not the exact numbers.)*
    is a real biological signal or an artifact of an unvalidated objective. Still open, still unrun.
 4. `structure_weight` (2.0) remains calibrated at one PCA dimensionality only (`n_pca=10`).
 
+**Tooling status, so the reader knows what is built vs. merely planned.** As of 2026-09-23 the
+instrument side of steps 1 and 3 is in place and merged: synthetic known-topology generators with
+a `snntopo synthetic` command (the numbers in (d) come from it); `steinmetz:11/passive` loading the
+same 698 neurons for the confound-free contrast in (c), plus all 13 cached Steinmetz sessions and
+per-area sub-sessions; and a distance schema that now preserves the raw measured value and records
+which construction produced it, so a candidate normalization no longer overwrites the data it is
+tested against. **None of the experiments above have been run** — deliberately, because their
+criteria have to be preregistered first, and the findings in (a)-(d) are post-hoc enough already.
+
 **Two caveats this poster should state rather than bury.** The `n` is small and asymmetric: 22 bio
 sessions, of which the held-out probe, Allen, is **one** — so under any framing where
 Allen-vs-2AFC separability is the acceptance test, this is a one-sample test, and no amount of
 model-side data fixes that. And the untrained/shuffled controls cited above as corroborating D20
 were run, with their numbers logged, but **their run directory no longer exists**, so that evidence
-is currently unreproducible and is being regenerated rather than re-cited.
+is currently unreproducible. Reporting code to render controls now exists, but **the controls
+themselves have not been re-run** — so until they are, the poster should cite them as historical
+record rather than as live corroboration, exactly as it does E2/E3.
 
 ---
 
