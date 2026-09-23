@@ -8,8 +8,9 @@ import torch
 from . import controls, objective
 from .atlas import bio_entry, control_entry, rescore, snn_entry, write_tables
 from .config import RESULTS_DIR
-from .contracts import ModelConfig, TopoConfig, TrainConfig
+from .contracts import ModelConfig, Task, TopoConfig, TrainConfig
 from .data import DATASETS, load_session
+from .generators import GENERATORS
 from .logging_utils import setup_logging
 from .models import ARCHS, valid_triples
 from .report import write_report
@@ -112,6 +113,26 @@ def cmd_control(args):
     write_tables(run_dir)
 
 
+def cmd_synthetic(args):
+    """Known-topology Activity controls through the same atlas tail as a recording.
+
+    There is deliberately no task or bio reference here: this is an instrument
+    calibration, not a claim about closeness to a biological dataset.
+    """
+    run_dir = Path(args.out)
+    setup_logging("synthetic", run_dir / "logs")
+    task = Task()
+    task.name, task.bio_match, task.action_names = "synthetic", None, ()
+    topo = topo_from_args(args)
+    for name in args.generator:
+        for i in range(args.n):
+            activity = GENERATORS[name](seed=args.seed + i, n_neurons=args.n_neurons,
+                                        n_trials=args.n_trials, n_bins=args.n_bins,
+                                        noise_level=args.noise_level)
+            control_entry(f"synthetic:{name}:{i:04d}", name, task, activity, topo, [], run_dir)
+    write_tables(run_dir)
+
+
 def cmd_search(args):
     """Wall-clock-capped model search for one task; rerun the same command to resume."""
     setup_logging("search", Path(args.out) / "logs")
@@ -172,6 +193,19 @@ def main(argv=None):
     c.add_argument("--out", default=str(RESULTS_DIR / "control"))
     add_topo_args(c)
     c.set_defaults(fn=cmd_control)
+
+    sy = sub.add_parser("synthetic", help="measure known-topology Activity positive controls")
+    sy.add_argument("--generator", action="append", required=True, choices=list(GENERATORS),
+                    help="generator to measure (repeatable)")
+    sy.add_argument("--n", type=int, default=1, help="entries per generator")
+    sy.add_argument("--n-neurons", type=int, default=128)
+    sy.add_argument("--n-trials", type=int, default=80)
+    sy.add_argument("--n-bins", type=int, default=150)
+    sy.add_argument("--noise-level", type=float, default=0.25)
+    sy.add_argument("--seed", type=int, default=0)
+    sy.add_argument("--out", default=str(RESULTS_DIR / "synthetic"))
+    add_topo_args(sy)
+    sy.set_defaults(fn=cmd_synthetic)
 
     r = sub.add_parser("search", help="search model configs for one task under a wall-clock budget")
     r.add_argument("--task", required=True, choices=list(TASKS))
