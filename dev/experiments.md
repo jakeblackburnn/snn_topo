@@ -564,3 +564,44 @@ tightens further; (2) joint raw-diameter + unit-count matching, since unit-count
 raw-diameter's H1 effect might be capturing overlapping or complementary variance — worth
 checking before concluding candidate (a) needs a deeper normalization change (e.g. residualizing
 distance on raw_diameter directly, rather than restricting to matched pairs).
+
+## E11 · 2026-09-23 · raw-diameter-residualized discriminative-validity check (D26 candidate a) · status: done
+**Hypothesis, preregistered before computing:** D26 found raw_diameter matching alone cannot
+close D20, but E9 established `|Δraw_diameter|` as the dominant driver of within-IBL pairwise
+distance and E10 found it is the strongest matching lever (H1 range narrowed 82%, still FAIL).
+Residualizing the cross-session distance directly on `|Δraw_diameter|` should narrow the
+bio-vs-bio range enough for Allen to clear it on both H0 and H1.
+**Method, fixed in advance:** add `TopoConfig.residualize_raw_diameter`; for every condition in
+`compare()`, recompute each Activity's full-trial raw diameter with the same
+`build_trajectories`/`unit_diameter` path as `compute_signature`, then subtract the D27 OLS fit
+`intercept + slope * |Δraw_diameter|` from each cross-source distance ratio (`distance / null_mean`)
+for H0/H1 and store the corrected ratio times the unchanged `null_mean` as `distance`. The fits
+use E9's strict 190 within-IBL pairs, condition `all`, wasserstein, from cached
+`results/baseline-wide/{entries,distances}.csv`. Null distributions, null summaries, and
+p-values are unchanged. The E4 all-condition check is an exact cached reanalysis: recomputing
+the new helper's raw diameter from each of the 22 cached raw Activities matched the stored
+full-trial signature value within 1e-12, and the correction is then a deterministic function of
+that diameter, cached `distance`, and cached `null_mean`; no new `compare()` resampling or ONE/GPU
+call can change it.
+**Criterion, fixed in advance:** identical to E4 — PASS iff Allen-vs-Steinmetz and every
+Allen-vs-IBL wasserstein distance ratio (`distance / null_mean`, condition `all`) are entirely
+above the strict within-IBL bio-vs-bio range's maximum on both H0 and H1. Landing inside the
+range on either dim is FAIL.
+**Run:** re-fit E9's ratio (`distance / null_mean`) rather than raw distance over the strict
+190 within-IBL pairs: H0 `ratio = 2.268774 + 4.471256 * |Δraw_diameter|` (r=+0.638770,
+R²=0.408027, p=3.56e-23); H1 `ratio = 0.245849 + 3.095054 * |Δraw_diameter|`
+(r=+0.568739, R²=0.323464, p=1.13e-17). These reproduce E9's +0.639/+0.569 sanity check.
+Recomputed all 22 raw all-condition diameters from cached Activities, then applied that exact
+ratio correction to the cached E4 cross-session rows; no new baseline run was needed for the
+reason fixed in Method.
+**Result: FAIL.**
+- Residualized strict within-IBL range (n=190): H0 [-5.012, 8.553] (mean 0.000), H1
+  [-3.824, 11.138] (mean -0.000). Residualizing removes the within-IBL fitted mean by
+  construction, but does not produce a sufficiently low maximum on both dims.
+- Allen-vs-Steinmetz: H0=1.482, H1=-1.123. Allen-vs-IBL (n=20): H0 [-1.848, 5.967]
+  (mean 3.145), H1 [-2.535, 1.402] (mean -0.165). Both Allen contrasts are inside the
+  residualized within-IBL range on H0 and H1; in particular no Allen H1 value approaches the
+  H1 maximum 11.138.
+**Takeaway:** D26's direct residualization mechanism is now a first-class `TopoConfig` option,
+but it does not resolve D20. The mean fit removes the correlated nuisance trend without yielding
+a discriminative Allen contrast; full-budget `steinmetz_2afc` search remains blocked.

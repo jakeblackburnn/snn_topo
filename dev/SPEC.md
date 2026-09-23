@@ -163,12 +163,15 @@ implemented as a standalone, uncommitted reanalysis script against cached `resul
 CSVs — none touched `snntopo/topology/`. D26 concludes the fix now needs to live in the distance
 *construction* itself (e.g. residualizing the pairwise distance on raw_diameter, rather than
 restricting to matched pairs) — a design-bearing change to `topology/pipeline.py` /
-`topology/stats.py` / `TopoConfig`, not another analysis script. **This is not yet built.** The
-codebase's current validation-check pattern (`snntopo baseline` + hand-written matching scripts
-per candidate) was fine for testing five independent session-selection rules but doesn't have a
-place to hang a genuinely new distance normalization as a first-class, testable `TopoConfig`
-option — that plumbing is the next session's prerequisite work, before candidate (a) itself can
-be tried and re-validated against E4's Allen check the same way every prior candidate was.
+`topology/stats.py` / `TopoConfig`, not another analysis script.
+
+**Update, 2026-09-23 (D27):** that first-class candidate is now implemented as
+`TopoConfig.residualize_raw_diameter`. It residualizes the cross-source H0/H1 distance ratio
+(`distance / null_mean`) on the preregistered within-IBL `|Δraw_diameter|` OLS fit, while leaving
+the within-source null and p-value untouched. E11 revalidated it against E4's Allen contrast and
+**FAILS**: Allen remains inside the residualized within-IBL range on both H0 and H1. Thus this
+normalization does not resolve D20; full-budget `steinmetz_2afc` search is still blocked until a
+future preregistered mechanism passes the same check.
 
 ## Known limits before a full run
 

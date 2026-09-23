@@ -430,3 +430,24 @@ best-motivated version of candidate (a): four session-selection matching rules (
 count, trial count, raw diameter) have each narrowed the range somewhat without closing it,
 suggesting the fix belongs in the distance construction itself, not in which sessions get
 compared.
+
+## D27 · 2026-09-23 · raw-diameter ratio residualization implemented; D20 remains blocking
+**Decision:** implement D26's direct distance-construction candidate as
+`TopoConfig.residualize_raw_diameter`: `compare()` subtracts the within-IBL OLS fit of
+`distance / null_mean` on `|Δraw_diameter|` for H0/H1, then stores the corrected ratio times the
+unchanged `null_mean` as the reported cross-source distance. E11 FAILS the held-out Allen check,
+so this mechanism is not adopted as a D20 resolution and the full-budget `steinmetz_2afc` search
+remains blocked.
+**Why:** the E9-population refit (n=190 strict within-IBL, all/wasserstein) reproduces its
+diagnostic correlations: H0 intercept/slope 2.268774/4.471256, r=+0.638770, R²=0.408027; H1
+0.245849/3.095054, r=+0.568739, R²=0.323464. Yet E11's residualized within-IBL ranges are H0
+[-5.012, 8.553] and H1 [-3.824, 11.138], while Allen-vs-Steinmetz is 1.482/-1.123 and
+Allen-vs-IBL is [-1.848, 5.967]/[-2.535, 1.402]. Allen remains inside on both dimensions, not
+above the range as E4 requires. Null distributions, null summaries, and p-values deliberately
+remain unaltered: they measure within-source sampling noise, not the cross-session nuisance E9
+diagnosed.
+**Rejected:** treating the original raw distance fit as the correction target. E9's method and
+the E4 gate are both ratio-based (`distance / null_mean`), so D27 fits and residualizes that
+quantity while retaining `DistanceResult`'s distance/null interface.
+**Revisit if:** a different, preregistered distance construction can clear the same Allen bar;
+otherwise D20 remains the block before any full-budget search.
