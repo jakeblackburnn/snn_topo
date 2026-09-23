@@ -1,90 +1,99 @@
-# Journal · 2026-09-23 12:02 · main · e4935cb
+# Journal · 2026-09-23 17:16 · main · 599eb25
 
 ## Start
-**State:** D20's discriminative-validity gap is still open and still blocks the full-budget
-`steinmetz_2afc` search. Four session-matching candidates are now exhausted, all FAIL by the same
-preregistered Allen-vs-bio criterion: region (E5/D22), unit-count (E6/E7/D23/D24), trial-count
-(E8/D25), raw-diameter (E10/D26). E9's diagnostic is the standing result: `|Δraw_diameter|` is the
-only covariate clearing `|r|>0.5` on both dims (+0.639 H0, +0.569 H1). D26's conclusion is that
-matching alone cannot close the gap — the fix belongs in the distance construction itself.
-**Since:** nothing since the last journal commit (`e4935cb`); tree clean apart from the
-pre-existing untracked `.nodeterm/`.
-**Next:**
-1. Design + implement raw-diameter residualization as a first-class option in the package —
-   decide the mechanism first (new `TopoConfig` field threaded through `stats.compare` vs. a
-   post-hoc correction in `objective.py`), then implement. Design-bearing package change, not
-   another scratchpad script.
-2. Once implemented, re-run E4's Allen discriminative-validity check against the new
-   normalization under the same preregistration discipline (hypothesis + criterion before
-   computing) — E11.
-3. If it passes: re-derive `structure_weight` (2.0), still only calibrated at `n_pca=10`.
-4. Full-budget `steinmetz_2afc` search stays blocked (D20) until some fix passes the Allen check
-   on both H0 and H1.
-**Traps:** `results/baseline-*/` are gitignored, local-only. E8/E9/E10's analysis scripts lived in
-a rotated-out scratchpad (`/tmp/snntopo_e8/`) — methodology is written out in `dev/experiments.md`
-E8-E10 if it needs reconstructing. Backgrounding a script with a leading `cd` changes that
-command's own execution directory — pass an absolute output path instead. python needs
-`source ~/Code/python_venv_01_main/bin/activate`. `snntopo` console script resolves to whichever
-checkout was last `pip install -e`'d — use `python -m snntopo.cli` from the target dir.
-`snntopo baseline` is O(n²) in session count (~12 min at 22 sessions with raw data cached).
-`--n-updates` defaults to 3000, not 1500.
-**Pointers:** `dev/experiments.md` E8/E9/E10; `dev/DECISIONS.md` D25/D26; `dev/SPEC.md` Validity
-section (current through D26). `results/baseline-wide/{entries,distances}.csv` is the source table
-every candidate since E5 has reanalyzed from. Refactor targets, verified present this session:
-`snntopo/contracts.py:105` (`TopoConfig`, no residualization field today),
-`snntopo/contracts.py:126` / `snntopo/topology/pipeline.py:61` (`raw_diameter` computed and stored),
-`snntopo/topology/stats.py:171` (`compare`) / `:197` (`split_half_null`) — the distance path, which
-currently never reads `raw_diameter`; `snntopo/objective.py:41` (`score`).
+Previous session closed with D20 still blocking: five preregistered fixes (four session-matching
+E5-E10, one distance-construction E11) all FAIL the Allen discriminative-validity check, and its
+Next said the sixth candidate had to be *designed*, not just re-run. This session was a mega
+brainstorm (6 research agents) + a big refactor toward accumulating large topological datasets,
+closing with a poster-report extension.
 
-## Close · 2026-09-23 15:48 · e4935cb..abf8007
-- **changed:** `snntopo/contracts.py`/`snntopo/topology/stats.py` (+`TopoConfig.
-  residualize_raw_diameter`: `compare()` fits `distance/null_mean` on `|Δraw_diameter|` from the
-  within-IBL reference population, subtracts it per H0/H1, leaves null/p-value untouched);
-  `tests/test_topology.py` (+regression test: flag-off bit-for-bit unchanged, flag-on transforms
-  only `.distance`); `dev/experiments.md` (+E11, preregistered, result FAIL); `dev/DECISIONS.md`
-  (+D27: mechanism implemented, does not resolve D20); `dev/SPEC.md` (Validity section updated
-  through D27).
-- **why:** implemented D26's required next step — the Next item's refactor (raw-diameter
-  residualization as a first-class `TopoConfig` option) — then re-ran E4's Allen discriminative-
-  validity check against it as E11, per the project's preregistration discipline.
-- **verified:** `python -m pytest tests/test_topology.py -q -k "raw_diameter or residualization"`
-  → 1 passed. Full suite run by the implementer (codex) before and after: 9 passed then the same
-  pre-existing forkserver Unix-socket sandbox error both times (not a regression, not fixed
-  either — sandbox artifact, see Traps).
-- **by:** claude, implementation delegated to a codex node driven by claude (nodeterm canvas);
-  claude reviewed the diff and caught one real error before it was hardcoded (see Traps).
-- `abf8007` topo: raw-diameter ratio residualization option (D26/D27)
-- 3 files, +42 −1 (code commit); `dev/` commit follows this one (journal + D27 + E11 + SPEC)
-- ⚠ uncommitted: none outside this journal commit (`.nodeterm/` untracked, pre-existing, unrelated)
+## Close · 2026-09-23 17:16 · 599eb25..599eb25 (+4 unmerged branches)
+- **changed:** `dev/brainstorm/mega-forward-plan/` (new: 6 research notes ~2000 lines +
+  `index.md` synthesis + `verify_auc_criterion.py`); `dev/2026-09-22-poster-report.md`
+  (+E8-E11 timeline, D22-D27 in Panel 7, Panel 8 rewritten around 4 new findings, 4 glossary
+  entries, Panel 0 + intro re-framed); 4 refactor branches committed but **not merged**.
+- **why:** D20 needed a new candidate designed from scratch. The brainstorm found that the
+  project had never built a positive control; building one answered D20 in one shot.
+- **verified:** `python -m pytest -q` in each of the 4 worktrees → 114 / 114 / 119 / 110 passed
+  (base 110), 0 failures. `test_bio_entry_siblings_cross_compare` passes in all four — the
+  journal's "pre-existing failure" is confirmed **sandbox-only**. Headline diagnostic re-run
+  independently by claude, not taken from the agent. The three post-hoc reanalysis numbers were
+  each recomputed by hand from `results/baseline-wide/`.
+- **by:** claude (brainstorm, synthesis, verification, poster); 4 codex stations on nodeterm
+  worktrees did the implementation.
+- 1 file, +195 −36 (poster) + `dev/brainstorm/` new; code lives on 4 branches, see Next
+- ⚠ uncommitted: none in `dev/` after this commit. `.nodeterm/` untracked, pre-existing.
+
+### The result that matters
+The pipeline was never broken. At project defaults, bio-comparable scale (300 neurons × 340
+trials × 150 bins):
+
+| comparison | H0 ratio | H1 ratio | H1 p |
+|---|---|---|---|
+| circle vs circle (**identical** topology) | 1.52 | 2.66 | 0.030 |
+| circle vs figure-8 (**different** H1) | 43.72 | 108.24 | 0.0099 |
+| within-IBL bio (n=190) | mean 5.12 | **mean 2.22** | — |
+| Allen vs IBL bio (n=20) | mean 8.39 | **mean 2.14** | — |
+
+A genuine topological difference reads 108. Every bio comparison the project has made reads ~2 —
+indistinguishable from the same-topology control. So D20 is better explained as *there is no
+detectable topological difference between these recordings at this construction* than as *the
+yardstick cannot discriminate*. Also: the same-topology pair was "significant" at p=0.030, so the
+split-half null is **anticonservative** in exactly the regime all bio comparisons live in —
+contradicting `stats.py`'s docstring claim of a 0-8% false-positive rate. And E4's never-run
+candidate (c) is answered: lack of power is **not** why E5-E11 failed.
+Caveat: the generator's Poisson noise is not calibrated to bio SNR, so ratio *scales* are not
+strictly comparable; the robust claim is the two orders of magnitude, not the exact numbers.
 
 ### Next
-1. **D20 is still open.** All five candidates tried so far — four session-matching (region/unit/
-   trial/raw-diameter, E5-E10) plus one distance-construction fix (raw-diameter ratio
-   residualization, E11) — FAIL the Allen discriminative-validity check. No lever is currently
-   flagged as untested; the next candidate needs to be designed, not just re-run. Consider
-   whether the linear-fit form itself (OLS on `|Δraw_diameter|`) is the wrong shape before trying
-   a different covariate — E11's residual range is *wider* than E10's raw matched range on H1
-   ([-3.824, 11.138] vs E10's matched max 2.568), so a global linear correction may be adding
-   variance for pairs poorly described by the fit, worth checking before ruling out
-   raw_diameter-based correction entirely.
-2. Full-budget `steinmetz_2afc` search stays blocked (D20) until some fix passes the Allen check
-   on both H0 and H1 — do not start it in the meantime.
-3. `structure_weight` (2.0) re-derivation stays deferred until D20 resolves (unchanged from prior
-   sessions).
+1. **Merge the 4 branches** (each green, none merged, in `../snn_topo.worktrees/`):
+   `refactor-cleanup` (123ad7d), `refactor-provenance` (d2fff47),
+   `feat-synthetic-controls` (100fcf9), `feat-steinmetz-passive` (4ae25fe). All 4 touch `cli.py`
+   in different regions — expect small conflicts there and nowhere else. Merge cleanup first
+   (it deletes `io_utils.py`), then provenance, then the two features.
+2. **Calibrate the synthetic generator's noise to bio split-half null magnitudes**, so the table
+   above becomes quantitative instead of order-of-magnitude. This is the single highest-value
+   next experiment and needs no new data.
+3. **Characterise the anticonservative null**: measure the false-positive rate over many
+   same-topology generator pairs at `n_resamples=50`, rather than the single p=0.030 observed.
+   This is a real finding about `stats.py` and probably wants its own E-entry.
+4. **Run the confound-free E4**: `steinmetz:11` vs `steinmetz:11/passive` (same 698 neurons, same
+   animal/probes, only task engagement varies) — loader landed on `feat-steinmetz-passive`.
+5. **Preregister E12 before computing anything further.** The AUC/paired-control findings in
+   `dev/brainstorm/mega-forward-plan/index.md` §1-2 are **post-hoc**; adopting AUC now because
+   AUC is the framing that passes is the exact error this project's discipline prevents.
+6. D20/full-budget `steinmetz_2afc` search stays blocked. Nothing this session unblocks it, and
+   the positive-control result arguably makes the search less interesting, not more.
 
 ### Traps
-Codex's first draft residualized on raw `distance` (r=0.406 H0) instead of the `distance/
-null_mean` ratio E9 actually diagnosed (r=0.639 H0) and that the Allen check evaluates — caught
-by comparing against E9's numbers before the fit was hardcoded; if re-deriving this again, fit
-the ratio, not raw distance. The full pytest suite hits a pre-existing sandbox-only failure
-(`test_bio_entry_siblings_cross_compare`, forkserver Unix-socket permission error) unrelated to
-this session's change — present before and after, run `-k` to scope around it rather than reading
-`-x` failure as a regression. Driving an agent via nodeterm's plain `open-terminal` (not
-`open-agent`) gives raw CLI flag control (`--sandbox workspace-write --ask-for-approval never`
-used here) but the node isn't auto-linked — needs an explicit `link --to <id>` before
-get-linked-context can read it.
+- **Codex under `--sandbox workspace-write` cannot `git commit`** in a worktree: `.git/worktrees/
+  <name>/index.lock` is read-only. All 4 stations did the work and none could commit it; claude
+  committed on their behalf. Same sandbox blocks AF_UNIX, so the `forkserver` pool fails and *no
+  topology can be computed at all* — `refactor-provenance` added a serial fallback for this, but
+  serial is slow enough to blow a 30s streaming limit. Run test suites outside the sandbox.
+- `--dangerously-bypass-approvals-and-sandbox` is refused by Claude Code's auto-mode classifier;
+  needs an explicit Bash permission rule if full-access codex is wanted.
+- The worktree prune reclaimed **7 GB**, not the 13 GB the audit estimated — `du -sh` per worktree
+  double-counts hardlinked git objects.
+- `python -m pytest` from a worktree needs `PYTHONPATH=.`; the editable install resolves `snntopo`
+  to the main checkout. Same reason `python -m snntopo.cli` beats the `snntopo` console script.
+- **Zero `kind:"control"` records exist in any run dir**, though SPEC/D20/the poster cite the D19
+  controls. `dev/experiments.md:307` explains it: run, numbers logged, run directory gone. Not
+  fabricated — unreproducible. `report.py` also had no `control` branch, so they'd have been
+  invisible anyway (fixed on `refactor-cleanup`).
+- Two research agents disagreed on the AUC number; the one that *computed* it was right and the
+  one that reasoned from prose was wrong. Verify agent numbers before building on them.
+- `_CACHE_SIZE = 32` is undersized since D20 widened references 3→20 (needs 60); it thrashes on
+  every comparison. Not fixed this session.
+
 ### Pointers
-`dev/experiments.md` E11; `dev/DECISIONS.md` D27; `dev/SPEC.md` Validity section (current through
-D27). `snntopo/topology/stats.py:_RAW_DIAMETER_FIT`/`_raw_diameter`/`compare` — the implemented
-mechanism. D27's decision (residualization implemented but rejected as a D20 fix) is already in
-`dev/DECISIONS.md`, no `/decide` needed.
+- `dev/brainstorm/mega-forward-plan/index.md` — start here; synthesis + links to all 6 angles.
+  `verify_auc_criterion.py` in that dir reruns the three post-hoc numbers from cached CSVs.
+- `dev/2026-09-22-poster-report.md` Panel 8 — the four findings in poster form.
+- `snntopo/generators.py` + `tests/test_generators.py` (on `feat-synthetic-controls`) — the
+  positive control. `snntopo/data/steinmetz.py` (on `feat-steinmetz-passive`) — `load("11/passive")`.
+- `snntopo/topology/stats.py` docstring's false-positive-rate claim is contradicted by this
+  session's circle-vs-circle result — worth correcting when item 3 above is done.
+- **No `/decide` written this session** — brainstorm produces options, not decisions. Items 2-5
+  above are candidates for `/decide` once you pick a direction; the reframe of D20 in particular
+  (instrument sound, difference absent) would supersede D20's own wording and deserves an entry.

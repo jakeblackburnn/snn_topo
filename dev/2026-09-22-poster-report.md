@@ -1,12 +1,14 @@
 # snntopo — Poster Outline & Extended Notes
-**2026-09-22 · for a scientifically-literate audience (intro neurobio + intro topology), no prior exposure to this project**
+**2026-09-22, extended 2026-09-23 · for a scientifically-literate audience (intro neurobio + intro topology), no prior exposure to this project**
 
 > This is written as an outline you'd build a poster from: each `## Panel` is a poster panel,
 > with enough prose underneath to actually understand and defend every number on it. It is not
 > a marketing summary — the honest state of this project as of today is "we found a serious
-> validity problem with our own method and have spent a full session trying, and failing, to fix
-> it." That is itself a real, presentable scientific result (a cautionary one about a common
-> analysis pattern), and the poster should say so plainly rather than dress it up.
+> validity problem with our own method, spent two full sessions and five preregistered experiments
+> failing to fix it, and then built the positive control we should have built first — which showed
+> the method works fine and the difference we were chasing isn't there." That is a real,
+> presentable scientific result (a cautionary one about a common analysis pattern), and the poster
+> should say so plainly rather than dress it up.
 
 ---
 
@@ -19,8 +21,12 @@
 trajectories between real brain recordings and trained spiking neural networks (SNNs), across
 three biological datasets and a searched space of network architectures — and, before trusting
 any of its comparisons, we tested the pipeline's ability to tell apart things that obviously
-*should* be distinguishable. It currently can't. That finding, and the four follow-up experiments
-we ran trying to fix it, are the actual content of this poster.
+*should* be distinguishable. It couldn't. Seven follow-up experiments failed to fix that. Then we
+built the control we should have built first — activity with *known* topology — and found the
+pipeline detects a genuine topological difference at ~100× its noise floor, while every difference
+between real recordings sits at ~2×, indistinguishable from noise. The method was never broken;
+the difference we spent months chasing does not appear to be there. That arc is the content of
+this poster.
 
 ---
 
@@ -299,33 +305,102 @@ passes the same Allen check.
   by more than 2.5× seed-to-seed (3.1–8.5) — real, but should not be quoted as one precise number.
   **0 of 5 seeds passed the Allen check on either dimension.**
 
-**Where this leaves the project, as of today (2026-09-22):** three independent, preregistered
-candidate fixes tried; the validity gap remains unresolved. Region identity is not the dominant
-nuisance variable. Neuron count is a real, robust, substantial driver of H1's spread specifically,
-and does essentially nothing for H0. **H0's spread is still completely unexplained** — the next
-untested, low-cost lever is trial-count matching (a 2.4× uncontrolled spread across sessions,
-using data already downloaded locally, no new cost) — flagged but deliberately not yet run,
-pending a decision on priority.
+**E8–E11 (2026-09-23) — the fix hunt continues, and moves from *which sessions* to *what the
+number is*.** E5–E7 all asked the same kind of question: *are we comparing the wrong pairs of
+sessions?* E8 exhausted that family; E9 diagnosed why it was never going to work; E10 and E11
+tested the strongest lever the diagnosis found, first as a matching rule and then inside the
+distance computation itself.
+
+- **E8 — trial-count matching (FAIL, robustly, D25).** The last untested single-session axis.
+  Trial count spans 340–1014 across the 22 cached sessions (~3×, never controlled for).
+  Subsampling every session to a fixed n=340 trials — the true minimum, so no session was
+  dropped — and repeating at five independent seeds narrowed H0's upper bound by only **10.2%**
+  (14.25 → mean 12.79) and H1's by **42.5%**, i.e. *weaker on both dimensions than unit-count
+  matching had been*. Allen's distances sat at roughly half the matched range's maximum on both
+  dims at every seed — not a near miss. **0 of 10 (5 seeds × 2 dims) passed.** With region,
+  unit-count and trial-count all spent, the session-matching family was declared exhausted.
+- **E9 — the diagnostic that should have come first (pending → informative).** Instead of
+  guessing a fourth axis, this asked directly: *across all 190 within-IBL session pairs, what
+  actually predicts how far apart two sessions land?* A correlation sweep over every available
+  per-session covariate gave a clear single answer: **`|Δraw_diameter|`** — the difference in the
+  two sessions' *pre-normalization* trajectory size — at **r = +0.64 (H0)** and **+0.57 (H1)**,
+  the only covariate clearing the preregistered |r| > 0.5 bar, and on both dimensions. Every
+  previously-tested covariate came in far behind (|Δn_units|, the driver E6/E7 chased, managed
+  only +0.24 on H0 and +0.05 on H1). One useful null finding came from reading the code rather
+  than running anything: the analysis window is a hardcoded 150 bins in all three loaders, so
+  every session's point cloud has exactly 150 points and point-cloud size *cannot* be a
+  within-dataset nuisance driver.
+  The irony is worth stating on the poster: `raw_diameter` is a quantity the pipeline has always
+  recorded and has *deliberately divided out* (D11's unit-diameter normalization exists precisely
+  to compare shape rather than firing-rate scale). It turns out to leak back in anyway.
+- **E10 — raw-diameter matching (FAIL, but the largest effect found, D26).** Restricting the
+  yardstick to session pairs whose raw diameters differ by less than the median gap narrowed H1's
+  upper bound by **82.1%** (14.31 → 2.57) — far beyond unit-count's 63% or trial-count's 42.5%,
+  the single biggest lever found in the whole hunt — and H0's by 27.2%. Allen's H1 now reached
+  **86% of the matched range's own maximum**, genuinely close to clearing it, where every prior
+  candidate had left it under half. But H0 stayed wide and Allen stayed inside on both dims, so
+  the preregistered criterion still failed. A second result fell out of this one: under the same
+  matching rule **Allen had zero matched partners in Steinmetz** — the two datasets' raw
+  trajectory scales are simply not comparable at this threshold, which says raw_diameter isn't
+  separating "Allen from bio" so much as splitting sessions, Allen's and bio's alike, by a
+  property nobody had been controlling.
+- **E11 — residualizing the distance itself (FAIL, D27).** The first fix in this series that
+  changed the *instrument* rather than the *sample*: a new first-class option that fits the
+  within-IBL distance ratio on `|Δraw_diameter|` (H0 R² = 0.41, H1 R² = 0.32, both p < 1e-16) and
+  subtracts that fitted nuisance trend from every cross-source comparison, leaving the null and
+  the p-value untouched. It does exactly what it was designed to do — the correlated trend is
+  removed by construction — and it **still fails the Allen check on both dimensions**. Notably
+  the residualized H1 range came out *wider* than E10's matched range (spanning −3.82 to 11.14),
+  which is the signature of a global linear correction adding variance for the pairs its fit
+  describes badly.
+
+**Where this leaves the project, as of today (2026-09-23):** **five** independent, preregistered
+candidate fixes tried — four session-matching (region, unit-count, trial-count, raw-diameter) and
+one distance-construction change (raw-diameter residualization) — and the validity gap is
+unresolved. What is now known, rather than guessed:
+
+- Region identity is not the dominant nuisance variable (E5).
+- Unit count is a real, robust, substantial driver of **H1** specifically and does essentially
+  nothing for H0 (E6/E7).
+- Trial count is a weak driver of both (E8).
+- **Raw trajectory diameter is the dominant driver on both dimensions** (E9) — the strongest lever
+  found (E10) — and yet subtracting its fitted effect is not sufficient (E11).
+- H0's spread remains the hard part. Every lever tried moves H1 far more than H0, and no candidate
+  has narrowed H0 by even 30%.
+
+The pattern across E5–E11 is itself the informative result: **the nuisance variance is not
+attributable to any single measured session property, and removing the one property that does
+predict it does not make the instrument discriminative.** That points away from "find the right
+covariate" and toward the construction — trial-averaged PCA trajectories, unit-diameter
+normalization, Wasserstein-on-diagrams, a scalar distance with a split-half null — being the
+thing that needs to change. Which is where the project goes next (Panel 8).
 
 ---
 
 ## Panel 7 — Standing decisions & what they mean for the poster's "so what"
 
-A running decision log (`dev/DECISIONS.md`, 24 entries) records every architectural and
+A running decision log (`dev/DECISIONS.md`, 27 entries) records every architectural and
 methodological choice with its rationale; the ones load-bearing for this poster:
 
 - **D18/D20 — the bio-vs-bio range is the correct idea, currently an unvalidated instrument.**
   Comparing an SNN to a *range* of normal biological variability, rather than to one bio session's
   significance test, is methodologically the right move (this is not being walked back) — but the
   specific range this pipeline currently constructs has not yet been shown to actually discriminate
-  anything, and three attempts to fix that this session have not succeeded.
+  anything, and five attempts to fix that have not succeeded.
 - **D21 — H2 dropped from the default; wasserstein used, not bottleneck.** Both changes were
   evidence-driven cost/power optimizations (H2 empty at default PCA dimensionality; bottleneck
   underpowered relative to wasserstein where directly compared) rather than a claim either is
   worthless in general.
-- **D22/D23/D24 — three fix attempts, ranked by what they ruled in vs. out.** Region-matching:
-  ruled out. Unit-count-matching: a real, robust, *partial* fix (H1 only). Trial-count-matching:
-  the clear next test, not yet run.
+- **D22–D27 — five fix attempts, ranked by what they ruled in vs. out.** Region-matching: ruled
+  out (D22). Unit-count-matching: a real, robust, *partial* fix, H1 only (D23/D24).
+  Trial-count-matching: weak on both dims, exhausts the session-matching family (D25).
+  Raw-diameter: identified as the dominant nuisance driver and the strongest lever found, still
+  insufficient as a matching rule (D26). Raw-diameter residualization: implemented as a
+  first-class pipeline option, still fails the same held-out check (D27).
+- **The methodological lesson compounds with each one.** Five fixes, each preregistered with its
+  criterion fixed before any number was computed, each reported as a failure rather than quietly
+  re-specified until it passed. The reason the project can state its negative result with
+  confidence is that its acceptance criterion was never allowed to move.
 - **Full-budget search on the primary task (`steinmetz_2afc`) remains blocked** on this
   discriminative-validity gap, per D20's original condition — this is a deliberate, standing
   choice to not scale up a comparison that has not yet been shown to measure what it claims to
@@ -345,22 +420,93 @@ this kind of failure — and it did.
 
 ## Panel 8 — Open questions / what's next
 
-1. **Trial-count matching** (cheap, all data local, no new downloads) — the clearly indicated next
-   experiment; not yet run, not yet requested.
-2. **If trial-count matching also fails to move H0**, E6's own conclusion is that the nuisance
-   variance is likely intrinsic to how the distance is constructed (the unit-diameter-normalized
-   Wasserstein-on-PCA-trajectory pipeline itself), not to any per-session sampling property — which
-   would mean the next fix is a genuinely different distance/normalization scheme, a more
-   design-bearing change than the pure-reanalysis experiments run so far.
-2b. A joint unit-*and*-trial matched range hasn't been tried; unit-count alone already showed H1's
-   narrowing doesn't compound simply (Allen's H1 mean sits under half the already-narrowed range's
-   max), so a joint match is not guaranteed to close the remaining gap even if it helps.
-3. Once (if) a fix passes the Allen check on both H0 and H1, the actual scientific question this
-   project exists to answer — full-budget `steinmetz_2afc` search, and whether the modular
-   (multi-region) architecture family that E3 preferred is a real biological signal or an artifact
-   of the same unvalidated objective — is still open and unrun.
-4. `structure_weight` (the H1-excess penalty in the search objective, currently 2.0) is still only
-   calibrated at one PCA dimensionality (`n_pca=10`) and hasn't been re-derived since.
+*Substantially rewritten 2026-09-23 after a planning session that re-examined the problem from six
+angles. Three findings below change what the next experiment should be. All three are **post-hoc**
+— computed after seeing five failures against a criterion fixed in advance — and are therefore
+stated here as motivation for new preregistered experiments, never as results.*
+
+**(a) The criterion may be doing more of the work than the instrument.** E4 asks Allen to exceed
+the **maximum** of 190 within-IBL distances — an extreme order statistic, and the least stably
+estimated number in a sample. Under the standard way of asking "does this measure discriminate?",
+the *same numbers* give **AUC 0.771 (H0) and 0.766 (H1), p ≈ 3–5e-05**. So the sharper statement of
+five sessions' work is not "the instrument cannot tell these apart" but **"the instrument cannot
+tell these apart by max-exclusion."** Those are very different claims, and only the second is
+supported.
+
+**(b) H0 and H1 are not in the same epistemic position, and H1 looks like noise.** The natural
+control for Allen is not within-IBL — that is *within*-dataset — but **Steinmetz-vs-IBL**, which is
+also cross-dataset and differs only in paradigm. Paired across the same 20 IBL sessions, Allen is
+further than Steinmetz in **17/20** sessions on H0 (p = 0.012) and in **1/20** on H1 (p = 0.0007) —
+i.e. **H1 is significantly *anti*-discriminative for paradigm.** That fits what the diagrams
+contain: **6 of 22 sessions have zero H1 features** and the median session has **one**, so H1
+distances are largely computed between near-empty diagrams. And H1 feature count tracks session
+noise (`spearman(raw_diameter, H1_n) = −0.562`): unit-diameter normalization divides by signal, so
+a low-SNR session sprouts spurious micro-loops. This is a *multiplicative* per-session effect —
+**E11 fitted an additive one**, which better explains D27's failure than D27's own account does.
+The project may have been requiring its yardstick to pass on a dimension carrying no biological
+signal at this construction.
+
+**(c) The clean version of E4 has been sitting in an already-downloaded file.** E4 varies lab,
+animal, probe placement, unit count, region set, firing-rate scale *and* paradigm simultaneously,
+so its failure cannot be pinned on any one of them. The cached Steinmetz file turns out to hold
+**13 sessions** (the project uses one), and session 11 carries `spks_passive`: **the same 698
+neurons**, same animal, same probes, same session, recorded passively. `steinmetz:11` vs
+`steinmetz:11/passive` is E4's contrast with **every confound held fixed and only task engagement
+varying** — at zero download cost. If the pipeline separates these, D20's framing needs rewriting.
+If it doesn't, that is a far cleaner negative result than E4, because nothing is left to blame.
+
+**(d) The positive control now exists — and it changes the conclusion.** Nothing in E1–E11
+established that this pipeline can detect a difference it *should* detect, which left D20 ambiguous
+between "no topological difference exists here" and "the instrument is broken." Synthetic activity
+with **known** homology, pushed through the same code path at the project's own defaults and at
+bio-comparable scale (300 neurons × 340 trials × 150 bins):
+
+| comparison | H0 ratio | H1 ratio |
+|---|---|---|
+| circle vs circle (*identical* topology, different draw) | 1.5 | **2.7** |
+| circle vs figure-8 (*genuinely different* H1) | 43.7 | **108.2** |
+| — *for comparison* — within-IBL bio (n=190) | 0.9–14.3 (mean 5.1) | 0.9–14.3 (**mean 2.2**) |
+| — *for comparison* — Allen vs IBL bio (n=20) | 2.0–13.9 (mean 8.4) | 1.2–4.3 (**mean 2.1**) |
+
+Read the H1 column. **A real topological difference looks like 108. Every bio comparison this
+project has ever made looks like 2.** The bio numbers are statistically indistinguishable from the
+*same-topology* control — and that control still came out "significant" at p = 0.030, a false
+positive on two point clouds with identical topology.
+
+This resolves the ambiguity in the more interesting direction. The instrument is **not**
+underpowered — it detects genuine H1 structure at ~100× its noise floor, which also answers E4's
+never-run power-analysis candidate. The better reading of D20 is therefore not "our yardstick can't
+discriminate" but: **there is no detectable topological difference between any of these recordings
+at this construction, and the distances five experiments spent months trying to rescue are sampling
+noise whose significance test under-estimates it.** *(Caveat: the synthetic noise model isn't
+calibrated to biological SNR, so the ratio scales aren't strictly comparable — the robust claim is
+the two orders of magnitude between them, not the exact numbers.)*
+
+**What happens next, in order:**
+
+1. **Calibrate and extend the positive control.** Match the generator's noise to bio split-half
+   null magnitudes so the comparison above becomes quantitative rather than order-of-magnitude, and
+   add the Steinmetz active-vs-passive contrast from (c). A third candidate is the published
+   grid-cell toroidal dataset, where the true answer β = (1,2,1) is known independently. The
+   anticonservative null is now its own finding and needs characterising: a false-positive rate
+   measured across many same-topology pairs, not one.
+2. **A newly preregistered criterion (E12)**, with the dimension(s), control population and
+   acceptance bar fixed *before* any number is computed, and tested on data the post-hoc analysis
+   above did not touch. **Switching to AUC now, because AUC is the framing under which the existing
+   data passes, would be exactly the error this project's method exists to prevent.** The reason
+   its negative results are credible is that its criterion has never moved after a result; that has
+   to stay true.
+3. **Then, and only then**, the scientific question the project exists to answer: full-budget
+   `steinmetz_2afc` search, and whether the modular (multi-region) architecture family E3 preferred
+   is a real biological signal or an artifact of an unvalidated objective. Still open, still unrun.
+4. `structure_weight` (2.0) remains calibrated at one PCA dimensionality only (`n_pca=10`).
+
+**Two caveats this poster should state rather than bury.** The `n` is small and asymmetric: 22 bio
+sessions, of which the held-out probe, Allen, is **one** — so under any framing where
+Allen-vs-2AFC separability is the acceptance test, this is a one-sample test, and no amount of
+model-side data fixes that. And the untrained/shuffled controls cited above as corroborating D20
+were run, with their numbers logged, but **their run directory no longer exists**, so that evidence
+is currently unreproducible and is being regenerated rather than re-cited.
 
 ---
 
@@ -381,5 +527,18 @@ this kind of failure — and it did.
   trained by gradient descent, by substituting a smooth function for the spike's true
   (non-differentiable) derivative during backpropagation only.
 - **Discriminative validity:** whether a measurement instrument can actually tell apart things
-  that are genuinely different — the property this project's E4–E7 experiments found lacking in
-  its current bio-vs-bio distance range.
+  that are genuinely different — the property this project's E4–E11 experiments set out to
+  establish for its bio-vs-bio distance range, and have not yet established.
+- **Positive control:** a test case where the answer is known in advance and the instrument
+  *should* succeed. Without one, a negative result is indistinguishable from a broken instrument.
+  This project ran eleven experiments before building one — the single clearest methodological
+  lesson in the whole timeline, and worth saying out loud on the poster.
+- **AUC (area under the ROC curve):** the probability that a randomly chosen item from group A
+  scores higher than a randomly chosen item from group B. 0.5 means no separation at all, 1.0 means
+  perfect separation. It is the standard way to ask "does this measure discriminate?", and it uses
+  the whole distribution rather than one extreme value.
+- **Preregistration:** fixing the hypothesis, the analysis and the pass/fail criterion in writing
+  *before* computing the result, so a failure cannot be quietly reinterpreted as a success. Every
+  experiment E4–E11 in this project was preregistered this way; it is why the negative results can
+  be trusted, and why the newer post-hoc findings in Panel 8 are labelled as motivation for a new
+  experiment rather than as results.
