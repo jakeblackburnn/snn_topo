@@ -1,15 +1,17 @@
 """Topology pipeline and significance statistics on synthetic activity with known shape."""
 import math
+import multiprocessing
 
 import gudhi
 import numpy as np
 import pytest
 
 from snntopo import objective
+from snntopo.topology import stats
 from snntopo.atlas import signature_summary
 from snntopo.contracts import Activity, TopoConfig
 from snntopo.topology.pipeline import compute_signature, persistence, unit_diameter
-from snntopo.topology.stats import (_RAW_DIAMETER_FIT, METRICS, _raw_diameter, compare,
+from snntopo.topology.stats import (_RAW_DIAMETER_FIT, METRICS, _raw_diameter, _residual_construction, compare,
                                     diagram_distance, split_half_null)
 
 
@@ -129,6 +131,40 @@ def test_split_half_null_shape():
         assert r.distance == r.null_mean and r.null_q95 >= 0
 
 
+def test_split_halves_serial_fallback_is_bitwise_identical_to_pool(monkeypatch, caplog):
+    """The fallback preserves pool.map's worker, inputs, and order exactly.
+
+    Use ``fork`` for the pooled half of this test: the test runner itself is one of the
+    sandboxes where ``forkserver`` cannot open its AF_UNIX socket, which is exactly the
+    condition the fallback must handle.
+    """
+    activity = curve_activity(circle(30), 30, 12, seed=7)
+    topo = TopoConfig(n_pca=4, smooth_win=1, maxdim=1, n_resamples=2)
+    request = [(activity, "all", 6)]
+    real_get_context = multiprocessing.get_context
+    monkeypatch.setattr(stats.multiprocessing, "get_context", lambda _: real_get_context("fork"))
+    stats._CACHE.clear()
+    pooled = stats._split_halves(request, topo, seed=3)
+
+    class UnavailablePool:
+        def __init__(self, *args, **kwargs):
+            raise OSError("AF_UNIX sockets are blocked")
+
+    monkeypatch.setattr(stats, "ProcessPoolExecutor", UnavailablePool)
+    stats._CACHE.clear()
+    with caplog.at_level("WARNING", logger="snntopo"):
+        serial = stats._split_halves(request, topo, seed=3)
+
+    assert "computing topology serially" in caplog.text
+    for pooled_pair, serial_pair in zip(pooled[0]["pairs"], serial[0]["pairs"]):
+        for pooled_dgm, serial_dgm in zip(pooled_pair, serial_pair):
+            for pooled_dim, serial_dim in zip(pooled_dgm, serial_dgm):
+                np.testing.assert_array_equal(serial_dim, pooled_dim)
+    for metric in topo.metrics:
+        np.testing.assert_array_equal(serial[0]["within"][metric], pooled[0]["within"][metric])
+    stats._CACHE.clear()
+
+
 def test_compare_same_process_is_rarely_significant():
     """Different neurons, neuron counts and trial counts, same latent trajectory. Without
     compare's trial-count equalization, H0 Wasserstein came out p < 0.05 in ~25% of seeds
@@ -168,9 +204,18 @@ def test_raw_diameter_residualization_changes_only_cross_distance():
     for plain, corrected in zip(base, residualized):
         assert (corrected.null_mean, corrected.null_q95, corrected.p_value) == (
             plain.null_mean, plain.null_q95, plain.p_value)
+        assert plain.distance_residual is None and plain.construction == "raw"
+        assert corrected.distance == plain.distance  # preserve the directly measured distance
         intercept, slope = _RAW_DIAMETER_FIT[plain.dim]
-        assert corrected.distance == pytest.approx(
+        assert corrected.distance_residual == pytest.approx(
             (plain.distance / plain.null_mean - (intercept + slope * delta)) * plain.null_mean)
+        assert corrected.construction == _residual_construction()
+
+
+def test_residual_construction_changes_with_fitted_constants(monkeypatch):
+    original = _residual_construction()
+    monkeypatch.setitem(stats._RAW_DIAMETER_FIT, 0, (0.0, 0.0))
+    assert _residual_construction() != original
 
 
 def test_objective_prefers_matching_shape():

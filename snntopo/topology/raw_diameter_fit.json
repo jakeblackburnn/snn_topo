@@ -1,0 +1,17 @@
+{
+  "condition": "all",
+  "coefficients": {
+    "0": {
+      "intercept": 2.2687743994178406,
+      "slope": 4.471255887696472
+    },
+    "1": {
+      "intercept": 0.24584879637964763,
+      "slope": 3.0950539405016997
+    }
+  },
+  "metric": "wasserstein",
+  "n_pairs": 190,
+  "population": "strict within-IBL bio pairs",
+  "source": "results/baseline-wide/{entries,distances}.csv"
+}

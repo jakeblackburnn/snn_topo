@@ -61,10 +61,12 @@ shared with other jobs (load ~16), n_resamples=50: split_half_null over 3 condit
 all of it. Callers must run under an `if __name__ == "__main__":` guard (the pool uses
 forkserver, which re-imports the main module)."""
 import hashlib
+import json
 import multiprocessing
 import os
 from concurrent.futures import ProcessPoolExecutor
 from itertools import repeat
+from pathlib import Path
 
 import gudhi
 import gudhi.wasserstein
@@ -72,18 +74,32 @@ import numpy as np
 from threadpoolctl import threadpool_limits
 
 from ..contracts import Activity, DistanceResult, TopoConfig
+from ..logging_utils import get_logger
 from .pipeline import build_trajectories, persistence, unit_diameter
 
 METRICS = ("wasserstein", "bottleneck")  # every metric diagram_distance supports; which of
 # these actually get computed per call is TopoConfig.metrics (default: wasserstein only)
 
-# Linear fit of within-IBL pairwise wasserstein distance/null_mean on |Δraw_diameter| (dev/experiments.md
-# E9 methodology, n=190 within-IBL pairs, condition "all", refit for D27):
-# ratio ≈ intercept + slope * |Δraw_diameter|. dim -> (intercept, slope).
+# Linear fit of within-IBL pairwise wasserstein distance/null_mean on |Δraw_diameter|
+# (dev/experiments.md E9 methodology, n=190 within-IBL pairs, condition "all", refit
+# for D27): ratio ≈ intercept + slope * |Δraw_diameter|. This is measured data, not a
+# tuning constant; scripts/refit_raw_diameter_fit.py recreates and checks this file.
+_RAW_DIAMETER_FIT_PATH = Path(__file__).with_name("raw_diameter_fit.json")
 _RAW_DIAMETER_FIT: dict[int, tuple[float, float]] = {
-    0: (2.2687743994178406, 4.471255887696472),
-    1: (0.24584879637964763, 3.0950539405016997),
+    int(dim): (float(coefficients["intercept"]), float(coefficients["slope"]))
+    for dim, coefficients in json.loads(_RAW_DIAMETER_FIT_PATH.read_text())["coefficients"].items()
 }
+
+
+def _residual_construction() -> str:
+    """Name the D27 correction by the exact fitted constants that define it.
+
+    A refit is a new distance construction even if the code path is otherwise identical;
+    storing a short content hash prevents old and new residualized rows from being mixed.
+    """
+    encoded = ";".join(f"{dim}:{intercept:.17g}:{slope:.17g}"
+                       for dim, (intercept, slope) in sorted(_RAW_DIAMETER_FIT.items()))
+    return "resid_rawdiam_" + hashlib.blake2b(encoded.encode(), digest_size=8).hexdigest()
 
 # (activity fingerprint, trial mask, trials per half, topo fields, seed) -> split-half diagrams.
 # 32 entries covers 3 bio references x 3 conditions with room for recent SNN activities.
@@ -147,10 +163,18 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
             halves1 += clouds[0::2]
             halves2 += clouds[1::2]
     if todo:
-        with ProcessPoolExecutor(max_workers=min(os.cpu_count(), len(halves1)),
-                                 mp_context=multiprocessing.get_context("forkserver")) as pool:
-            results = list(pool.map(_half_pair, halves1, halves2, repeat(topo.maxdim), repeat(topo.metrics),
-                                     chunksize=4))
+        try:
+            with ProcessPoolExecutor(max_workers=min(os.cpu_count(), len(halves1)),
+                                     mp_context=multiprocessing.get_context("forkserver")) as pool:
+                results = list(pool.map(_half_pair, halves1, halves2, repeat(topo.maxdim), repeat(topo.metrics),
+                                         chunksize=4))
+        except OSError as e:
+            # Some agent sandboxes forbid the AF_UNIX socket forkserver needs. Keep the
+            # requests and their order unchanged so this slower path computes precisely
+            # the same diagrams and distances as pool.map, rather than changing a run.
+            get_logger().warning("forkserver process pool unavailable (%s); computing topology serially", e)
+            results = [_half_pair(points1, points2, topo.maxdim, topo.metrics)
+                       for points1, points2 in zip(halves1, halves2)]
         for i, key in enumerate(todo):
             chunk = results[i * topo.n_resamples:(i + 1) * topo.n_resamples]
             _CACHE[key] = {"pairs": [(r[0], r[1]) for r in chunk],
@@ -166,10 +190,12 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
 
 
 def _result(target: str, cond: str, dim: int, metric: str, distance: float, null: np.ndarray,
-            p_value: float) -> DistanceResult:
+            p_value: float, distance_residual: float | None = None,
+            construction: str = "raw") -> DistanceResult:
     return DistanceResult(target=target, condition=cond, dim=dim, metric=metric, distance=distance,
                           null_mean=float(null.mean()), null_q95=float(np.quantile(null, 0.95)),
-                          p_value=p_value, n_resamples=len(null))
+                          p_value=p_value, n_resamples=len(null), distance_residual=distance_residual,
+                          construction=construction)
 
 
 def _usable(activity: Activity, cond: str, topo: TopoConfig) -> bool:
@@ -206,11 +232,15 @@ def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: 
                 distance = float(cross[m][:, :, d].mean())
                 null = np.concatenate([ha["within"][m][:, d], hb["within"][m][:, d]])
                 p_value = (1 + int((null >= distance).sum())) / (1 + len(null))
+                distance_residual = None
+                construction = "raw"
                 if delta is not None and d in _RAW_DIAMETER_FIT:
                     intercept, slope = _RAW_DIAMETER_FIT[d]
                     null_mean = float(null.mean())
-                    distance = (distance / null_mean - (intercept + slope * delta)) * null_mean
-                results.append(_result(target, cond, d, m, distance, null, p_value))
+                    distance_residual = (distance / null_mean - (intercept + slope * delta)) * null_mean
+                    construction = _residual_construction()
+                results.append(_result(target, cond, d, m, distance, null, p_value,
+                                       distance_residual, construction))
     return results
 
 

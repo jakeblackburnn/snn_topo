@@ -30,12 +30,14 @@ def add_topo_args(p):
     p.add_argument("--metrics", nargs="+", choices=list(METRICS), default=list(d.metrics),
                    help="diagram distance metrics to compute (default: wasserstein only -- "
                         "objective.py never reads bottleneck)")
+    p.add_argument("--residualize-raw-diameter", action="store_true", default=d.residualize_raw_diameter,
+                   help="also record D27's raw-diameter-residualized cross distance")
 
 
 def topo_from_args(args) -> TopoConfig:
     return TopoConfig(n_pca=args.n_pca, smooth_win=args.smooth_win, maxdim=args.maxdim,
                       min_trials=args.min_trials, n_resamples=args.n_resamples,
-                      metrics=tuple(args.metrics))
+                      metrics=tuple(args.metrics), residualize_raw_diameter=args.residualize_raw_diameter)
 
 
 def cmd_bio(args):

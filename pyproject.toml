@@ -21,6 +21,9 @@ snntopo = "snntopo.cli:main"
 [tool.setuptools.packages.find]
 include = ["snntopo*"]
 
+[tool.setuptools.package-data]
+"snntopo.topology" = ["*.json"]
+
 [tool.pytest.ini_options]
 # worktree-local code wins over the shared venv's editable install
 pythonpath = ["."]

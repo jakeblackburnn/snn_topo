@@ -192,10 +192,14 @@ def measure_activity(record: AtlasRecord, activity, task: Task, topo: TopoConfig
             record.objective_version = result_score["objective_version"]
     else:
         # D4: generic tasks stay accuracy-only; no structural penalty applies here,
-        # just the closest bio target by raw mean distance.
+        # just the closest bio target by the active (raw or requested residual) distance.
         wass = [d for d in record.distances if d.target != "self" and d.metric == "wasserstein"]
         if wass:
-            by_target = pd.DataFrame([asdict(d) for d in wass]).groupby("target")["distance"].mean()
+            by_target = pd.DataFrame([
+                {"target": d.target,
+                 "distance": d.distance_residual if d.distance_residual is not None else d.distance}
+                for d in wass
+            ]).groupby("target")["distance"].mean()
             record.nearest_bio = str(by_target.idxmin())
 
 
@@ -212,7 +216,7 @@ def control_entry(entry_id: str, kind_label: str, task: Task, activity, topo: To
     (shuffled has no ModelConfig, whether it shuffled bio or SNN activity)."""
     run_dir = Path(run_dir)
     record = AtlasRecord(entry_id=entry_id, kind="control", source=f"{task.name}:{kind_label}", status="ok",
-                         model=model_cfg.to_dict() if model_cfg else None)
+                         model=model_cfg.to_dict() if model_cfg else None, meta={"topo": asdict(topo)})
     measure_activity(record, activity, task, topo, bio_refs, run_dir, target_counts, weight)
     append_record(run_dir, record)
     return record
