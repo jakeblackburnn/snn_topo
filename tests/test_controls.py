@@ -106,6 +106,7 @@ def test_untrained_through_measure_activity_sets_objective_and_control_kind(fake
     assert record.status in ("ok", "degenerate")  # zero-init readout collapses to one action (D-something)
     assert record.objective_distance is not None
     assert record.signature_file is not None
+    assert record.meta["topo"] == atlas.asdict(TOPO)
     assert (tmp_path / record.signature_file).exists()
 
 

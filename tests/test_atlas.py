@@ -59,6 +59,19 @@ def test_legacy_record_without_new_objective_fields_loads(tmp_path: Path):
     assert r.objective_terms is None and r.objective_version is None
 
 
+def test_existing_baseline_wide_rows_keep_raw_distance_when_the_schema_grows():
+    """A pre-provenance run remains readable without changing any measured number."""
+    run_dir = Path(__file__).resolve().parents[3] / "snn_topo" / "results" / "baseline-wide"
+    if not (run_dir / "atlas.jsonl").exists():
+        pytest.skip("the local baseline-wide reference run is unavailable")
+    stored = [d["distance"] for line in (run_dir / "atlas.jsonl").read_text().splitlines()
+              for d in json.loads(line)["distances"]]
+    reread = [d.distance for r in read_records(run_dir) for d in r.distances]
+    assert reread == stored
+    assert all(d.distance_residual is None and d.construction == "raw"
+               for r in read_records(run_dir) for d in r.distances)
+
+
 def test_signature_npz_roundtrip(tmp_path: Path):
     signature = Signature(
         diagrams={"all": [np.array([[0.0, np.inf]]), np.array([[0.1, 0.4]]), np.empty((0, 2))]},
@@ -96,6 +109,16 @@ def test_score_normalises_by_null_mean():
     ]
     result = objective.score(distances, summary, target_counts)
     assert result["distance_ratio"] == pytest.approx(1.0)
+
+
+def test_score_uses_the_recorded_residual_when_present():
+    summary = {"left_H1_n": 10}
+    target_counts = {"bio:x:1": {("left", 1): 10}}
+    distance = _dr("bio:x:1", "left", 1, 1.0, 1.0)
+    distance.distance_residual = 3.0
+    distance.construction = "resid_rawdiam_test"
+    result = objective.score([distance], summary, target_counts)
+    assert result["distance_ratio"] == pytest.approx(3.0)
 
 
 def test_structure_penalty_scales_with_feature_excess():

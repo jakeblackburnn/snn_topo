@@ -144,6 +144,10 @@ class DistanceResult:
     null_q95: float
     p_value: float
     n_resamples: int
+    # ``distance`` is always the directly measured cross-source value. Corrections are
+    # additional measurements, never replacements, so stored rows remain re-analysable.
+    distance_residual: float | None = None
+    construction: str = "raw"  # "raw" | "resid_rawdiam_<fit hash>"
 
 
 @dataclass
@@ -151,7 +155,7 @@ class AtlasRecord:
     """One atlas row: a bio session or one evaluated SNN config. Every search trial
     becomes one, including degenerate/failed/timed-out ones."""
     entry_id: str
-    kind: str  # "bio" | "snn"
+    kind: str  # "bio" | "snn" | "control"
     source: str  # dataset name (bio) or task name (snn)
     status: str  # "ok" | "degenerate" | "failed" | "timeout"
     session_id: str | None = None

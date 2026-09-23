@@ -57,9 +57,10 @@ def score(distances: list[DistanceResult], summary: dict,
         n_bio = target_counts.get(d.target, {}).get((d.condition, d.dim), 0)
         if n_bio <= 0:
             continue
-        if not (math.isfinite(d.distance) and math.isfinite(d.null_mean)) or d.null_mean <= 0:
+        distance = d.distance_residual if d.distance_residual is not None else d.distance
+        if not (math.isfinite(distance) and math.isfinite(d.null_mean)) or d.null_mean <= 0:
             continue
-        ratios.append(d.distance / d.null_mean)
+        ratios.append(distance / d.null_mean)
         if d.dim >= 1:  # H0 count is trial-bin count, not structure -- exclude from the penalty
             n_snn = summary.get(f"{d.condition}_H{d.dim}_n")
             if n_snn is not None:
