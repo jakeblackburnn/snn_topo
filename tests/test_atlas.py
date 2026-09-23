@@ -61,7 +61,9 @@ def test_legacy_record_without_new_objective_fields_loads(tmp_path: Path):
 
 def test_existing_baseline_wide_rows_keep_raw_distance_when_the_schema_grows():
     """A pre-provenance run remains readable without changing any measured number."""
-    run_dir = Path(__file__).resolve().parents[3] / "snn_topo" / "results" / "baseline-wide"
+    # Relative to the repo root, so this resolves in the main checkout and in a worktree alike
+    # (it was originally written against a worktree's layout and silently skipped everywhere else).
+    run_dir = Path(__file__).resolve().parents[1] / "results" / "baseline-wide"
     if not (run_dir / "atlas.jsonl").exists():
         pytest.skip("the local baseline-wide reference run is unavailable")
     stored = [d["distance"] for line in (run_dir / "atlas.jsonl").read_text().splitlines()
