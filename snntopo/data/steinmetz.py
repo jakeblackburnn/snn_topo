@@ -1,8 +1,21 @@
 """Steinmetz et al. (2019) mouse visual 2AFC recordings.
 
-The NMA release is split across three OSF archives.  Session ids are global
-indices in the concatenation part0, part1, part2; consequently id ``"11"``
-remains the 698-unit prototype session.
+The locally supported NMA part has session ids ``"0"`` through ``"12"``.
+``"11"`` loads the active 2AFC trials.  ``"11/passive"`` loads the passive
+stimulus-presentation trials from the same units, animal, probes, and session.
+Active ``left`` and ``right`` conditions are the animal's chosen action;
+passive conditions instead mean a nonzero left or right stimulus contrast.
+Passive trials can have stimuli on both sides, so those masks are not mutually
+exclusive.  ``all`` is their union, which is all 110 passive trials in session
+11.  This makes the primary within-session contrast ``all`` versus ``all``:
+the 340 active and 110 passive trials are equalized by ``compare`` at 55 trials
+per half.  That controls recording confounds by construction, at the cost of
+power relative to using all active trials.
+
+``"11/VISp"`` loads an active sub-session containing only units from that
+recorded area.  Region sub-sessions share trials and neurons with their parent
+and with one another, so they are not independent samples and must never be
+pooled with parent sessions in the bio-vs-bio yardstick (pseudo-replication).
 """
 from pathlib import Path
 from functools import cache
@@ -13,11 +26,7 @@ import requests
 from ..config import DATA_DIR
 from ..contracts import Activity, BioSession
 
-PARTS = (
-    ("agvxh", "steinmetz_part0.npz"),
-    ("uv3mw", "steinmetz_part1.npz"),
-    ("ehmw2", "steinmetz_part2.npz"),
-)
+PARTS = (("agvxh", "steinmetz_part0.npz"),)
 WINDOW = slice(50, 200)  # 0.5--2.0 s after the stimulus in 10 ms bins
 
 
@@ -74,14 +83,34 @@ def _session_data(session_id: str):
     raise KeyError(f"unknown Steinmetz session {session_id}")
 
 
+def _split_session_id(session_id: str) -> tuple[str, str | None]:
+    """Separate a global session id from its optional composite suffix."""
+    base, separator, suffix = str(session_id).partition("/")
+    if separator and not suffix:
+        raise KeyError(f"Steinmetz composite session id has an empty suffix: {session_id!r}")
+    return base, suffix or None
+
+
 def load(session_id: str) -> BioSession:
-    dat = _session_data(session_id)
-    response = np.asarray(dat["response"])
-    # The SNN and IBL activity are both split by the chosen action, not correctness.
-    left_mask = response == 1
-    right_mask = response == -1
-    spikes = np.asarray(dat["spks"], dtype=np.float32)
+    base_id, suffix = _split_session_id(session_id)
+    dat = _session_data(base_id)
     regions = np.asarray(dat["brain_area"]).astype(str)
+    if suffix == "passive":
+        left_mask = np.asarray(dat["contrast_left_passive"]) > 0
+        right_mask = np.asarray(dat["contrast_right_passive"]) > 0
+        spikes = np.asarray(dat["spks_passive"], dtype=np.float32)
+    else:
+        response = np.asarray(dat["response"])
+        # The SNN and IBL activity are both split by the chosen action, not correctness.
+        left_mask = response == 1
+        right_mask = response == -1
+        spikes = np.asarray(dat["spks"], dtype=np.float32)
+        if suffix is not None:
+            in_region = regions == suffix
+            if not np.any(in_region):
+                raise KeyError(f"unknown Steinmetz region {suffix!r} in session {base_id}")
+            spikes = spikes[in_region]
+            regions = regions[in_region]
     return BioSession(
         dataset="steinmetz",
         session_id=str(session_id),
