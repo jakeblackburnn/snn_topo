@@ -3,6 +3,8 @@ from ..contracts import BioSession, DatasetEntry
 from . import allen, ibl, steinmetz
 
 DATASETS: dict[str, DatasetEntry] = {
+    # TODO(human): Widening this yardstick beyond session 11 is a scientific
+    # decision; it would change every downstream Steinmetz reference number.
     "steinmetz": DatasetEntry(steinmetz.load, steinmetz.list_sessions, ("11",),
                                "Steinmetz et al. visual 2AFC Neuropixels recordings"),
     "ibl": DatasetEntry(ibl.load, ibl.list_sessions, ibl.REFERENCE_SESSIONS,

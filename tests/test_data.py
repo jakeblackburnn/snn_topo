@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from snntopo.data import DATASETS
+from snntopo.data import DATASETS, load_session
 from snntopo.data import ibl, steinmetz
 from snntopo.tasks import TASKS
 
@@ -35,9 +35,38 @@ def test_steinmetz_global_session_11_stays_in_part0():
     assert np.array_equal(session.activity.conditions["right"], response == -1)
 
 
-def test_steinmetz_global_ids_concatenate_the_three_parts(monkeypatch):
-    monkeypatch.setattr(steinmetz, "_part_data", lambda part: [None] * (part + 1))
-    assert steinmetz.list_sessions() == ["0", "1", "2", "3", "4", "5"]
+def test_steinmetz_passive_session_11_uses_stimulus_side_conditions():
+    active = steinmetz.load("11")
+    passive = load_session("steinmetz", "11/passive")
+    activity = passive.activity
+    dat = steinmetz._session_data("11")
+    assert passive.session_id == "11/passive"
+    assert activity.spikes.shape == (698, 110, 250)
+    assert activity.spikes.shape[0] == active.activity.spikes.shape[0]
+    assert set(activity.conditions) == {"all", "left", "right"}
+    assert np.array_equal(activity.conditions["left"], dat["contrast_left_passive"] > 0)
+    assert np.array_equal(activity.conditions["right"], dat["contrast_right_passive"] > 0)
+    for mask in activity.conditions.values():
+        assert mask.dtype == bool and mask.shape == (activity.spikes.shape[1],)
+    assert np.array_equal(activity.conditions["all"],
+                          activity.conditions["left"] | activity.conditions["right"])
+
+
+def test_steinmetz_lists_all_cached_part0_sessions(monkeypatch):
+    monkeypatch.setattr(steinmetz, "_part_data", lambda part: [None] * 13)
+    assert steinmetz.list_sessions() == [str(i) for i in range(13)]
+
+
+def test_steinmetz_region_subsession_keeps_its_parent_trials():
+    parent = steinmetz.load("11")
+    visp = steinmetz.load("11/VISp")
+    regions = steinmetz._session_data("11")["brain_area"].astype(str)
+    in_visp = regions == "VISp"
+    assert visp.session_id == "11/VISp"
+    assert np.array_equal(visp.activity.spikes, parent.activity.spikes[in_visp])
+    assert visp.meta["n_units"] == int(in_visp.sum())
+    assert visp.meta["n_trials"] == parent.meta["n_trials"]
+    assert visp.meta["brain_regions"] == ["VISp"]
 
 
 def test_ibl_choice_convention_is_derived_from_rewarded_trials():
