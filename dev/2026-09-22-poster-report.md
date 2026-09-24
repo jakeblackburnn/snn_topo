@@ -22,11 +22,13 @@ trajectories between real brain recordings and trained spiking neural networks (
 three biological datasets and a searched space of network architectures — and, before trusting
 any of its comparisons, we tested the pipeline's ability to tell apart things that obviously
 *should* be distinguishable. It couldn't. Seven follow-up experiments failed to fix that. Then we
-built the control we should have built first — activity with *known* topology — and found the
-pipeline detects a genuine topological difference at ~100× its noise floor, while every difference
-between real recordings sits at ~2×, indistinguishable from noise. The method was never broken;
-the difference we spent months chasing does not appear to be there. That arc is the content of
-this poster.
+built the control we should have built first: activity with *known* topology, measured at
+noise matched to the real data. The test turned out to be statistically valid, and the
+cross-recording differences we had been chasing are the size of a geometry change within one
+topology. Once the yardstick was calibrated, the pipeline found a real biological difference on
+the first try: task-engaged vs passive activity in the same neurons, replicated in 11 of 12
+held-out sessions. The method was never broken. It needed a yardstick measured at the right noise
+level. That arc is the content of this poster.
 
 ---
 
@@ -379,7 +381,7 @@ thing that needs to change. Which is where the project goes next (Panel 8).
 
 ## Panel 7 — Standing decisions & what they mean for the poster's "so what"
 
-A running decision log (`dev/DECISIONS.md`, 27 entries) records every architectural and
+A running decision log (`dev/DECISIONS.md`, 28 entries) records every architectural and
 methodological choice with its rationale; the ones load-bearing for this poster:
 
 - **D18/D20 — the bio-vs-bio range is the correct idea, currently an unvalidated instrument.**
@@ -397,6 +399,10 @@ methodological choice with its rationale; the ones load-bearing for this poster:
   Raw-diameter: identified as the dominant nuisance driver and the strongest lever found, still
   insufficient as a matching rule (D26). Raw-diameter residualization: implemented as a
   first-class pipeline option, still fails the same held-out check (D27).
+- **D28: the reframe.** The yardstick is now a synthetic floor at matched noise (true null,
+  same-topology geometry floor, different-topology reference), not the bio-vs-bio range. The
+  instrument is sound (E12/E14), and cross-recording differences are geometry-sized. The search
+  block from D20 stands.
 - **The methodological lesson compounds with each one.** Five fixes, each preregistered with its
   criterion fixed before any number was computed, each reported as a failure rather than quietly
   re-specified until it passed. The reason the project can state its negative result with
@@ -468,52 +474,58 @@ bio-comparable scale (300 neurons × 340 trials × 150 bins):
 | — *for comparison* — within-IBL bio (n=190) | 0.9–14.3 (mean 5.1) | 0.9–14.3 (**mean 2.2**) |
 | — *for comparison* — Allen vs IBL bio (n=20) | 2.0–13.9 (mean 8.4) | 1.2–4.3 (**mean 2.1**) |
 
-Read the H1 column. **A real topological difference looks like 108. Every bio comparison this
-project has ever made looks like 2.**
+Read naively, the H1 column says a real topological difference looks like 108 and every bio
+comparison looks like 2. **That comparison turned out to be misleading, for two reasons that four
+preregistered experiments (E12–E15, 2026-09-24) pinned down.**
 
-**E12 put numbers on this (40 pairs per arm, preregistered).** The split-half null is **valid**:
-on true null pairs (same embedding, independent noise) it flagged 1/40 on H0 and 0/40 on H1. The
-"circle vs circle" row above was not a null pair. Its two circles had different random neuron
-embeddings, so they differed in geometry, and its p = 0.030 was a correct detection of that
-difference. It was not a false positive. *(An earlier version of this panel called the null
-anticonservative; E12 retracts that.)* Same topology with a different embedding, at noise matched
-to bio H1 null scale, gives H1 ratios of 0.94–2.49 (5–95%). The bio mean of 2.2 sits inside that
-range. Circle vs figure-8 never drops below 106.
+**The circle-vs-circle row was not a null pair, and the test is valid.** Its two circles had
+different random neuron embeddings, so they genuinely differed in geometry, and p = 0.030 was a
+correct detection of that difference. On true null pairs (same embedding, independent noise) the
+test flagged 0–1 of 40 at every noise level tried. *(An earlier version of this panel called the
+null anticonservative; E12 retracts that.)*
 
-This resolves the ambiguity in the more interesting direction. The instrument is **not**
-underpowered: it detects genuine H1 structure at about 100× its noise floor, which also answers
-E4's never-run power-analysis candidate. The better reading of D20 is not "our yardstick can't
-discriminate". It is **every bio difference measured is the size of a geometry change within one
-topology.** `compare` tests "same signature", and signatures carry geometry as well as topology.
-So whether these recordings differ in *topology* is not something this statistic can show at
-ratios of about 2. *(Caveat: H0 noise scale is not bio-matched, so H0 comparisons remain
-order-of-magnitude.)*
+**Ratio scale depends on noise, so the yardstick has to be measured at the data's noise.**
+The same three synthetic arms at three noise levels, H1 ratio (5–95%):
+
+| noise level (H1 null scale) | true null | same topology, new embedding | circle vs figure-8 |
+|---|---|---|---|
+| low (0.004), E12 | 0.82–1.27 | 0.94–8.46 | 106–131 |
+| matched to IBL (0.016), E12 | — | **0.94–2.49** | **31–38** |
+| matched to Steinmetz active-vs-passive (0.078), E14 | 0.89–1.08 | **0.92–1.09** | **2.7–3.2** |
+
+At IBL-matched noise the bio within-IBL H1 mean (2.2) sits in the geometry band, far below the
+topology band. So the reading of D20 becomes **every cross-recording difference measured so far
+is the size of a geometry change within one topology** (D28). `compare` tests "same signature",
+and a signature carries geometry as well as topology.
+
+**With a calibrated floor, the pipeline finds a real bio difference.** On the *same neurons*,
+task-engaged vs passive-viewing trials in Steinmetz session 11 give H1 ratio 3.07 (p = 0.010).
+That clears the matched floor (1.09) and a temporal-drift control (early vs late task trials,
+0.89) (E13). Preregistered replication across the other 12 sessions: detected in **11/12**, with
+H1 ratios of 1.8–4.6 and drift controls near 1 everywhere (E15). This is a behavioural-state
+effect on fixed neurons that replicates across animals, and it is the first positive bio result
+the instrument has produced. Two limits apply. At this noise, the ratio cannot distinguish a
+geometry change from a topology change (circle vs figure-8 reads about 2.8 here). And engagement
+is still confounded with movement and stimulus set.
 
 **What happens next, in order:**
 
-1. **Calibrate and extend the positive control.** Match the generator's noise to bio split-half
-   null magnitudes so the comparison above becomes quantitative rather than order-of-magnitude, and
-   add the Steinmetz active-vs-passive contrast from (c). A third candidate is the published
-   grid-cell toroidal dataset, where the true answer β = (1,2,1) is known independently.
-2. **A newly preregistered criterion**, with the dimension(s), control population and
-   acceptance bar fixed *before* any number is computed, and tested on data the post-hoc analysis
-   above did not touch. **Switching to AUC now, because AUC is the framing under which the existing
-   data passes, would be exactly the error this project's method exists to prevent.** The reason
-   its negative results are credible is that its criterion has never moved after a result; that has
-   to stay true.
-3. **Then, and only then**, the scientific question the project exists to answer: full-budget
-   `steinmetz_2afc` search, and whether the modular (multi-region) architecture family E3 preferred
-   is a real biological signal or an artifact of an unvalidated objective. Still open, still unrun.
+1. **Stress-test the floor.** It has only been measured with circle/figure-8 latents and one
+   noise model. Vary latent shape, embedding dimension and firing rate, and check that the
+   floor holds (D28's revisit condition). The grid-cell torus dataset, where β = (1,2,1) is known,
+   is the independent bio positive control.
+2. **Separate engagement from movement.** Split active trials by whether a wheel movement happened,
+   to find out whether E15's effect is motor activity rather than task engagement.
+3. **Re-derive the SNN-vs-bio comparison against a matched-noise floor** rather than the bio-vs-bio
+   range. This needs a preregistered criterion before the full-budget `steinmetz_2afc` search
+   is unblocked. **Switching to AUC now, because AUC is the framing under which the existing data
+   passes, would be exactly the error this project's method exists to prevent.**
 4. `structure_weight` (2.0) remains calibrated at one PCA dimensionality only (`n_pca=10`).
 
-**Tooling status, so the reader knows what is built vs. merely planned.** As of 2026-09-23 the
-instrument side of steps 1 and 3 is in place and merged: synthetic known-topology generators with
-a `snntopo synthetic` command (the numbers in (d) come from it); `steinmetz:11/passive` loading the
-same 698 neurons for the confound-free contrast in (c), plus all 13 cached Steinmetz sessions and
-per-area sub-sessions; and a distance schema that now preserves the raw measured value and records
-which construction produced it, so a candidate normalization no longer overwrites the data it is
-tested against. **None of the experiments above have been run** — deliberately, because their
-criteria have to be preregistered first, and the findings in (a)-(d) are post-hoc enough already.
+**Tooling status.** The synthetic generators take a `mixing_seed`, so a true null pair (same
+embedding, fresh noise) can be built. `scripts/null_calibration.py` runs the three arms at any
+scale, and `scripts/engagement_contrast.py` runs the active/passive contrast across Steinmetz
+sessions. Every number in this panel regenerates from those two scripts.
 
 **Two caveats this poster should state rather than bury.** The `n` is small and asymmetric: 22 bio
 sessions, of which the held-out probe, Allen, is **one** — so under any framing where

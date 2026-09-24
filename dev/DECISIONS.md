@@ -451,3 +451,26 @@ the E4 gate are both ratio-based (`distance / null_mean`), so D27 fits and resid
 quantity while retaining `DistanceResult`'s distance/null interface.
 **Revisit if:** a different, preregistered distance construction can clear the same Allen bar;
 otherwise D20 remains the block before any full-budget search.
+
+## D28 · 2026-09-24 · D20 reframed: instrument sound, yardstick is a matched-noise synthetic floor
+**Decision:** judge a `compare` ratio against synthetic arms (true null, same-topology geometry
+floor, different-topology) run at the *same split-half null_mean* as the data, not against the
+bio-vs-bio range. D20's operational block on the full-budget `steinmetz_2afc` search stands, but
+its explanation changes: the instrument is sound, and cross-recording differences measured so far
+are the size of within-topology geometry changes.
+**Why:** E12/E14 found the null valid on true null pairs (1/40, 0/40, 0/40, 0/40), so the
+2026-09-23 "anticonservative" reading is retracted. E12, E14 and the addendum found ratio scale
+strongly noise-dependent. Circle vs figure-8 reads H1 about 115 at noise 0.25, about 35 at
+IBL-matched noise and about 2.8 at E13's noise, so no fixed ratio bar, and no range from
+recordings at other noise levels, can serve as a yardstick. At IBL-matched noise the bio within-IBL
+H1 mean of 2.22 sits in the geometry band (0.94-2.49), far below the topology band (31-38).
+E13/E15 show the construction does detect a real bio contrast when one exists: task-engaged vs
+passive on fixed neurons clears the matched floor and a temporal-drift control in 11/12 held-out
+Steinmetz sessions.
+**Rejected:** "no detectable difference exists between these recordings" (last session's
+wording): E15 detects one on the same neurons. Also rejected: keeping the bio-vs-bio range as the
+yardstick. E4-E11 never made it discriminate, and E14 explains why ratios from different noise
+scales are not commensurable.
+**Revisit if:** a matched-noise synthetic floor turns out to be sensitive to generator choices
+beyond noise level (latent shape, embedding dimension, firing rate). Only circle/figure-8 with
+softplus-Poisson has been tried.
