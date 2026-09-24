@@ -704,7 +704,7 @@ control and the within-topology geometry floor. The construction can see a behav
 change on fixed neurons. What it does *not* show is a topology change: `compare` tests signatures,
 and 3.1 is far from the 106+ that a real H1 difference produced in E12 arm C.
 
-## E14 · 2026-09-24 · E12 arms at E13's noise scale · status: preregistered
+## E14 · 2026-09-24 · E12 arms at E13's noise scale · status: done
 **Hypothesis, preregistered before computing:** E13's 2.49 bar came from E12 at noise 2.0 (H1
 null_mean 0.016), but E13's H1 null_mean is 0.078. E12 found the geometry floor shrinks as noise
 rises, so at E13's scale the floor should be lower than 2.49. E13's detection should therefore
@@ -719,8 +719,35 @@ H1 null_mean 0.0788 at 16 vs E13 primary 0.0775 (H0 0.056 vs 0.081; 24 would mat
 - C sanity: C H1 q5 > B H1 q95. If this fails, noise 16 has buried the circle and B is
   uninterpretable as a floor; E13 then keeps its E12 bar, with this caveat recorded.
 - The floor used by E15 is B's H1 q95 at noise 16 (or 2.49 if C sanity fails).
+**Run:** as in Method (prereg `a5b1462`), 120 pairs. Output is `results/null-calibration-e14/pairs.csv`.
 
-## E15 · 2026-09-24 · engaged vs passive across Steinmetz sessions (E13 replication) · status: preregistered
+| arm | dim | p ≤ 0.05 | ratio q5 / q50 / q95 | null_mean med |
+|---|---|---|---|---|
+| A | H0 | 0/40 | 0.92 / 0.98 / 1.24 | 0.060 |
+| A | H1 | 0/40 | 0.89 / 0.98 / 1.08 | 0.085 |
+| B | H0 | 0/40 | 0.92 / 0.99 / 1.11 | 0.061 |
+| B | H1 | 0/40 | 0.92 / 0.98 / **1.09** | 0.084 |
+| C | H0 | 40/40 | 4.43 / 5.22 / 5.98 | 0.051 |
+| C | H1 | 40/40 | **2.66 / 2.84 / 3.16** | 0.087 |
+
+**Result:** null **valid** (0/40 on both dims). C sanity **passes** (2.66 > 1.09). E13 **stands**
+(3.07 > 1.09). E15's floor is **1.09**.
+**Takeaway, and it matters more than the verdict:** ratio scales depend strongly on noise. At
+this noise, geometry-only changes are invisible (B ≈ 1), and a *genuine* H1 difference (circle vs
+figure-8) reads only about 2.8, not the 108 seen at noise 0.25. E13's 3.07 on real data is the
+same size as a full topology change at matched noise. It does not follow that engagement changes
+topology, because `compare` tests signatures, and the ratio is not topology-specific. It does
+follow that the poster's "real difference = 108, bio = 2" contrast was an artefact of mismatched
+noise. The robust statement is relative to a floor measured at matched noise.
+
+**Addendum, NOT preregistered (descriptive only, run after E15):** C at noise 2.0, 300×340
+(`--runs C:2.0`, `results/null-calibration-c2/`). H1 ratio q5/q50/q95 30.93 / 35.34 / 37.92;
+H0 22.11 / 24.41 / 25.67; 40/40 flagged. So at the IBL-matched noise the three scales separate
+cleanly: true null ≈ 1, geometry floor 0.94-2.49, topology change 31-38. The bio within-IBL H1
+mean of 2.22 sits in the geometry band. Its max of 14.3 does not, but it is still well short of
+a topology change.
+
+## E15 · 2026-09-24 · engaged vs passive across Steinmetz sessions (E13 replication) · status: done
 **Hypothesis, preregistered before computing:** E13 (session 11 only) is a real effect of
 engagement/movement, so it replicates in the other sessions.
 **Method, fixed in advance:** `scripts/engagement_contrast.py --sessions 0 1 ... 12`, identical to
@@ -733,3 +760,30 @@ Over the 12 held-out sessions: ≥ 7 detected → **replicates**; ≤ 3 → **do
 4-6 → mixed. If E14 finds the null anticonservative, E15 is reported but not judged.
 Caveat accepted in advance: the floor is measured at one scale (698×110), while sessions range
 over 584-1769 units and 123-292 active trials.
+**Run:** as in Method (prereg `a5b1462`). Output is `results/engagement-contrast-e15/contrasts.csv`.
+H1, median over 5 seeds (floor 1.09 from E14):
+
+| session | block | primary | p | drift max | adjacent | detected |
+|---|---|---|---|---|---|---|
+| 0 | 70 | 1.98 | 0.020 | 1.43 | 1.64 | yes |
+| 1 | 78 | 3.22 | 0.010 | 1.13 | 2.38 | yes |
+| 2 | 75 | 4.30 | 0.010 | 1.01 | 2.51 | yes |
+| 3 | 61 | 3.36 | 0.010 | 1.09 | 2.27 | yes |
+| 4 | 75 | 3.52 | 0.010 | 0.98 | 2.84 | yes |
+| 5 | 99 | 2.21 | 0.020 | 1.12 | 1.95 | yes |
+| 6 | 95 | 1.84 | **0.059** | 1.10 | 1.90 | no (p only) |
+| 7 | 78 | 3.77 | 0.010 | 1.08 | 3.07 | yes |
+| 8 | 110 | 3.98 | 0.010 | 1.04 | 4.25 | yes |
+| 9 | 110 | 4.42 | 0.010 | 1.01 | 4.80 | yes |
+| 10 | 110 | 4.55 | 0.010 | 1.03 | 4.49 | yes |
+| 12 | 110 | 2.84 | 0.020 | 0.99 | 3.03 | yes |
+| *11 (E13, excluded)* | 110 | 3.07 | 0.010 | 1.01 | 3.36 | yes |
+
+**Result: REPLICATES, 11/12 held-out sessions (criterion ≥ 7).** Drift controls sit at about 1
+everywhere (max 1.43, session 0). H0 goes the same way in most sessions (e.g. session 12 H0 6.85
+vs drift 1.21), but H0 is not judged.
+**Takeaway:** a task-engaged vs passive signature difference on fixed neurons is a robust,
+cross-animal effect. It clears a same-session temporal control and the matched-noise geometry
+floor. At this noise its size (H1 about 2-4.5) matches E14's circle-vs-figure-8 (about 2.8). The
+ratio cannot tell geometry from topology at this noise, so this is **not** a claim that
+engagement changes topology. Engagement is still confounded with movement and stimulus set.
