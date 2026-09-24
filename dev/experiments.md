@@ -661,7 +661,7 @@ embedding get buried under sampling noise.
 Caveats: A was run only at noise 0.25, not at the bio-matched 2.0. H0 null scale is never
 bio-matched (synthetic 0.0055 vs bio 0.0365), so H0 comparisons to bio remain order-of-magnitude.
 
-## E13 · 2026-09-24 · Steinmetz 11 task-engaged vs passive, same units (journal Next 3) · status: preregistered
+## E13 · 2026-09-24 · Steinmetz 11 task-engaged vs passive, same units (journal Next 3) · status: done
 **Hypothesis, preregistered before computing:** E12 showed that bio H1 ratios of about 2 are the size of a
 within-topology geometry change. On identical neurons (698 units, same animal, probes and session),
 switching from task engagement to passive viewing is the largest state change available without
@@ -679,3 +679,27 @@ engagement **detected** iff, on H1, the primary median ratio over seeds is > 2.4
 at bio-matched noise) **and** > the drift control's max ratio over seeds, **and** the primary
 median p ≤ 0.05. Otherwise **not detected**. Detected would still mean "signature differs beyond
 a within-topology geometry change", not "topology differs".
+**Run:** `python scripts/engagement_contrast.py` (preregistration committed first in `aa663e7`).
+Output is `results/engagement-contrast/contrasts.csv` (gitignored). Values are over 5 compare seeds:
+
+| contrast | H0 ratio med [min, max] | H0 p med | H1 ratio med [min, max] | H1 p med | null_mean med (H1) |
+|---|---|---|---|---|---|
+| primary (active vs passive) | 1.83 [1.76, 1.86] | 0.040 | **3.07 [3.04, 3.18]** | **0.010** | 0.0775 |
+| drift (early vs late active) | 1.12 [1.09, 1.15] | 0.307 | 0.89 [0.85, 1.01] | 0.535 | 0.0727 |
+| adjacent (late active vs passive) | 1.92 [1.82, 1.98] | 0.040 | 3.36 [3.21, 3.45] | 0.010 | 0.0755 |
+
+**Result: engagement DETECTED.** On H1, 3.07 > 2.49 (E12 floor) and > 1.01 (drift max), with
+p = 0.010. The weak prediction was wrong.
+- Drift is not the explanation. Early-vs-late active sits at the null (ratio about 1), while the
+  temporally *adjacent* late-active-vs-passive pair is the largest contrast (3.36).
+- p = 0.010 is the floor for 100 null draws (1/101), so it is saturated rather than small.
+- Scale caveat: the H1 null_mean here (0.078, 55-trial halves) is about 5× E12's bio-matched level
+  (0.016). E12 found that the geometry floor *shrinks* as noise grows (B median 3.0 → 1.3 from
+  noise 0.25 → 2.0), so at this noise the 2.49 bar is probably generous. That caveat assumes the
+  trend continues, and E12 did not measure it.
+- Confounds that remain with engagement: movement (passive has none) and stimulus set (active
+  `all` includes zero-contrast trials that got a response; passive `all` is nonzero contrast only).
+**Takeaway:** this is the first bio contrast in the project that clears both a same-neuron temporal
+control and the within-topology geometry floor. The construction can see a behavioural-state
+change on fixed neurons. What it does *not* show is a topology change: `compare` tests signatures,
+and 3.1 is far from the 106+ that a real H1 difference produced in E12 arm C.
