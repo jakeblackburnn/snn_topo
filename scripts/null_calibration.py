@@ -4,10 +4,11 @@ Arms, each over --n pairs, all through stats.compare at project TopoConfig defau
   A  circle vs circle, same embedding (mixing_seed), independent noise -- compare's true H0
   B  circle vs circle, different embeddings -- same topology, different geometry
   C  circle vs figure-8, different embeddings -- different topology
-B runs at a second noise level to check whether its floor depends on noise.
-Rows are appended as they finish, so an interrupted run keeps what it measured.
+Defaults reproduce E12.  E14 reruns the arms at E13's scale:
 
     python scripts/null_calibration.py --out results/null-calibration
+    python scripts/null_calibration.py --out results/null-calibration-e14 \
+        --n-neurons 698 --n-trials 110 --runs A:16 B:16 C:16
 """
 import argparse
 import csv
@@ -20,13 +21,11 @@ from snntopo.contracts import TopoConfig
 from snntopo.generators import circle, figure8
 from snntopo.topology.stats import compare
 
-SCALE = dict(n_neurons=300, n_trials=340, n_bins=150)
-RUNS = [("A", 0.25), ("B", 0.25), ("C", 0.25), ("B", 2.0)]
 FIELDS = ["arm", "noise_level", "pair", "dim", "distance", "null_mean", "null_q95", "ratio", "p_value"]
 
 
-def pair(arm: str, i: int, noise_level: float):
-    kw = dict(SCALE, noise_level=noise_level)
+def pair(arm: str, i: int, noise_level: float, scale: dict):
+    kw = dict(scale, noise_level=noise_level)
     if arm == "A":
         return circle(seed=2 * i, mixing_seed=10_000 + i, **kw), circle(seed=2 * i + 1, mixing_seed=10_000 + i, **kw)
     if arm == "B":
@@ -40,9 +39,9 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return centre - half, centre + half
 
 
-def summarize(path: Path) -> None:
+def summarize(path: Path, runs: list[tuple[str, float]]) -> None:
     rows = list(csv.DictReader(path.open()))
-    for arm, noise_level in RUNS:
+    for arm, noise_level in runs:
         for dim in ("0", "1"):
             sel = [r for r in rows if r["arm"] == arm and r["noise_level"] == str(noise_level) and r["dim"] == dim]
             if not sel:
@@ -62,8 +61,13 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=40)
     ap.add_argument("--out", default="results/null-calibration")
+    ap.add_argument("--n-neurons", type=int, default=300)
+    ap.add_argument("--n-trials", type=int, default=340)
+    ap.add_argument("--runs", nargs="+", default=["A:0.25", "B:0.25", "C:0.25", "B:2.0"])
     ap.add_argument("--summary-only", action="store_true")
     args = ap.parse_args()
+    scale = dict(n_neurons=args.n_neurons, n_trials=args.n_trials, n_bins=150)
+    runs = [(arm, float(level)) for arm, level in (r.split(":") for r in args.runs)]
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     path = out / "pairs.csv"
@@ -72,17 +76,17 @@ def main() -> None:
         with path.open("w", newline="") as f:
             writer = csv.DictWriter(f, FIELDS)
             writer.writeheader()
-            for arm, noise_level in RUNS:
+            for arm, noise_level in runs:
                 for i in range(args.n):
                     start = time.time()
-                    a, b = pair(arm, i, noise_level)
+                    a, b = pair(arm, i, noise_level, scale)
                     for r in compare(a, b, arm, ["all"], topo, seed=i):
                         writer.writerow(dict(arm=arm, noise_level=noise_level, pair=i, dim=r.dim,
                                              distance=r.distance, null_mean=r.null_mean, null_q95=r.null_q95,
                                              ratio=r.distance / r.null_mean, p_value=r.p_value))
                     f.flush()
                     print(f"{arm} noise={noise_level} pair {i}: {time.time() - start:.1f}s", flush=True)
-    summarize(path)
+    summarize(path, runs)
 
 
 if __name__ == "__main__":

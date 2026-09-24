@@ -1,13 +1,16 @@
-"""E13: Steinmetz session 11, task-engaged vs passive, on the same 698 units.
+"""E13/E15: Steinmetz task-engaged vs passive trials, on the same units per session.
 
 Contrasts, condition `all` only (passive left/right mean stimulus side, not choice):
   primary    all active responded trials vs all passive trials
-  drift      first 110 vs last 110 active responded trials -- the passive block follows
+  drift      first vs last `block` active responded trials -- the passive block follows
              the task, so a within-task time gap is the confound to beat
-  adjacent   last 110 active vs passive -- the smallest time gap
-Each is repeated over compare seeds, since one split-half draw is itself noisy.
+  adjacent   last `block` active vs passive -- the smallest time gap
+block = min(n_passive, n_active // 2), so the drift blocks never overlap; for session
+11 that is 110, the passive count.  Each contrast is repeated over compare seeds, since
+one split-half draw is itself noisy.
 
-    python scripts/engagement_contrast.py --out results/engagement-contrast
+    python scripts/engagement_contrast.py --out results/engagement-contrast             # E13
+    python scripts/engagement_contrast.py --out results/engagement-contrast-e15 --sessions 0 1 2 3 4 5 6 7 8 9 10 11 12
 """
 import argparse
 import csv
@@ -19,8 +22,7 @@ from snntopo.contracts import Activity, TopoConfig
 from snntopo.data import load_session
 from snntopo.topology.stats import compare
 
-N_BLOCK = 110  # the passive trial count, so every contrast compares 55-trial halves
-FIELDS = ["contrast", "seed", "dim", "distance", "null_mean", "null_q95", "ratio", "p_value"]
+FIELDS = ["session", "block", "contrast", "seed", "dim", "distance", "null_mean", "null_q95", "ratio", "p_value"]
 
 
 def subset(activity: Activity, trials: np.ndarray) -> Activity:
@@ -32,36 +34,42 @@ def subset(activity: Activity, trials: np.ndarray) -> Activity:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=5)
+    ap.add_argument("--sessions", nargs="+", default=["11"])
     ap.add_argument("--out", default="results/engagement-contrast")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    active = load_session("steinmetz", "11").activity
-    passive = load_session("steinmetz", "11/passive").activity
-    responded = np.flatnonzero(active.conditions["all"])
-    early, late = subset(active, responded[:N_BLOCK]), subset(active, responded[-N_BLOCK:])
-    contrasts = {"primary": (active, passive), "drift": (early, late), "adjacent": (late, passive)}
-
     topo = TopoConfig()
     rows = []
-    for name, (a, b) in contrasts.items():
-        for seed in range(args.seeds):
-            for r in compare(a, b, name, ["all"], topo, seed=seed):
-                rows.append(dict(contrast=name, seed=seed, dim=r.dim, distance=r.distance, null_mean=r.null_mean,
-                                 null_q95=r.null_q95, ratio=r.distance / r.null_mean, p_value=r.p_value))
+    for session in args.sessions:
+        active = load_session("steinmetz", session).activity
+        passive = load_session("steinmetz", f"{session}/passive").activity
+        responded = np.flatnonzero(active.conditions["all"])
+        block = min(int(passive.conditions["all"].sum()), len(responded) // 2)
+        early, late = subset(active, responded[:block]), subset(active, responded[-block:])
+        contrasts = {"primary": (active, passive), "drift": (early, late), "adjacent": (late, passive)}
+        for name, (a, b) in contrasts.items():
+            for seed in range(args.seeds):
+                for r in compare(a, b, name, ["all"], topo, seed=seed):
+                    rows.append(dict(session=session, block=block, contrast=name, seed=seed, dim=r.dim,
+                                     distance=r.distance, null_mean=r.null_mean, null_q95=r.null_q95,
+                                     ratio=r.distance / r.null_mean, p_value=r.p_value))
+        print(f"session {session} done (block {block})", flush=True)
     with (out / "contrasts.csv").open("w", newline="") as f:
         writer = csv.DictWriter(f, FIELDS)
         writer.writeheader()
         writer.writerows(rows)
 
-    for name in contrasts:
-        for dim in (0, 1):
-            sel = [r for r in rows if r["contrast"] == name and r["dim"] == dim]
-            ratio = np.array([r["ratio"] for r in sel])
-            p = np.array([r["p_value"] for r in sel])
-            print(f"{name:8s} H{dim}  ratio median {np.median(ratio):.2f} [{ratio.min():.2f}, {ratio.max():.2f}]  "
-                  f"p median {np.median(p):.3f}  null_mean median {np.median([r['null_mean'] for r in sel]):.4g}")
+    for session in args.sessions:
+        for name in ("primary", "drift", "adjacent"):
+            for dim in (0, 1):
+                sel = [r for r in rows if r["session"] == session and r["contrast"] == name and r["dim"] == dim]
+                ratio = np.array([r["ratio"] for r in sel])
+                p = np.array([r["p_value"] for r in sel])
+                print(f"{session:>2s} {name:8s} H{dim}  ratio median {np.median(ratio):.2f} "
+                      f"[{ratio.min():.2f}, {ratio.max():.2f}]  p median {np.median(p):.3f}  "
+                      f"null_mean median {np.median([r['null_mean'] for r in sel]):.4g}")
 
 
 if __name__ == "__main__":

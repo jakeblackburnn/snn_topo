@@ -703,3 +703,33 @@ p = 0.010. The weak prediction was wrong.
 control and the within-topology geometry floor. The construction can see a behavioural-state
 change on fixed neurons. What it does *not* show is a topology change: `compare` tests signatures,
 and 3.1 is far from the 106+ that a real H1 difference produced in E12 arm C.
+
+## E14 · 2026-09-24 · E12 arms at E13's noise scale · status: preregistered
+**Hypothesis, preregistered before computing:** E13's 2.49 bar came from E12 at noise 2.0 (H1
+null_mean 0.016), but E13's H1 null_mean is 0.078. E12 found the geometry floor shrinks as noise
+rises, so at E13's scale the floor should be lower than 2.49. E13's detection should therefore
+stand, and the null should stay valid.
+**Method, fixed in advance:** `scripts/null_calibration.py --n-neurons 698 --n-trials 110 --runs
+A:16 B:16 C:16`, which is E13's neuron count and 55-trial halves. Everything else is as E12. Noise 16
+was chosen before any pair ran, by scanning the split-half null of `circle(seed=500)` at this scale:
+H1 null_mean 0.0788 at 16 vs E13 primary 0.0775 (H0 0.056 vs 0.081; 24 would match H0 better).
+**Criteria, fixed in advance:**
+- A, per dim: ≤ 4/40 at p ≤ 0.05 → null valid; ≥ 7/40 → anticonservative; 5-6 → inconclusive.
+- E13 detection **stands** iff E13's primary H1 median 3.07 > B's H1 q95 at noise 16.
+- C sanity: C H1 q5 > B H1 q95. If this fails, noise 16 has buried the circle and B is
+  uninterpretable as a floor; E13 then keeps its E12 bar, with this caveat recorded.
+- The floor used by E15 is B's H1 q95 at noise 16 (or 2.49 if C sanity fails).
+
+## E15 · 2026-09-24 · engaged vs passive across Steinmetz sessions (E13 replication) · status: preregistered
+**Hypothesis, preregistered before computing:** E13 (session 11 only) is a real effect of
+engagement/movement, so it replicates in the other sessions.
+**Method, fixed in advance:** `scripts/engagement_contrast.py --sessions 0 1 ... 12`, identical to
+E13 except that block = min(n_passive, n_active_responded // 2), which still gives 110 for
+session 11. All 13 sessions have passive blocks (110-150 trials); active responded counts are 123-292.
+Session 11 is rerun for completeness but is **excluded** from the verdict (already seen).
+**Criteria, fixed in advance:** per session, *detected* iff on H1 the primary median ratio >
+floor (from E14) **and** > that session's drift max ratio, **and** the primary median p ≤ 0.05.
+Over the 12 held-out sessions: ≥ 7 detected → **replicates**; ≤ 3 → **does not replicate**;
+4-6 → mixed. If E14 finds the null anticonservative, E15 is reported but not judged.
+Caveat accepted in advance: the floor is measured at one scale (698×110), while sessions range
+over 584-1769 units and 123-292 active trials.
