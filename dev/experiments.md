@@ -660,3 +660,22 @@ shrinks the geometry floor, from a median of 3.0 to 1.3, because diagram differe
 embedding get buried under sampling noise.
 Caveats: A was run only at noise 0.25, not at the bio-matched 2.0. H0 null scale is never
 bio-matched (synthetic 0.0055 vs bio 0.0365), so H0 comparisons to bio remain order-of-magnitude.
+
+## E13 · 2026-09-24 · Steinmetz 11 task-engaged vs passive, same units (journal Next 3) · status: preregistered
+**Hypothesis, preregistered before computing:** E12 showed that bio H1 ratios of about 2 are the size of a
+within-topology geometry change. On identical neurons (698 units, same animal, probes and session),
+switching from task engagement to passive viewing is the largest state change available without
+recording confounds. If *any* bio contrast pushes the signature beyond the geometry floor, this
+one should. Prediction (weak): it does not; the ratio lands inside E12's floor.
+**Method, fixed in advance:** `scripts/engagement_contrast.py`, `TopoConfig()` defaults, condition
+`all` only (passive left/right are stimulus sides, not choices), compare seeds 0-4, every contrast
+at 55-trial halves:
+- primary: active responded trials (276) vs passive (110).
+- drift control: first 110 vs last 110 active responded trials. The passive block follows the
+  task, so elapsed time is the confound.
+- adjacent (secondary): last 110 active vs passive.
+**Criterion, fixed in advance (H1 primary; H0 reported, since E12 never bio-matched H0 noise):**
+engagement **detected** iff, on H1, the primary median ratio over seeds is > 2.49 (E12 arm B q95
+at bio-matched noise) **and** > the drift control's max ratio over seeds, **and** the primary
+median p ≤ 0.05. Otherwise **not detected**. Detected would still mean "signature differs beyond
+a within-topology geometry change", not "topology differs".
