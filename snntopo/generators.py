@@ -23,12 +23,16 @@ EXPECTED_BETTI: dict[str, tuple[int, ...]] = {
 
 
 def _activity(latent: np.ndarray, *, seed: int, n_neurons: int, n_trials: int,
-              noise_level: float, bin_size_s: float = 0.01) -> Activity:
+              noise_level: float, mixing_seed: int | None = None, bin_size_s: float = 0.01) -> Activity:
     """Project one latent trajectory into trial-noisy Poisson population activity.
 
     The shared trajectory is deliberately fixed across trials: averaging should reveal
     it, while Poisson sampling and `noise_level` set the split-half floor just as they
     do for a repeated experimental condition.
+
+    `mixing_seed` fixes the neuron embedding independently of the noise.  Two draws
+    that differ in `seed` alone differ in geometry too, so they are not a null pair for
+    stats.compare; the same `mixing_seed` with different `seed`s is.
     """
     if n_neurons < latent.shape[1]:
         raise ValueError(f"n_neurons={n_neurons} is smaller than latent dimension {latent.shape[1]}")
@@ -39,6 +43,9 @@ def _activity(latent: np.ndarray, *, seed: int, n_neurons: int, n_trials: int,
 
     rng = np.random.default_rng(seed)
     mixing = rng.normal(size=(n_neurons, latent.shape[1]))
+    if mixing_seed is not None:
+        # Drawn after the default mixing so `seed`'s noise stream is unchanged.
+        mixing = np.random.default_rng(mixing_seed).normal(size=mixing.shape)
     mixing /= np.linalg.norm(mixing, axis=1, keepdims=True)
     embedded = latent @ mixing.T  # (bins, neurons), a random high-dimensional projection
     trial_noise = noise_level * rng.normal(size=(n_trials, *embedded.shape))
@@ -58,14 +65,14 @@ def _circle_points(n_bins: int) -> np.ndarray:
 
 
 def circle(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
-           n_bins: int = 150, noise_level: float = 0.25) -> Activity:
+           n_bins: int = 150, noise_level: float = 0.25, mixing_seed: int | None = None) -> Activity:
     """One loop: the minimal known-positive answer for whether H1 survives the chain."""
     return _activity(_circle_points(n_bins), seed=seed, n_neurons=n_neurons, n_trials=n_trials,
-                     noise_level=noise_level)
+                     noise_level=noise_level, mixing_seed=mixing_seed)
 
 
 def figure8(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
-            n_bins: int = 150, noise_level: float = 0.25) -> Activity:
+            n_bins: int = 150, noise_level: float = 0.25, mixing_seed: int | None = None) -> Activity:
     """Two circles meeting at one point: can the pipeline count two independent loops?"""
     n_left = n_bins // 2
     n_right = n_bins - n_left
@@ -74,11 +81,11 @@ def figure8(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
     # than looking like a single large loop joined by a short bridge.
     right = _circle_points(n_right)[::-1] + np.array([1.0, 0.0])
     return _activity(np.vstack((left, right)), seed=seed, n_neurons=n_neurons, n_trials=n_trials,
-                     noise_level=noise_level)
+                     noise_level=noise_level, mixing_seed=mixing_seed)
 
 
 def torus(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
-          n_bins: int = 150, noise_level: float = 0.25) -> Activity:
+          n_bins: int = 150, noise_level: float = 0.25, mixing_seed: int | None = None) -> Activity:
     """A sampled torus surface: two H1 generators and one H2 void (at maxdim=2)."""
     n_u = max(3, round(np.sqrt(n_bins)))
     n_v = int(np.ceil(n_bins / n_u))
@@ -90,22 +97,24 @@ def torus(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
     # other after diameter normalization, turning this calibration into a geometry
     # artifact rather than a topology check.
     latent = np.column_stack((np.cos(u), np.sin(u), np.cos(v), np.sin(v)))
-    return _activity(latent, seed=seed, n_neurons=n_neurons, n_trials=n_trials, noise_level=noise_level)
+    return _activity(latent, seed=seed, n_neurons=n_neurons, n_trials=n_trials, noise_level=noise_level,
+                     mixing_seed=mixing_seed)
 
 
 def sphere(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
-           n_bins: int = 150, noise_level: float = 0.25) -> Activity:
+           n_bins: int = 150, noise_level: float = 0.25, mixing_seed: int | None = None) -> Activity:
     """Fibonacci sampling of S²: a geometrically rich H1-negative control."""
     i = np.arange(n_bins) + 0.5
     z = 1 - 2 * i / n_bins
     phi = np.pi * (1 + 5 ** 0.5) * i
     r = np.sqrt(1 - z ** 2)
     latent = np.column_stack((r * np.cos(phi), r * np.sin(phi), z))
-    return _activity(latent, seed=seed, n_neurons=n_neurons, n_trials=n_trials, noise_level=noise_level)
+    return _activity(latent, seed=seed, n_neurons=n_neurons, n_trials=n_trials, noise_level=noise_level,
+                     mixing_seed=mixing_seed)
 
 
 def two_circles(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
-                n_bins: int = 150, noise_level: float = 0.25) -> Activity:
+                n_bins: int = 150, noise_level: float = 0.25, mixing_seed: int | None = None) -> Activity:
     """Two separated loops: whether H0 retains disconnected-component information."""
     n_left = n_bins // 2
     n_right = n_bins - n_left
@@ -114,15 +123,16 @@ def two_circles(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
     left = _circle_points(n_left) + np.array([-1.5, 0.0])
     right = _circle_points(n_right) + np.array([1.5, 0.0])
     return _activity(np.vstack((left, right)), seed=seed, n_neurons=n_neurons, n_trials=n_trials,
-                     noise_level=noise_level)
+                     noise_level=noise_level, mixing_seed=mixing_seed)
 
 
 def noise(*, seed: int = 0, n_neurons: int = 128, n_trials: int = 80,
-          n_bins: int = 150, noise_level: float = 0.25) -> Activity:
+          n_bins: int = 150, noise_level: float = 0.25, mixing_seed: int | None = None) -> Activity:
     """IID latent positions: the no-manifold negative control, with no long H1 bar."""
     rng = np.random.default_rng(seed)
     latent = rng.normal(size=(n_bins, 8))
-    return _activity(latent, seed=seed, n_neurons=n_neurons, n_trials=n_trials, noise_level=noise_level)
+    return _activity(latent, seed=seed, n_neurons=n_neurons, n_trials=n_trials, noise_level=noise_level,
+                     mixing_seed=mixing_seed)
 
 
 GENERATORS: dict[str, Callable[..., Activity]] = {

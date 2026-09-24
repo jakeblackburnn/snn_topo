@@ -605,3 +605,29 @@ reason fixed in Method.
 **Takeaway:** D26's direct residualization mechanism is now a first-class `TopoConfig` option,
 but it does not resolve D20. The mean fit removes the correlated nuisance trend without yielding
 a discriminative Allen contrast; full-budget `steinmetz_2afc` search remains blocked.
+
+## E12 · 2026-09-24 · split-half null calibration + same-topology floor (synthetic, bio scale) · status: preregistered
+**Hypothesis, preregistered before computing:** the 2026-09-23 "circle vs circle" positive
+control (H1 ratio 2.66, p=0.030, n=1) used different `seed`s, and `generators._activity` seeds
+the neuron embedding with the same `seed` as the noise. So that pair differed in geometry and was
+not a null pair for `stats.compare`; it is not evidence that the null is anticonservative.
+Predictions: (A) on a true null pair the split-half test's false-positive rate is near nominal;
+(B) same-topology/different-embedding pairs give H1 ratios of order 2, so bio ratios of ~2 are
+the size of a geometry change within one topology.
+**Method, fixed in advance:** `scripts/null_calibration.py`, `stats.compare` at `TopoConfig()`
+defaults (`n_pca=10, smooth_win=5, maxdim=1, n_resamples=50`, wasserstein), condition `all`,
+300 neurons × 340 trials × 150 bins, 40 pairs per arm, compare `seed=i`:
+- A: `circle(seed=2i, mixing_seed=10000+i)` vs `circle(seed=2i+1, mixing_seed=10000+i)`, noise 0.25.
+- B: `circle(seed=2i)` vs `circle(seed=2i+1)`, noise 0.25 and noise 2.0.
+- C: `circle(seed=2i)` vs `figure8(seed=2i+1)`, noise 0.25.
+Noise 2.0 was chosen, before any A/B pair was computed, by matching the synthetic H1 split-half
+null_mean (0.0186 at 2.0; 0.0040 at 0.25) to the strict within-IBL bio H1 null_mean median
+(0.0174, `results/baseline-wide`, n=190). H0 is not matched at any level tried (synthetic 0.0052
+at 2.0 vs bio 0.0365). The only pair computed before preregistration was C pair 0 (timing).
+**Criteria, fixed in advance:**
+- A, per dim: #(p ≤ 0.05) ≤ 4/40 → null **valid**; ≥ 7/40 → **anticonservative**; 5-6 →
+  inconclusive. Also report the 95% Wilson CI.
+- B, H1: report ratio q5/q50/q95 at both noise levels. The D20 reframe ("bio differences are
+  the size of a within-topology geometry change") **holds** iff the within-IBL bio H1 mean ratio
+  2.22 lies in B's [q5, q95] at noise 2.0 (the bio-matched level); 0.25 is secondary.
+- C sanity: C's H1 ratio q5 > B's H1 ratio q95 at noise 0.25; otherwise the arms are uninterpretable.

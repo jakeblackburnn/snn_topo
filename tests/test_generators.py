@@ -104,3 +104,20 @@ def test_compare_separates_figure8_more_than_a_second_circle_draw(monkeypatch):
     same_h1 = next(r for r in same if r.dim == 1 and r.metric == "wasserstein")
     different_h1 = next(r for r in different if r.dim == 1 and r.metric == "wasserstein")
     assert different_h1.distance > same_h1.distance
+
+
+def test_mixing_seed_fixes_the_embedding_without_touching_the_default_stream():
+    """E12's null pair: same embedding, independent noise.  mixing_seed=None must keep
+    every existing seed's output bit-identical, since atlas entries were made from it."""
+    kw = dict(n_neurons=32, n_trials=12, n_bins=40, noise_level=0.2)
+    default = GENERATORS["circle"](seed=7, **kw)
+    np.testing.assert_array_equal(default.spikes, GENERATORS["circle"](seed=7, mixing_seed=None, **kw).spikes)
+
+    a = GENERATORS["circle"](seed=1, mixing_seed=99, **kw)
+    b = GENERATORS["circle"](seed=2, mixing_seed=99, **kw)
+    assert not np.array_equal(a.spikes, b.spikes)
+    # Same embedding: trial-averaged rates agree far better than across embeddings.
+    other = GENERATORS["circle"](seed=2, mixing_seed=100, **kw)
+    same_gap = np.abs(a.spikes.mean(1) - b.spikes.mean(1)).mean()
+    other_gap = np.abs(a.spikes.mean(1) - other.spikes.mean(1)).mean()
+    assert same_gap < 0.5 * other_gap
