@@ -469,28 +469,33 @@ bio-comparable scale (300 neurons × 340 trials × 150 bins):
 | — *for comparison* — Allen vs IBL bio (n=20) | 2.0–13.9 (mean 8.4) | 1.2–4.3 (**mean 2.1**) |
 
 Read the H1 column. **A real topological difference looks like 108. Every bio comparison this
-project has ever made looks like 2.** The bio numbers are statistically indistinguishable from the
-*same-topology* control — and that control still came out "significant" at p = 0.030, a false
-positive on two point clouds with identical topology.
+project has ever made looks like 2.**
+
+**E12 put numbers on this (40 pairs per arm, preregistered).** The split-half null is **valid**:
+on true null pairs (same embedding, independent noise) it flagged 1/40 on H0 and 0/40 on H1. The
+"circle vs circle" row above was not a null pair. Its two circles had different random neuron
+embeddings, so they differed in geometry, and its p = 0.030 was a correct detection of that
+difference. It was not a false positive. *(An earlier version of this panel called the null
+anticonservative; E12 retracts that.)* Same topology with a different embedding, at noise matched
+to bio H1 null scale, gives H1 ratios of 0.94–2.49 (5–95%). The bio mean of 2.2 sits inside that
+range. Circle vs figure-8 never drops below 106.
 
 This resolves the ambiguity in the more interesting direction. The instrument is **not**
-underpowered — it detects genuine H1 structure at ~100× its noise floor, which also answers E4's
-never-run power-analysis candidate. The better reading of D20 is therefore not "our yardstick can't
-discriminate" but: **there is no detectable topological difference between any of these recordings
-at this construction, and the distances five experiments spent months trying to rescue are sampling
-noise whose significance test under-estimates it.** *(Caveat: the synthetic noise model isn't
-calibrated to biological SNR, so the ratio scales aren't strictly comparable — the robust claim is
-the two orders of magnitude between them, not the exact numbers.)*
+underpowered: it detects genuine H1 structure at about 100× its noise floor, which also answers
+E4's never-run power-analysis candidate. The better reading of D20 is not "our yardstick can't
+discriminate". It is **every bio difference measured is the size of a geometry change within one
+topology.** `compare` tests "same signature", and signatures carry geometry as well as topology.
+So whether these recordings differ in *topology* is not something this statistic can show at
+ratios of about 2. *(Caveat: H0 noise scale is not bio-matched, so H0 comparisons remain
+order-of-magnitude.)*
 
 **What happens next, in order:**
 
 1. **Calibrate and extend the positive control.** Match the generator's noise to bio split-half
    null magnitudes so the comparison above becomes quantitative rather than order-of-magnitude, and
    add the Steinmetz active-vs-passive contrast from (c). A third candidate is the published
-   grid-cell toroidal dataset, where the true answer β = (1,2,1) is known independently. The
-   anticonservative null is now its own finding and needs characterising: a false-positive rate
-   measured across many same-topology pairs, not one.
-2. **A newly preregistered criterion (E12)**, with the dimension(s), control population and
+   grid-cell toroidal dataset, where the true answer β = (1,2,1) is known independently.
+2. **A newly preregistered criterion**, with the dimension(s), control population and
    acceptance bar fixed *before* any number is computed, and tested on data the post-hoc analysis
    above did not touch. **Switching to AUC now, because AUC is the framing under which the existing
    data passes, would be exactly the error this project's method exists to prevent.** The reason

@@ -606,7 +606,7 @@ reason fixed in Method.
 but it does not resolve D20. The mean fit removes the correlated nuisance trend without yielding
 a discriminative Allen contrast; full-budget `steinmetz_2afc` search remains blocked.
 
-## E12 · 2026-09-24 · split-half null calibration + same-topology floor (synthetic, bio scale) · status: preregistered
+## E12 · 2026-09-24 · split-half null calibration + same-topology floor (synthetic, bio scale) · status: done
 **Hypothesis, preregistered before computing:** the 2026-09-23 "circle vs circle" positive
 control (H1 ratio 2.66, p=0.030, n=1) used different `seed`s, and `generators._activity` seeds
 the neuron embedding with the same `seed` as the noise. So that pair differed in geometry and was
@@ -631,3 +631,32 @@ at 2.0 vs bio 0.0365). The only pair computed before preregistration was C pair 
   the size of a within-topology geometry change") **holds** iff the within-IBL bio H1 mean ratio
   2.22 lies in B's [q5, q95] at noise 2.0 (the bio-matched level); 0.25 is secondary.
 - C sanity: C's H1 ratio q5 > B's H1 ratio q95 at noise 0.25; otherwise the arms are uninterpretable.
+**Run:** `python scripts/null_calibration.py --out results/null-calibration` (preregistration
+committed first in `755097e`). 160 pairs, about 6 s each, forkserver pool. Output is `results/null-calibration/pairs.csv`.
+
+| arm | noise | dim | p ≤ 0.05 | Wilson 95% | ratio q5 / q50 / q95 | mean | null_mean med |
+|---|---|---|---|---|---|---|---|
+| A | 0.25 | H0 | 1/40 | [0.004, 0.129] | 0.89 / 1.01 / 1.16 | 1.02 | 0.0024 |
+| A | 0.25 | H1 | 0/40 | [0.000, 0.088] | 0.82 / 0.96 / 1.27 | 1.01 | 0.0044 |
+| B | 0.25 | H0 | 25/40 | [0.470, 0.758] | 0.97 / 1.75 / 4.41 | 1.96 | 0.0024 |
+| B | 0.25 | H1 | 25/40 | [0.470, 0.758] | 0.94 / 3.01 / 8.46 | 3.40 | 0.0044 |
+| B | 2.0 | H0 | 7/40 | [0.087, 0.320] | 0.99 / 1.15 / 1.99 | 1.25 | 0.0055 |
+| B | 2.0 | H1 | 3/40 | [0.026, 0.199] | 0.94 / 1.31 / 2.49 | 1.46 | 0.0156 |
+| C | 0.25 | H0 | 40/40 | [0.912, 1.000] | 42.39 / 45.51 / 48.00 | 45.19 | 0.0033 |
+| C | 0.25 | H1 | 40/40 | [0.912, 1.000] | 105.96 / 115.49 / 131.45 | 117.82 | 0.0037 |
+
+**Result:**
+- A: **null valid** on both dims (1/40 and 0/40 ≤ 4/40). The split-half test is, if anything,
+  conservative on a true null pair. It sits well centred, with a ratio median of about 1.0.
+- C sanity: **pass** (C H1 q5 105.96 > B H1 q95 8.46).
+- B: the reframe **holds**. The bio within-IBL H1 mean of 2.22 lies in B's H1 [0.94, 2.49] at the
+  bio-matched noise 2.0, and also in [0.94, 8.46] at 0.25.
+**Takeaway:** the 2026-09-23 "anticonservative null" claim is **retracted**. That p=0.030 was a
+real geometry difference between two embeddings, not a false positive. `compare` answers "same
+signature?", and different embeddings of one circle genuinely have different signatures (62%
+flagged at 0.25). So a significant bio `compare` does not imply different *topology*. It can be
+geometry alone, and bio H1 ratios are the size of within-topology geometry changes. More noise
+shrinks the geometry floor, from a median of 3.0 to 1.3, because diagram differences from
+embedding get buried under sampling noise.
+Caveats: A was run only at noise 0.25, not at the bio-matched 2.0. H0 null scale is never
+bio-matched (synthetic 0.0055 vs bio 0.0365), so H0 comparisons to bio remain order-of-magnitude.

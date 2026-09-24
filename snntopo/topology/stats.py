@@ -40,7 +40,11 @@ null's mix of a-halves and b-halves, so remaining noise differences between the 
 The statistic is a mean over resamples while null draws are single resamples, so under
 H0 the statistic sits near the middle of the null (median p ~0.45 on synthetic data;
 false-positive rate at alpha=0.05 was 0-8% over 12 seeds, whether neuron counts, trial
-counts or both differed). The cost is power: the averaged cross distance has to pass
+counts or both differed; at bio scale, 300 neurons x 340 trials, it was 1/40 on H0 and
+0/40 on H1 -- dev/experiments.md E12). A true null pair shares its embedding: two
+circles with different random embeddings differ in geometry, and compare flags them
+(E12 arm B), so a significant compare means a different signature, not a different
+topology. The cost is power: the averaged cross distance has to pass
 most single-resample null draws. Circle vs. ellipse, n_resamples=50: effects of
 distance/null_mean ~1.3-1.9 were detected in 0-25% of seeds, ~2.3 and above in 100%.
 A paired per-resample test (cross_r vs. the same split's within distances) would be
