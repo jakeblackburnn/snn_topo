@@ -514,8 +514,10 @@ is still confounded with movement and stimulus set.
    noise model. Vary latent shape, embedding dimension and firing rate, and check that the
    floor holds (D28's revisit condition). The grid-cell torus dataset, where β = (1,2,1) is known,
    is the independent bio positive control.
-2. **Separate engagement from movement.** Split active trials by whether a wheel movement happened,
-   to find out whether E15's effect is motor activity rather than task engagement.
+2. **Separate engagement from movement.** Every responded trial includes a wheel turn, so compare
+   active **no-go** trials (engaged, no movement; 56–155 per session) against passive trials,
+   matched on stimulus contrast. That shows whether E15's effect is motor activity rather than
+   task engagement.
 3. **Re-derive the SNN-vs-bio comparison against a matched-noise floor** rather than the bio-vs-bio
    range. This needs a preregistered criterion before the full-budget `steinmetz_2afc` search
    is unblocked. **Switching to AUC now, because AUC is the framing under which the existing data
