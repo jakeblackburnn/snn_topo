@@ -106,7 +106,7 @@ def test_specs_expand_to_resolved_recipes(e15):
         55, 55, [0, 110], [166, 276])  # session 11: 276 responded, 110 passive
     assert sum(1 for label in pairs if label.startswith("arm:")) == 3 * e15.N_ARMS_MINI
     full = e15.expand()[1]
-    assert len(full) == 3 * 4 + 3 * 10 and all(p["seeds"] == [0, 1, 2, 3, 4] for p in full if p["label"].startswith("e15:"))
+    assert len(full) == 3 * len(e15.SESSIONS) + 3 * 10 and all(p["seeds"] == [0, 1, 2, 3, 4] for p in full if p["label"].startswith("e15:"))
     e16 = runner.load_spec(E16)
     (_, nogo), (_, drift) = [(p["label"], p) for p in e16.expand(mini=True)[1]]
     assert (nogo["h"], drift["h"], drift["a"]["trials"]["range"]) == (25, 12, [0, 25])  # 50 zero-contrast no-go

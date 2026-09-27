@@ -787,3 +787,48 @@ cross-animal effect. It clears a same-session temporal control and the matched-n
 floor. At this noise its size (H1 about 2-4.5) matches E14's circle-vs-figure-8 (about 2.8). The
 ratio cannot tell geometry from topology at this noise, so this is **not** a claim that
 engagement changes topology. Engagement is still confounded with movement and stimulus set.
+
+## E17 · 2026-09-27 · v3 instrument validation, known-answer arms at two scales (M4) · status: done
+(E16 is reserved for the no-go spec, `experiments/e16_nogo.py`.)
+**Question:** does the v3 pipeline (runner + floor.py) reproduce the instrument's known answers
+at E12's and E14's settings? It's a sweep, not a preregistration: the acceptance is design.md's.
+**Method:** `sweeps/validate_instrument.py`, arms A/B/C × 40 (`floor.arms`) at 300×340 noise 0.25
+and 698×110 noise 16, one seed, `CMP` wasserstein, 50 resamples. Acceptance per scale: arm A
+p ≤ 0.05 in ≤ 4/40 per dim; arm C p ≤ 0.05 in ≥ 36/40 on H1; `floor` sane on H1 (C q5 > B q95);
+pooled = serial = disk halves (M3's unit test).
+**Run:** `snntopo run sweeps/validate_instrument.py --out results/runs/20260927-1703-validate_instrument`
+(SNNTOPO_WORKERS=12; first invocation at 7057b61 interrupted after 13 activities, resumed at
+f7c1351, library code identical; resume 30.6 min wall). 400 activities, 0 failed, 240 pairs.
+`snntopo verdict sweeps/validate_instrument.py`:
+
+| scale | arm | dim | n | n_sig | ratio q5 | q50 | q95 | null_mean med |
+|---|---|---|---|---|---|---|---|---|
+| 300x340 · 0.25 | A | 0 | 40 | 1 | 0.891 | 1.005 | 1.162 | 0.00236 |
+| 300x340 · 0.25 | A | 1 | 40 | 0 | 0.803 | 0.938 | 1.449 | 0.00441 |
+| 300x340 · 0.25 | B | 0 | 40 | 26 | 0.942 | 1.708 | 4.165 | 0.00237 |
+| 300x340 · 0.25 | B | 1 | 40 | 25 | 0.878 | 2.955 | 8.61 | 0.00454 |
+| 300x340 · 0.25 | C | 0 | 40 | 40 | 41.73 | 45.59 | 48.52 | 0.00324 |
+| 300x340 · 0.25 | C | 1 | 40 | 40 | 105.9 | 115.7 | 131.4 | 0.00379 |
+| 698x110 · 16 | A | 0 | 40 | 0 | 0.897 | 0.997 | 1.111 | 0.0624 |
+| 698x110 · 16 | A | 1 | 40 | 0 | 0.906 | 0.979 | 1.128 | 0.0846 |
+| 698x110 · 16 | B | 0 | 40 | 0 | 0.874 | 0.983 | 1.225 | 0.0627 |
+| 698x110 · 16 | B | 1 | 40 | 0 | 0.896 | 0.986 | 1.066 | 0.0839 |
+| 698x110 · 16 | C | 0 | 40 | 40 | 4.202 | 5.107 | 5.764 | 0.0518 |
+| 698x110 · 16 | C | 1 | 40 | 40 | 2.561 | 2.769 | 3.048 | 0.0894 |
+
+    PASS  300x340 noise 0.25: A H0 p<=0.05 in <= 4/40: 1/40
+    PASS  300x340 noise 0.25: A H1 p<=0.05 in <= 4/40: 0/40
+    PASS  300x340 noise 0.25: C H1 p<=0.05 in >= 36/40: 40/40
+    PASS  300x340 noise 0.25: floor H1 sane (C q5 > B q95): 105.917 > 8.610
+    PASS  698x110 noise 16: A H0 p<=0.05 in <= 4/40: 0/40
+    PASS  698x110 noise 16: A H1 p<=0.05 in <= 4/40: 0/40
+    PASS  698x110 noise 16: C H1 p<=0.05 in >= 36/40: 40/40
+    PASS  698x110 noise 16: floor H1 sane (C q5 > B q95): 2.561 > 1.066
+    PASS: 8/8 criteria
+
+Fourth criterion: `pytest tests/test_runner.py::test_pooled_serial_and_disk_cached_halves_are_identical` → 1 passed.
+**Result: PASS, 8/8.** Magnitudes match E12 (300×340 C H1 q50 ≈ 117 there, 115.7 here) and E14
+(698×110 C H1 ≈ 2.85, B q95 ≈ 1.02; here 2.77 and 1.07). A is calibrated at both scales.
+**Takeaway:** the v3 pipeline is a faithful re-implementation of the E12/E14 instrument. At low
+noise, geometry (B) is readily detected (25/40 on H1, q95 8.6), so there a ratio above 1 is not
+topology; at E14's noise B collapses to ~1 and only the topology arm clears the floor.
