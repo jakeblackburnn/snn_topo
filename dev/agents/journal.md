@@ -1,173 +1,117 @@
-# Journal · 2026-09-24 11:08 · main · ec39c20
-
+# Journal · 2026-09-27 13:24 · main · 25c78e2
 ## Start
-Carried forward from the 2026-09-23 Close (part 2). All 4 refactor branches are merged, and
-127 tests pass on main. D20 is still open. The Next items below are unchanged.
-Correction found during framing: `generators._activity` seeds the neuron mixing matrix with the
-same `seed` as the spike noise (`snntopo/generators.py:40-44`). So the "circle vs circle,
-different draw" pair used different random embeddings, which means different geometry. That
-pair is not a true H0 for `compare`, and p=0.030 is not yet evidence that the null is
-anticonservative. See the task below.
+**State:** E12-E15 done. The null is valid (0/40). The Steinmetz engaged-vs-passive H1 contrast
+clears the matched-noise floor (3.07 vs 1.09) and replicates in 11/12 sessions. D28 reframes D20;
+the `steinmetz_2afc` search block still stands. 128 tests pass (rerun this session, after the
+migration below).
+**Since:** Nothing committed since `25c78e2`. This session migrated `dev/` to the human/agent split:
+`journal.md`, `DECISIONS.md` → `decisions.md`, `SPEC.md` → `spec.md` and `experiments.md` moved
+under `dev/agents/`; `context/` and the poster report moved to `dev/agents/project/`, all via
+`git mv`. `dev/` path references were updated in README, `snntopo/{objective,contracts,topology/stats}.py`
+(comments only), the moved docs and `brainstorm/`. Past journal Close entries and the frozen
+`project/context/` keep their old paths. The user's `dev/main.md` and `dev/journal.md` don't
+exist yet; they're the user's to write.
+**Next:** (no user tasks yet)
+1. Preregister E16: active no-go vs passive, contrast-matched, Steinmetz sessions 0-12. No-go
+   trials (`response == 0`, 56-155/session) are the only engaged-without-movement set. Add a
+   `nogo` contrast to `scripts/engagement_contrast.py`, then rerun the E14 floor scan at the no-go
+   null scale.
+2. Stress-test the floor (D28 revisit): latent shape, embedding dimension, firing rate at fixed
+   null_mean.
+3. Re-derive SNN-vs-bio against a matched-noise floor, with a preregistered criterion, before
+   unblocking the search.
+4. Rerun the D19 controls (untrained/shuffled); their run directory is gone.
+**Traps:**
+- Never compare a `distance/null_mean` ratio to a bar measured at a different null_mean (the same
+  difference reads 115, 35 or 2.8). Scan `split_half_null` on `circle(seed=500)` to match noise;
+  matching H0 needs a higher noise than matching H1.
+- Generators with different `seed` also differ in embedding. For a null pair, share `mixing_seed`.
+- `compare` tests "same signature", and signatures include geometry: significant ≠ different topology.
+- `results/` is gitignored; CSVs regenerate from the scripts (commands in their docstrings and the E-entries).
+- Stats code run from `python -` (stdin) falls back to serial with noisy tracebacks. Run a script file.
+- Venv is `~/Code/python_venv_01_main`; bare `python3` has no numpy.
+- Steinmetz passive `left`/`right` = stimulus side; use condition `all` for active-vs-passive.
+  Active `all` = responded trials only (`snntopo/data/steinmetz.py:103`).
+- `_CACHE_SIZE = 32` is still undersized for 20 references.
+**Pointers:**
+- `dev/agents/experiments.md:609` E12, `:664` E13, `:707` E14, `:750` E15.
+- `dev/agents/decisions.md:455` D28.
+- `snntopo/generators.py:25` `_activity`; `:46` `mixing_seed`.
+- `scripts/null_calibration.py` (`--n-neurons --n-trials --runs A:x B:x C:x`);
+  `scripts/engagement_contrast.py:49` block rule.
+- `dev/agents/project/2026-09-22-poster-report.md` Panel 8 (d).
 
-### Next
-1. **Calibrate the synthetic generator's noise to bio split-half null magnitudes**, so the table
-   above becomes quantitative instead of order-of-magnitude. This is the single highest-value
-   next experiment and needs no new data.
-2. **Characterise the anticonservative null**: measure the false-positive rate over many
-   same-topology generator pairs at `n_resamples=50`, rather than the single p=0.030 observed.
-   This is a real finding about `stats.py` and probably wants its own E-entry.
-3. **Run the confound-free E4**: `steinmetz:11` vs `steinmetz:11/passive` (same 698 neurons, same
-   animal/probes, only task engagement varies). Loader is merged and verified `compare`-able;
-   deliberately **not run** this session so its criterion can be preregistered first.
-4. **Preregister E12 before computing anything further.** The AUC/paired-control findings in
-   `dev/brainstorm/mega-forward-plan/index.md` §1-2 are **post-hoc**; adopting AUC now because
-   AUC is the framing that passes is the exact error this project's discipline prevents.
-5. D20/full-budget `steinmetz_2afc` search stays blocked. Nothing this session unblocks it, and
-   the positive-control result arguably makes the search less interesting, not more.
-
-### Traps
-- **Codex under `--sandbox workspace-write` cannot `git commit`** in a worktree: `.git/worktrees/
-  <name>/index.lock` is read-only. All 4 stations did the work and none could commit it; claude
-  committed on their behalf. Same sandbox blocks AF_UNIX, so the `forkserver` pool fails and *no
-  topology can be computed at all* — `refactor-provenance` added a serial fallback for this, but
-  serial is slow enough to blow a 30s streaming limit. Run test suites outside the sandbox.
-- `--dangerously-bypass-approvals-and-sandbox` is refused by Claude Code's auto-mode classifier;
-  needs an explicit Bash permission rule if full-access codex is wanted.
-- The worktree prune reclaimed **7 GB**, not the 13 GB the audit estimated — `du -sh` per worktree
-  double-counts hardlinked git objects.
-- `python -m pytest` from a worktree needs `PYTHONPATH=.`; the editable install resolves `snntopo`
-  to the main checkout. Same reason `python -m snntopo.cli` beats the `snntopo` console script.
-- **Zero `kind:"control"` records exist in any run dir**, though SPEC/D20/the poster cite the D19
-  controls. `dev/experiments.md:307` explains it: run, numbers logged, run directory gone. Not
-  fabricated — unreproducible. `report.py` also had no `control` branch, so they'd have been
-  invisible anyway (fixed on `refactor-cleanup`).
-- Two research agents disagreed on the AUC number; the one that *computed* it was right and the
-  one that reasoned from prose was wrong. Verify agent numbers before building on them.
-- `_CACHE_SIZE = 32` is undersized since D20 widened references 3→20 (needs 60); it thrashes on
-  every comparison. Not fixed this session.
-
-### Pointers
-- `dev/brainstorm/mega-forward-plan/index.md` — start here; synthesis + links to all 6 angles.
-  `verify_auc_criterion.py` in that dir reruns the three post-hoc numbers from cached CSVs.
-- `dev/2026-09-22-poster-report.md` Panel 8 — the four findings in poster form.
-- `snntopo/generators.py` + `tests/test_generators.py` — the positive control (`snntopo synthetic`).
-  `snntopo/data/steinmetz.py` — `load("11/passive")`, `load("11/VISp")`, sessions 0-12.
-- `snntopo/topology/stats.py:_RAW_DIAMETER_FIT` is now `snntopo/topology/raw_diameter_fit.json`,
-  refit by `scripts/refit_raw_diameter_fit.py`. The refit **reproduced D27's stored constants
-  exactly** (H0 r=0.638770, H1 r=0.568739), so E11's numbers are confirmed, not merely inherited.
-- `snntopo/contracts.py` `DistanceResult` now carries `distance_residual` + `construction`;
-  `distance` is always the raw measured value. 4338 legacy rows verified readable and unchanged
-  (`tests/test_atlas.py::test_existing_baseline_wide_rows_keep_raw_distance_when_the_schema_grows`).
-- `snntopo/topology/stats.py`'s module docstring claims a 0-8% false-positive rate at α=0.05;
-  this session's circle-vs-circle result (p=0.030 on *identical* topology) contradicts it. Correct
-  the docstring when Next item 2 is done — don't leave a wrong number in the file that everything
-  else cites.
-- **No `/decide` written this session** — brainstorm produces options, not decisions. Items 1-4
-  above are candidates for `/decide` once you pick a direction; the reframe of D20 in particular
-  (instrument sound, difference absent) would supersede D20's own wording and deserves an entry.
-
-## Task: E12 — null calibration and same-topology floor on synthetic data · 11:08
-**Goal:** find out whether the split-half null behaves correctly at bio scale, and what H1 ratio "same topology, different geometry" produces. Every later p-value and ratio (E4-passive included) depends on both answers.
+## Task: Reframe snntopo as a general SNN-TDA data-gathering platform, through to an implementation packet · 13:38
+**Goal:** Turn snntopo from a D20-centred SNN-vs-bio search into an organized setup that gathers TDA results across many SNNs (and brain data) at scale. This session ends when the implementation packet for a separate nodeterm build session is ready.
 **Now:**
-- `stats.compare` tests H0 "same signature up to trial noise" (`snntopo/topology/stats.py:20-29`). The docstring's 0-8% FPR comes from small-scale seeds (`stats.py:41-43`).
-- `generators._activity` uses one `seed` for both the mixing matrix and the noise (`snntopo/generators.py:40-44`). Different seeds therefore give different embeddings.
-- The single bio-scale run (`dev/brainstorm/mega-forward-plan/index.md:116`) had circle-vs-circle H1 ratio 2.66 with p=0.030. That was n=1, with different embeddings and no committed script.
-**Scope:** in: separate the embedding seed from the noise seed; a script that runs three arms at bio scale; an E12 entry in experiments.md, preregistered before running. out: noise-level calibration (Next 1), E4-passive (Next 3), changes to `stats.py` beyond correcting the docstring, and the D20 search.
-**Constraints:** project defaults (`n_pca=10, smooth_win=5, maxdim=1, n_resamples=50`), 300 neurons × 340 trials × 150 bins, condition `all`, `noise_level=0.25`. Existing generator outputs must not change for existing seeds, so the embedding seed defaults to `seed`. Assumption: 40 pairs per arm is enough (for FPR≈0.05, 95% CI ≈ ±7pp). Assumption: about 20 s per compare, about 40 min in total.
+- `dev/main.md` sets the new frame: a flexible workspace, a large TDA dataset over varied SNNs, brain signatures plus comparison metrics, and a poster.
+- The code (~2.9k lines, `snntopo/`) is organized around search/objective (`search.py`, `objective.py`, D17/D18), with a matched-noise floor as yardstick (D28). `results/` is ad hoc per-run directories (gitignored).
+- `dev/brainstorm/mega-forward-plan/` (09-23) already holds the data-platform schema, model zoo tiers, bio expansion and a codebase audit. Its index is D20-centred and partly stale (E12 retracted the anticonservative claim).
+- `dev/agents/project/context/` holds the v1 build packet. Four merged worktrees are still checked out, and the dev/ path migration is uncommitted.
+**Scope:** in: pre-flight commit → `/brainstorm` → `/consolidate` → `/context-builder` packet (including a nodeterm addendum) → worktree cleanup. out: any code change, any experiment (E16 and the D28 stress tests are paused), launching the build.
+**Constraints:**
+- `/brainstorm` goes in a new topic, `dev/brainstorm/snn-tda-dataset/`, with mega-forward-plan read as seed input. It doesn't extend that folder.
+- `/context-builder` rewrites `dev/agents/project/context/` in place; git keeps v1 (last at `0374c27`). Assumption: this is fine even though D1-D10 cite it as a "frozen input", since the old pointers resolve through git.
+- The agent-team addendum names nodeterm: a Claude orchestrator node that spawns subagents and leans on codex in permissive mode (sandbox off, which ripser's process pool needs; see mega index, forkserver trap).
+- Carry forward: the preregistration discipline (never move a criterion after seeing a result), "never overwrite a measured number" (store raw + correction + construction id), the pair-policy wall (all-pairs is infeasible above ~10³ entries), and `SNNTOPO_DATA_DIR` (shared data across worktrees).
+- Git: commit the dev/ path migration as its own commit before `/brainstorm`. Remove the four merged worktrees and their branches before any launch. Confirm each step with you first.
 **Approach:**
-- Add a `mixing_seed` param (default `None` → `seed`) to `_activity` and the generators, and a test that pins the old behaviour.
-- `scripts/null_calibration.py` runs three arms over 40 seeds: (A) circle vs circle with the same embedding and independent noise, which is the true H0; (B) circle vs circle with different embeddings, which is the same-topology floor; (C) circle vs figure-8, the different-topology reference. It writes a CSV with the per-pair ratio and p for H0 and H1.
-- Preregister in experiments.md before the run. A: FPR at α=0.05 within [0, 0.10] means the null is valid; above 0.15 means anticonservative. B: report the H1 ratio distribution. If the bio mean (~2.2) falls inside B's 5-95% range, the D20 reframe holds as "bio differences are the size of a geometry change within one topology."
-- Fix the `stats.py` docstring numbers to whatever A shows.
-**Risks:** A passes, and the "anticonservative" claim in the poster Panel 8 and the journal has to be retracted. That is fine; it is the point. B could depend on the noise level, so its floor would not transfer to bio. Checking one second noise level on B would show this. Pool/cache thrash (`_CACHE_SIZE`) could slow the run; watch the wall time.
-**Done when:** `pytest -q` is green, including the new mixing-seed test. The CSV exists under `results/null-calibration/`. E12 in experiments.md holds the preregistered criteria (committed before the run), the FPR of A with CI, the H1 ratio quantiles of B and C, and a verdict. The `stats.py` docstring and poster Panel 8 agree with E12.
-**Open:**
-1. Should Next 1 (noise calibration) be folded in by running arm B at 2-3 noise levels? Recommend one extra level only (+~15 min), as a transfer check, not a calibration.
-Open 1 resolved: arm B got one extra noise level, and 2.0 was used instead of 1.0 because 2.0
-matches the bio H1 null_mean (0.0186 vs bio 0.0174). The choice was made before any A/B pair ran.
+1. Pre-flight: run `pytest -q` (expect 128 pass), then commit the uncommitted dev/ migration (README, 3 comment-only .py edits, moved docs).
+2. Brainstorm + consolidate in one **general-purpose subagent**, to save context. `/brainstorm` is user-invoke-only, so the subagent reads `~/.claude/skills/brainstorm/SKILL.md` and `consolidate/SKILL.md` and follows them. It may fork per angle. The prompt hands it the topic, the seed files and the facets: dataset organization and schema, the pair/reference-panel policy, SNN breadth (model zoo), brain-signature extraction, run orchestration at scale, and what search/objective becomes. It must not ask questions or touch code. It returns index.md's recommendation plus open questions, and I relay them to you.
+3. `/context-builder` stays in the main session, since its interview needs you: interview, then write requirements, research, decisions, design (milestones with runnable checks) and agent-team with the nodeterm addendum, then `/consolidate` it.
+4. Hygiene: remove the four merged worktrees and branches. Leave you a one-paragraph launch note: open a Claude node, `/project-builder`.
+**Risks:**
+- The brainstorm rediscovers the 09-23 work. To catch it, the new index should cite mega's files rather than restate them.
+- The subagent's work is invisible until it reports. To catch problems, I read its index.md before relaying it; the facet files I only spot-check.
+- Scope creep into running science. The guard is that no `results/` writes happen this session.
+- project-builder says it's "not for incremental features on an already-built project". This reorg is big enough, but the packet's design must name what survives from v1, or the builder will one-shot over working code.
+- Codex in permissive mode touches shared data. The packet sets which paths each role may write.
+**Done when:**
+- `git status` is clean apart from this session's dev/ docs, the migration is its own commit, and `git worktree list` shows only main.
+- `dev/brainstorm/snn-tda-dataset/index.md` exists, links every facet file, and gives a recommendation.
+- `dev/agents/project/context/` has requirements.md (Done-when list, sandbox), research.md, decisions.md, design.md (milestones, each with a runnable check), and agent-team.md with a nodeterm/codex addendum. No blocking open question remains.
+- design.md's acceptance includes: E15 reproduces through the new pipeline, the existing tests pass, and E16 is runnable as the first experiment on the new setup.
+**Open:** none blocking. Pause/resume of E16 and the stop point are decided (above).
 
-## Progress · 11:24
-- **E12 done** (`755097e` prereg, `9060ae4` result). Null **valid**: A flagged 1/40 on H0 and 0/40
-  on H1. The "anticonservative" claim is **retracted** in the poster Panel 8 and the `stats.py`
-  docstring. Floor B (same topology, different embedding) at noise 2.0 has H1 q5-q95 [0.94, 2.49],
-  which contains the bio mean of 2.22, so the reframe holds. C (figure-8) H1 ≥ 106.
-  `generators.*` gained `mixing_seed`; existing seeds stay bit-identical (checked, plus a new
-  test). pytest: 128 passed.
-- **E13 done** (`aa663e7` prereg, `2cac171` result). This was Next 3, run at the user's request
-  ("tackle the next relevant experiment"). Steinmetz 11 active vs passive on the same 698 units:
-  H1 ratio 3.07 (p=0.010, 5 seeds) vs drift control 0.89 and E12 floor 2.49 → **detected**. This
-  is the first bio contrast to clear both. It is still a signature change, not a topology change.
-- `results/` is gitignored; both CSVs regenerate from `scripts/null_calibration.py` and
-  `scripts/engagement_contrast.py`.
-- Candidate Next: (a) run E12 arm A and B at the E13 noise scale (null_mean about 0.078) so the
-  2.49 bar is measured rather than extrapolated; (b) repeat E13 across Steinmetz sessions 0-12
-  that have passive blocks, since n=1 session is the main weakness; (c) `/decide` the D20 reframe
-  now that E12/E13 back it; (d) E13 is not yet in poster Panel 8.
+## Progress · 13:54
+- Pre-flight: 128 passed. Path migration committed `5d91f47`. Four merged worktrees and branches removed, and `snn_topo.worktrees/` rmdir'd.
+- Brainstorm (subagent): `dev/brainstorm/snn-tda-dataset/` committed `479b25d` and `3fa110a`. Recommendation: the recipe-hashed activity is the unit of record, pairs are declared only, storage is jsonl plus a content-addressed store, search/objective are frozen, experiments are committed specs with prereg bound by blob hash, and v1 numerics are frozen behind golden checks G1-G7 (E15 string-identical).
+- Verified by hand: E16 as framed is nearly empty. Passive has 0 zero-contrast trials, so contrast-matched no-go means misses only, with 14/14/9 in sessions 6/11/12 (`checks/e16_and_determinism.out`). Model built before seeding: `atlas.py:237` vs `training.py:32`.
+- Next: `/context-builder`. The ranked open questions are in the subagent report and `snn-tda-dataset/index.md`.
 
-## Progress · 12:37 — user: "do 1-4"
-- **E14** (prereg `a5b1462`, result `a589a10`): E12's arms at E13's scale (698×110, noise 16, H1
-  null 0.079). Null valid (0/40, 0/40), geometry floor H1 q95 **1.09** → E13 stands. **Ratio scale
-  depends on noise.** Circle vs figure-8 reads H1 about 115 at noise 0.25, about 35 at IBL-matched
-  noise (a descriptive addendum, not preregistered) and about 2.8 at E13 noise.
-- **E15** (same prereg, same result commit): engaged vs passive **replicates in 11/12** held-out
-  Steinmetz sessions. Session 6 misses on p only (0.059). Drift controls are about 1 everywhere.
-- **D28** (`668bacb`): D20 reframed. The yardstick is a matched-noise synthetic floor; the
-  instrument is sound; cross-recording differences are geometry-sized. The search block stands.
-- **Poster** Panel 0/7/8 updated (`668bacb` plus this edit). The Panel 8 "108 vs 2" headline is
-  replaced with the matched-noise table.
-- New Next: (a) no-go-vs-passive, contrast-matched, to separate movement from engagement (56-155
-  no-go trials/session); (b) stress-test the floor over latent shape, embedding dimension and firing
-  rate (D28 revisit); (c) re-derive SNN-vs-bio against a matched floor with a preregistered
-  criterion before unblocking the search.
-- Trap: the ratio `distance/null_mean` is not comparable across noise scales. Never compare a
-  ratio to a bar measured at a different null_mean.
+## Progress · 14:49
+- /context-builder: v3 packet written in `dev/agents/project/context/` (requirements, research, decisions D29-D38, design M1-M9, agent-team + nodeterm addendum). Consolidated by subagent: `afd2d9d`, `f0006e1`.
+- User calls: freeze search; jsonl storage; declared pairs only; no old-results oracle, validated by a known-answer spec instead (D33); fresh dataset with v1 kept parallel; specs at root binding PREREG+verdict; new families smoke-gated into zoo v1; E15 fresh + E16 skeleton; team and gates as drafted.
+- After consolidate, fixed design gaps: Steinmetz trial arrays moved to M2 (the bio producer and E16 --mini need them); ModelConfig fields moved to M8; file-ownership section added; E16 uses `PREREG = None` so the binding can't lock it by accident; SNNTOPO_WORKERS 6/5/5 across tracks. Uncommitted, for /devlog.
+- Stale cite outside the packet: `snn-tda-dataset/experiments-and-prereg.md` §5 has `steinmetz.py:121-135`, which should be about 103-117.
+- Next: the user starts the build session (nodeterm orchestrator node → `/project-builder`).
 
-## Close · 2026-09-24 12:49 · ec39c20..1e2108c
-- **changed:** `snntopo/generators.py`: `mixing_seed` fixes the neuron embedding separately from the noise. Default None keeps the output bit-identical.
-- **changed:** `scripts/null_calibration.py` (E12/E14 synthetic arms) and `scripts/engagement_contrast.py` (E13/E15, Steinmetz active vs passive): both new.
-- **changed:** `dev/experiments.md` E12-E15; `dev/DECISIONS.md` D28; `stats.py` docstring FPR numbers; poster Panels 0/7/8.
-- **why:** the D20 reading rested on an n=1 "same-topology" control that was really a pair with different geometry. Calibrating the null and the floor showed the instrument is sound, and that ratios are only meaningful against a floor measured at the data's own noise. With that floor, the first positive bio result appeared and replicated.
-- **verified:** `python -m pytest -q` → 128 passed, 9 deselected (base 127 + 1 new mixing-seed test). Existing generator seeds were checked bit-identical against the pre-change code on all 6 generators. Every E-entry was preregistered and committed before its run; the verdicts were computed from the CSVs.
-- **by:** claude
-- `755097e` E12: preregister null calibration; generators gain mixing_seed
-- `9060ae4` E12: null valid (1/40, 0/40); retract anticonservative claim
-- `aa663e7` E13: preregister Steinmetz 11 engaged-vs-passive contrast
-- `2cac171` E13: engaged-vs-passive detected on H1 (3.07 vs floor 2.49, drift 0.89)
-- `a5b1462` E14/E15: preregister floor at E13 scale and cross-session replication
-- `a589a10` E14/E15 results: floor 1.09 at E13 scale; engagement replicates 11/12
-- `668bacb` D28: reframe D20 around a matched-noise synthetic floor; poster E12-E15
-- `1e2108c` poster: next step is no-go vs passive (responded trials all move)
-- 8 files, +479 −55
-
-### Results in one screen
-| | H1 result |
-|---|---|
-| E12 true-null FPR (300×340, noise 0.25) | 0/40 (H0 1/40): the null is valid; the "anticonservative" claim is retracted |
-| E12 geometry floor, noise 2.0 (IBL-matched H1 null 0.016) | ratio 0.94-2.49 (q5-q95); bio within-IBL mean 2.22 falls inside |
-| circle vs figure-8 at noise 0.25 / 2.0 / 16 | ~115 / ~35 / ~2.8, so ratio scale depends on noise |
-| E14 floor at E13 scale (698×110, noise 16, null 0.079) | q95 1.09; true null 0/40 |
-| E13 Steinmetz 11 active vs passive | 3.07, p=0.010; drift control 0.89 |
-| E15 held-out sessions | detected in 11/12 (session 6: p=0.059); ratios 1.8-4.6; drift ≈ 1 |
+## Close · 2026-09-27 15:08 · 0374c27..07c6eae
+- **changed:** dev/ split: agent docs moved under `dev/agents/`, path refs updated (README, 3 comment-only .py edits)
+- **changed:** `dev/brainstorm/snn-tda-dataset/`: new brainstorm (schema, pair policy, SNN breadth, brain signatures, orchestration, prereg, v1 survival, checks/)
+- **changed:** `dev/agents/project/context/`: v3 build packet (requirements, research, D29-D38, design M1-M9, agent-team + nodeterm addendum), rewritten in place over v1
+- **why:** reframe snntopo per `dev/main.md` from a D20-centred search into a general SNN-TDA data-gathering platform; the packet is the input for `/project-builder`
+- **verified:** `pytest -q` → 128 passed (13:54, before the migration commit). No code change after that. Packet fixes post-consolidate are docs only
+- **by:** pair
+- `07c6eae` notes: SNN-TDA reframe (main.md) and 09-27 session plan
+- `f0006e1` consolidate: v3 context packet, fix stale path:line citations, dedupe validation facts
+- `afd2d9d` journal: snapshot before consolidate
+- `3fa110a` consolidate: snn-tda-dataset brainstorm, dedupe no-go check, fix cross-file facts
+- `479b25d` journal: snapshot before consolidate
+- `5d91f47` dev: update path references after agent-docs move
+- 36 files, +2078 −419 (excl. journal)
+- ⚠ uncommitted: `.nodeterm/` (canvas state, not project code)
 
 ### Next
-1. **Preregister E16: active no-go vs passive**, matched on stimulus contrast, across Steinmetz sessions 0-12. Every responded trial includes a wheel turn, so no-go trials (`response == 0`, 56-155 per session) are the only engaged-without-movement set. Reuse `scripts/engagement_contrast.py`: add a `nogo` contrast and pick the floor for the no-go null scale. Floors are noise-specific, so run the E14 scan again at the new scale; do not reuse 1.09 blindly.
-2. **Stress-test the floor (D28 revisit):** vary latent shape (torus, two_circles), embedding dimension and base firing rate at a fixed null_mean, and check that the B-arm q95 is stable.
-3. **Re-derive SNN-vs-bio against a matched-noise floor**, with a preregistered criterion, before unblocking the full-budget `steinmetz_2afc` search. D20's block still stands under D28.
-4. Rerun the D19 controls (untrained/shuffled). Their run directory is gone, so they are unreproducible (`dev/experiments.md:307`).
+1. `/project-builder` from the nodeterm orchestrator node in the main checkout. It reads the packet and shows the phase-1 plan for a go-ahead (checkpoint 1, `agent-team.md`)
+2. Before any codex node: add an explicit permission rule for codex permissive mode (see Traps)
+3. E16 population (misses vs zero-contrast withholds, `snn-tda-dataset/experiments-and-prereg.md` §5) is the user's call. It blocks only E16's PREREG commit
+4. Paused science (after the build): D28 floor stress tests, SNN-vs-bio against a matched floor, D19 controls rerun
 ### Traps
-- **Never compare a `distance/null_mean` ratio to a bar measured at a different null_mean.** The same topology difference reads 115, 35 or 2.8 depending on noise (E12/E14). To find the matched noise level, scan `split_half_null` on `circle(seed=500)` at the target neurons×trials until H1 null_mean matches. Matching H0 needs a higher noise than matching H1.
-- Generators with different `seed` also have different embeddings, so the geometry differs. That is not a null pair for `compare`. For a null pair, share `mixing_seed`.
-- `compare` tests "same signature", and signatures include geometry. A significant result does not mean different topology, and at bio noise the ratio cannot separate the two.
-- `results/` is gitignored. CSVs live in `results/{null-calibration,null-calibration-e14,null-calibration-c2,engagement-contrast,engagement-contrast-e15}/` and regenerate from the scripts. The commands are in each script's docstring and in the E-entries.
-- Running stats code from `python -` (stdin) makes forkserver fail and fall back to serial, with noisy tracebacks. Run a script file instead.
-- The venv is `~/Code/python_venv_01_main` (no project `.venv`). Bare `python3` has no numpy.
-- Steinmetz passive `left`/`right` mean stimulus side, not choice, so use only condition `all` for active-vs-passive. Active `all` = responded trials only (`snntopo/data/steinmetz.py:103`).
-- `_CACHE_SIZE = 32` is still undersized for 20 references (not fixed).
+- E16 as first framed is nearly empty: passive has 0 zero-contrast trials, so contrast-matched no-go = misses only, 14/14/9 trials in sessions 6/11/12 (`dev/brainstorm/snn-tda-dataset/checks/e16_and_determinism.out`)
+- SNN model is built before seeding (`atlas.py:237` vs `training.py:32`); the M2 seeding fix covers it
+- Worktrees branch from HEAD: commit packet edits before spawning workers, or they build on the old design
 ### Pointers
-- `dev/experiments.md:609` E12, `:664` E13, `:707` E14 (+ non-preregistered C@2.0 addendum), `:750` E15.
-- `dev/DECISIONS.md:455` D28: matched-noise synthetic floor replaces the bio-vs-bio range; the search block stands.
-- `snntopo/generators.py:25` `_activity`; `:46` the `mixing_seed` override (drawn after the default mixing so the noise stream is unchanged).
-- `scripts/null_calibration.py`: `--n-neurons --n-trials --runs A:x B:x C:x`; defaults reproduce E12.
-- `scripts/engagement_contrast.py:49` block rule `min(n_passive, n_active//2)`; the default `--sessions 11` reproduces E13.
-- `snntopo/topology/stats.py:40` docstring now cites E12 FPR numbers and the "signature ≠ topology" caveat.
-- `dev/2026-09-22-poster-report.md` Panel 8 (d): the matched-noise table plus E13/E15.
+- `dev/agents/project/context/design.md` milestones table (M1-M9 checks), "File ownership"; `agent-team.md` Addendum: nodeterm, Checkpoints
+- `dev/brainstorm/snn-tda-dataset/index.md`: recommendation + links to all facets
+- `dev/agents/experiments.md:750` E15 (must reproduce through the new pipeline, design.md acceptance)

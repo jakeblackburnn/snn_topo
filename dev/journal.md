@@ -9,3 +9,9 @@ process: do exploratory work via /brainstorm to develop ideas for the project ex
 then /consolidate results. define a workflow for implementation, using /context-builder, to make
 a packet for the implementation sub-session. implementation should use a nodeterm workflow with claude
 orchestrator with subagents and heavily utilizing codex in permissive mode.
+
+## Results · 2026-09-27 15:08 (agent)
+1. /brainstorm project expansion: done — `dev/brainstorm/snn-tda-dataset/index.md` (`479b25d`)
+2. /consolidate: done — `3fa110a`, `f0006e1`
+3. /context-builder implementation packet: done — `dev/agents/project/context/` (v3, M1-M9)
+4. nodeterm implementation sub-session: not started — Next 1 (`/project-builder`)

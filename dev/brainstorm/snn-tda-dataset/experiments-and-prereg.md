@@ -143,7 +143,7 @@ no-go trials, or early/late), a matched-noise floor from `match_noise` at the no
 block raises null_mean, where E14 found the geometry floor near 1 and a real topology change
 reads only about 2.8), and a replication rule over held-out sessions fixed in advance. Loader
 work: `steinmetz.load` exposes only `all`/`left`/`right` for active, with `all` = responded
-(`snntopo/data/steinmetz.py:121-135`). A no-go selector is a recipe-level mask built from
+(`snntopo/data/steinmetz.py:103-118`). A no-go selector is a recipe-level mask built from
 `response == 0` plus contrasts. That needs a new condition or a trial selector in the recipe, not
 a new composite session id.
 

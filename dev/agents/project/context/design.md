@@ -30,13 +30,25 @@ v1 stays importable in parallel (D34). The new code reuses `topology/pipeline.py
 | `snntopo/cli.py` | + `run`, `status`, `verdict`; the 8 v1 subcommands unchanged | changed |
 | `snntopo/topology/stats.py` | `compare(..., h=None)` explicit `h`; results carry `h`, `seed`, `null_mean_a`, `null_mean_b`; `SNNTOPO_WORKERS` pool cap (`:171`); disk layer under `_CACHE` (memory → disk → compute); `STATS_VERSION` | changed, additive |
 | `snntopo/topology/pipeline.py` | `PIPELINE_VERSION` constant | changed, additive |
-| `snntopo/contracts.py` | `DistanceResult` + `h`, `seed`, `null_mean_a`, `null_mean_b` (defaults); `ModelConfig` + `tau_spread=0.0`, `dale=False`, `frac_inhibitory=0.2` | changed, additive only (its own rule, `:4`) |
+| `snntopo/contracts.py` | `DistanceResult` + `h`, `seed`, `null_mean_a`, `null_mean_b` (defaults); `ModelConfig` + `tau_spread=0.0`, `dale=False`, `frac_inhibitory=0.2` (in M8) | changed, additive only (its own rule, `:4`) |
 | `snntopo/training.py` | `train(..., checkpoints=())` snapshots `state_dict` at exact update counts (not best-so-far) | changed |
-| `snntopo/data/steinmetz.py` | trial-level arrays (response, contrasts, block) available for recipe masks; atomic download (tmp + `os.replace`) | changed |
+| `snntopo/data/steinmetz.py` | trial-level arrays (response, contrasts, block) for recipe masks, incl. no-go/contrast selectors (M2); atomic download, tmp + `os.replace` (M6) | changed |
 | `snntopo/models/` | Dale sign constraint and τ spread in the existing neurons/networks; a rate/CTRNN network | changed + new |
 | `snntopo/tasks/steinmetz_nogo.py` | 3-action variant with a rewarded withhold on zero-contrast trials | new |
 | `experiments/` | `e15_engagement.py`, `e16_nogo.py` | new, repo root |
 | `sweeps/` | `validate_instrument.py`, `bio_core.py`, `zoo_v0.py`, `smoke_<family>.py`, `zoo_v1.py` | new, repo root |
+
+**File ownership.** Phase 1 (M1-M3) owns `dataset.py`, `producers.py`, `measure.py`,
+`runner.py`, `cli.py`, `stats.py`, `pipeline.py`, `contracts.py` and `training.py`. After M3 these
+are shared, and a phase-2 track changes them only as listed here:
+- Track A adds `verdict` to `runner.py`/`cli.py` and prereg fields to `run.json`.
+- Track C adds the `ModelConfig` fields and the `rate` branch of `snn_activity`.
+- Any other change to a shared file goes through the orchestrator (agent-team.md).
+
+Each track owns the files it creates:
+- A: `floor.py`, `experiments/`, `sweeps/validate_instrument.py`.
+- B: `sweeps/bio_core.py`, the `steinmetz.py` download.
+- C: `models/`, `tasks/steinmetz_nogo.py`, `sweeps/zoo_*`, `sweeps/smoke_*`.
 
 ## Recipes (resolved JSON; hash = `activity_id`)
 
@@ -115,6 +127,10 @@ PREREG = {"hypothesis":..., "prediction":..., "criteria": {...}, "excluded": [..
 def verdict(tables: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, str]: ...
 ```
 
+A spec may set `PREREG = None` as a placeholder (E16's skeleton does, until the user picks its
+population). Binding starts at the first commit where PREREG is not None, and the runner allows
+only `--mini` for a spec whose PREREG is None.
+
 Import must be cheap and side-effect free (forkserver re-imports `__main__`, which is the CLI
 entry). `expand()` may load data.
 
@@ -161,11 +177,11 @@ entry). `expand()` may load data.
 | M | delivers | runnable check |
 |---|---|---|
 | M1 | `dataset.py` (ids, RunWriter, store, load) | `pytest tests/test_dataset.py`: round-trip, dedup, torn last line dropped, mid-file corruption raises, `load` requires topo_id/cmp_id |
-| M2 | `producers.py` (bio/synthetic/control/snn existing families, seeding fix, checkpoints), `measure.py`, stats/contracts additive changes | `pytest`: same recipe → same id + content_hash (bio, synthetic, control, SNN on CPU); explicit-h compare equals default-h compare when h = min//2; v1 suite green. Record the CUDA determinism result (same SNN recipe twice on CUDA and once on CPU) in the journal, and set the `PERSIST` default from it |
+| M2 | `producers.py` (bio/synthetic/control/snn existing families, seeding fix, checkpoints), Steinmetz trial arrays + no-go/contrast selectors, `measure.py`, stats and `DistanceResult` additive changes | `pytest`: same recipe → same id + content_hash (bio, synthetic, control, SNN on CPU); explicit-h compare equals default-h compare when h = min//2; v1 suite green. Record the CUDA determinism result (same SNN recipe twice on CUDA and once on CPU) in the journal, and set the `PERSIST` default from it |
 | M3 | `runner.py`, CLI `run`/`status`, shards, `SNNTOPO_WORKERS`, disk halves cache | `pytest`: kill-and-resume gives the same row set; 2 shards = 1 shard; pooled = serial = disk-cached. `snntopo run sweeps/validate_instrument.py --mini --dry-run` prints counts and a cost estimate |
 | M4 | `floor.py` + `sweeps/validate_instrument.py` | full run passes the acceptance above; append an E-entry to `dev/agents/experiments.md` |
 | M5 | prereg binding, `verdict`, `experiments/e15_engagement.py`, `experiments/e16_nogo.py` | `pytest`: a changed PREREG or verdict voids runs, a changed expand doesn't, a dirty tree is refused. E15: scan → PREREG commit → run (~20 min incl. arms) → `snntopo verdict` prints; E-entry appended. E16 `--mini` runs one session and verdict executes |
-| M6 | `sweeps/bio_core.py` (13 sessions × blocks × regions ≥50 units, R1/R2/R4, neuron-split region controls) | `--dry-run` counts match `checks/bio_inventory.out` (77 regions); full run completes; `status` shows 0 missing |
+| M6 | atomic Steinmetz download; `sweeps/bio_core.py` (13 sessions × blocks × regions ≥50 units, R1/R2/R4, neuron-split region controls) | `--dry-run` counts match `checks/bio_inventory.out` (77 regions); full run completes; `status` shows 0 missing |
 | M7 | GPU measurement; `sweeps/zoo_v0.py` | memory/throughput table for n_hidden {64,256,1024} × {1,2,4} concurrent in the journal, and N chosen; zoo_v0 `--dry-run` ≈ 970 activities; a 200-update smoke on 6 triples × 1 seed completes with degenerate fraction logged |
 | M8 | `tau_spread`, `dale`, rate family, `steinmetz_nogo`; `sweeps/smoke_<family>.py`; `sweeps/zoo_v1.py` | each smoke sweep runs, with degenerate fraction and accuracy recorded; zoo_v1 includes the passers (gate: <50% degenerate and above-chance accuracy for ≥1 config), `--dry-run` works |
 | M9 | docs: README, `docs/architecture.md`, `dev/agents/spec.md`, `CLAUDE.md` (sandbox from requirements.md) | `pytest -q` green; `snntopo --help` lists 11 subcommands; README quickstart commands run |
