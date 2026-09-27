@@ -352,3 +352,48 @@ and sweep expansion counts. **Gaps:** none.
 3. `sweeps/bio_core.py`: add `derive()` calling `floor.robust_count_rows`; drop the dead `TOPO.metrics`; rerun into a new dir (~16 min) so every activity has R1 rows.
 4. M9 docs: README, docs/architecture.md, dev/agents/spec.md (v3, replacing v1's), D29-D38 appended to dev/agents/decisions.md (continues from D28, no renumber), CLAUDE.md (sandbox from requirements.md, commands used, layout). `snntopo --help` lists 11 subcommands.
 5. Check every requirements.md Done-when item with a real command. 6. CHECKPOINT 4: user OK to merge v3-build to main.
+
+## Close · 2026-09-27 18:19 · b13e52b..ac1ba4a
+- **changed:** snntopo v3 M1-M3 (dataset.py rows/ids/store, producers.py + measure.py, runner.py `run`/`status` with shards/resume/halves disk cache), merged on `v3-build`
+- **changed:** M6 (atomic Steinmetz download, `sweeps/bio_core.py`) and M7+M8 (GPU measurement N=2, `sweeps/zoo_v0.py`/`zoo_v1.py`, `tau_spread`, Dale, rate family, `steinmetz_nogo`), merged on `v3-build`
+- **changed:** runner: optional spec `derive(activity_id, activity)` hook for derived rows (user decision; design.md "Spec interface"/"Runner")
+- **changed:** Track A (M4 floor.py + validate_instrument, M5 PREREG binding + `snntopo verdict`, E15 spec, E16 skeleton) is on `v3-a`, NOT merged (+1283 −3, 11 files)
+- **why:** build the v3 dataset workspace from `dev/agents/project/context/` (`/project-builder`, nodeterm orchestrator + codex/claude tracks)
+- **verified:** `pytest -q` on v3-build at 8ad1b48 → 179 passed, 11 deselected; `snntopo status results/runs/20260927-1703-bio_core` → 732/732 activities, 924/924 comparisons, 0 missing; `zoo_v0`/`zoo_v1 --dry-run` → 972/1260 activities; Track A2 (v3-a): `snntopo verdict sweeps/validate_instrument.py` → PASS 8/8 (E17), `pytest -q` → 174 passed, 1 skipped, `-m data` → 13 passed
+- **by:** claude
+- `ac1ba4a` journal: phase 2 integration and resume list
+- `8ad1b48` Merge M7+M8 (Track C): GPU measurement (N=2), zoo_v0/v1, tau_spread, Dale, rate family, steinmetz_nogo
+- `85dee0e` runner: optional spec derive(activity_id, activity) writes derived rows in phase 1
+- `99cba89` design: derived rows come from an optional spec derive(tables) hook (user decision)
+- `2c4103a` M8 add gated model axes and families
+- `6d6dd02` M7 measure GPU and define zoo v0
+- `8dac864` Merge M6 (Track B): atomic Steinmetz download, sweeps/bio_core.py
+- `a7e4aad` Add atomic Steinmetz download and bio core sweep
+- `f6bf95b` producers: train lazily per training key, GPU when available; journal phase 1
+- `c75aff7` Merge M3: runner run/status, shards, resume, SNNTOPO_WORKERS, halves disk cache
+- `917a8b8` dataset.load: a retried activity's success beats its earlier failed row
+- `1342fc9` M3: runner (run/status), shards, SNNTOPO_WORKERS, disk halves cache
+- `d27af89` Merge M2: producers, measure, stats h/seed, checkpoints, Steinmetz trial arrays
+- `3520de8` Fix M2 producer and measurement gate findings
+- `d139afb` M2: add activity producers and measurement rows
+- `e7ef821` M1: dataset.py (ids, RunWriter, store, load) + PIPELINE/STATS_VERSION
+- 38 files, +3212 −36
+
+### Next
+1. CHECKPOINT 3 (user): approve E15's PREREG. Track A2's report is the `## Track A (cont.)` section of `dev/agents/journal.md` on `v3-a` (`git show v3-a:dev/agents/journal.md`): scale 1026×110, blind target H1 null_mean 0.06644, scan 12 → 0.0581, 16 → 0.0756, chosen noise 12. The user had typed (unsent) "add 14 to the scan and rerun it" into A2: do that first (`python experiments/e15_engagement.py scan` in the v3-a worktree, add level 14), then show the table + intended PREREG.
+2. On approval: commit PREREG on v3-a, run E15 (arms + contrasts, ~30+ min), `snntopo verdict experiments/e15_engagement.py`, new E-entry; run `snntopo run experiments/e16_nogo.py --mini` for real.
+3. Gate v3-a: `pytest -q`, reviewer agent on `git diff v3-build...v3-a` (check `runner.load_spec` compile-from-source change and the binding tests), merge `--no-ff` (journal conflict: keep both sections).
+4. `sweeps/bio_core.py`: add `derive()` calling `floor.robust_count_rows(aid, activity, TOPO, CMP)`, drop dead `TOPO.metrics=`; rerun into a new dir (~16 min) so every activity has R1 rows.
+5. M9 docs (README, `docs/architecture.md`, v3 `dev/agents/spec.md` replacing v1's, D29-D38 appended to `dev/agents/decisions.md` (continues after D28), root `CLAUDE.md` with Agent sandbox from requirements.md); `snntopo --help` lists 11 subcommands; check every requirements.md Done-when item by command; CHECKPOINT 4: user OK to merge `v3-build` → main.
+### Traps
+- `snntopo run --out` with a relative path resolves against cwd, so from a worktree it starts a new run in the worktree. Pass `$SNNTOPO_RESULTS_DIR/runs/<id>`.
+- nodeterm `send`/`settings` answer "Agent messaging refused." even with messaging switched on: a follow-up to a track means a new node in its group (`open-agent --group <group-id> --prompt-file`).
+- nodeterm lists working codex nodes as "AGENT STATUS UNCONFIRMED"; read panes with `tmux -L node-terminal capture-pane -p -t nt-<node-id>`. A Claude pane's busy marker is the `…(Nm Ns` spinner, not "esc to interrupt".
+- Three tracks sharing the 16 cores slowed topology ~3× (validation 10-16 s/activity loaded, 3-5 s quiet); bio_core took 16 min quiet vs a 52 min loaded extrapolation.
+- Codex workers overwrote `dev/agents/journal.md` once; briefs must say APPEND, never rewrite.
+### Pointers
+- Build packet: `dev/agents/project/context/{requirements,design,decisions,agent-team}.md`; derived-rows decision in design.md "Spec interface"/"Runner".
+- Briefs (session scratchpad, gone after reboot): brief-a.md / brief-a2.md contents are summarized in Track A sections of the journal on v3-a.
+- Worktrees: `../snn_topo.worktrees/v3-{a,b,c,m2,m3}`; only v3-a is unmerged. nodeterm groups: Track A `group-mukacave-5de15e30`.
+- Runs: `results/runs/20260927-1703-bio_core` (full), `results/runs/20260927-1703-validate_instrument` (E17).
+- Runner phase 1 / derive hook: `snntopo/runner.py:447-495`; R1: `floor.robust_count_rows` (v3-a `snntopo/floor.py:258`).
