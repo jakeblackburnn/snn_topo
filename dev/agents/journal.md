@@ -128,3 +128,87 @@ exist yet; they're the user's to write.
 **CUDA determinism:** small SNN recipe twice on CUDA and once on CPU: `cuda_cuda_bit_identical True`; `cuda_cpu_bit_identical True`. Set `PERSIST_DEFAULT = dict(spikes="none", weights=False)`.
 
 **v1 test edits:** none. **Cross-module gaps:** none encountered.
+
+## M3 · 2026-09-27 16:24 EDT
+**Built:**
+- `snntopo/runner.py`: spec loading by path (importlib, registered in `sys.modules`), `expand` (pair sides added to the activities; pairs gain `a_id`/`b_id`/`pair_key`), anti-join resume over every shard's files, stable sha256 shard hash (phase 1 by `training_key` or `activity_id`, phase 2 by `pair_key`), `run.json` with git state, `--dry-run` counts and cost, `status`.
+- `snntopo/cli.py`: `run <spec> [--out] [--shard i/N] [--mini] [--dry-run] [--retry-failed]` and `status <run_dir>`. The 8 v1 subcommands are unchanged.
+- `snntopo/topology/stats.py`:
+  - `SNNTOPO_WORKERS`, read per call: `max_workers=min(workers, len(halves1))`.
+  - The serial fallback logs one loud line per process (`_SERIAL_WARNED`).
+  - Disk layer: `DISK_CACHE` module flag, off by default; `runner.run` sets it and restores it in `finally`. Lookup goes memory -> `store/halves/<key>.npz` -> compute. Computed entries are written through `dataset.store_put_npz` (tmp + `os.replace`, write-once).
+  - Disk key = `short_hash(content_hash, sha256(mask), h, n_resamples, seed, topo_id, cmp_id)`. `dataset` and `producers.content_hash` are imported at call time to avoid the import cycle (dataset imports `STATS_VERSION`).
+  - The forkserver preloads `snntopo.topology.stats`. Under `python -m` and pytest, `__main__` isn't preloaded (forkserver passes only `main_path`), so every new pool's workers re-imported stats + torch, about 1.3 s per `_split_halves` call. The full suite went from 41 s to 31 s. Numbers are unchanged: `_half_pair` is the same function in the same order.
+- `tests/test_runner.py` (11 tests) and `tests/specs/tiny.py`: 6 circles, a 2-update SNN trained once for checkpoints 0 and 2, a failing recipe, and 5 pairs (a side outside the recipes, `first_half`, 2 seeds, one blocked by h, SNN-vs-SNN).
+
+**Runner semantics (the reviewer should check these):**
+- **Phase-1 write order: spikes blob -> signature rows -> self-null rows -> activity row *last*.** The brief listed the activity row first. It is last because the activity row is the commit marker. If an ok/degenerate activity row exists, all of that activity's signature and self-null rows exist too. So resume never has to guess an activity's conditions, and another shard's phase 2 never sees an activity whose signature rows are half written. A kill before the marker means the activity is produced again; rows already on disk are skipped by key. The row set is the same as with the brief's order.
+- Self-null expected keys (status/dry-run) come from the signature rows: `n_trials // 2`, seed 0, each condition with `skipped is None`. That matches `measure.null_rows(h=None)`.
+- Pair nulls are computed on an `Activity` restricted to the pair's condition. `measure.null_rows` with an explicit h runs every usable condition, and raises when h is too big for one of the others. They hit the in-memory halves compare just filled.
+- A pair is `waiting` (a side has no row yet; a later run picks it up) or `blocked`: a side failed, the condition is missing or skipped, or 2h > n_trials, all read from the signature rows. Blocked pairs are logged and never computed.
+- Phase-2 sides come from, in order: an in-process LRU (16), `store/spikes/<content_hash>` if persisted, or `produce` again (both sides in one call, so SNN checkpoints share one training). A regenerated side must reproduce its recorded `content_hash`; otherwise the pair is blocked with a "persist its spikes" message.
+- A run dir holds one (spec path, topo_id, cmp_id, mini). Resuming with a different one is refused ("Use a new --out"). Otherwise a TOPO change would leave activity rows marked done without signatures at the new topo_id.
+- Crash/concurrency safety:
+  - Each shard has its own jsonl files and its own `run[.sIofN].json` = `{"invocations": [...]}`, replaced via tmp + `os.replace`.
+  - Each shard holds a non-blocking `flock` on `.lock[.sIofN]`, so a second process on the same shard is refused.
+  - `--shard` requires `--out`.
+  - New run dirs are made with an atomic `mkdir` loop (`-2`, `-3`, … on collision).
+- An invocation record holds spec, `code_rev`, `spec_blob` (`git hash-object`), `spec_tracked`, `clean`, argv, host, shard, mini, `exploratory`, `retry_failed`, topo_id, cmp_id, persist, start/end, status (`running|done|incomplete|failed`) and summary. A killed run stays `running`.
+  - `clean` = `status --porcelain --untracked-files=no` is empty in both the code checkout and the spec's repo, and the spec is tracked and matches HEAD.
+  - `is_experiment` = the spec's parent dir is named `experiments`. It can't test for "experiments" anywhere in the path, because this repo itself lives under `~/Code/main/experiments/`.
+  - `exploratory` = `--mini` or not under `experiments/`.
+  - Track A adds `prereg_hash`/`verdict_hash` to the record and `verdict`. The `PREREG is None -> --mini only` rule isn't built (M5 binding).
+- The PERSIST spikes rule counts an activity as SNN when its base kind is `snn`, controls of one included: `"all"` covers every SNN activity, `"paired"` covers SNN pair sides. Weights go through `produce(persist_weights=True)`.
+- `--dry-run` cost model (orchestration.md): produce 1 s synthetic / 5 s bio / 1 s per SNN eval; train 5 + 0.05·n_updates s per training key; measure 12 s per activity; compare 3 s per (pair, seed). Measure and compare scale by n_resamples/50. The estimate adds an upper bound for SNN sides retrained in phase 2 when their spikes aren't persisted.
+
+**Checks:**
+- `pytest -q` → `161 passed, 1 skipped, 11 deselected, 2 warnings in 31.37s`.
+- `pytest -q tests/test_runner.py` → `11 passed in 15.96s`.
+  - Kill-and-resume: a subprocess is SIGKILLed once the second activity's signature rows exist. In 4/4 manual tries that was `acts 1 sigs 12 nulls 6`, i.e. signatures written, nulls and the marker not. A torn fragment is then appended, and the rerun gives the same row set as the uninterrupted run. The kill test passed 6/6 repeats.
+  - Shards 0/2 + 1/2, then a second pass of each, give the one-shard row set, with one store shared by all shards.
+  - Pooled = serial = disk-written = disk-read: diagrams, within arrays and compare/null results are bitwise equal, dtype included. The disk-read pass monkeypatches `build_trajectories`/`_half_pair` to raise.
+  - The dirty-tree refusal uses a tmp git repo: an untracked or modified spec is refused, an untracked other file doesn't make the tree dirty, and `--mini` runs labelled exploratory.
+  - Also covered: rerun is a byte-level no-op, `--retry-failed`, the construction-mismatch/lock/`--shard`-needs-`--out` refusals, dry-run writes nothing, run-dir collisions, the `SNNTOPO_WORKERS` cap, and the serial warning logged once.
+- `pytest -q -m data tests/test_producers.py` → `2 passed, 9 deselected in 5.23s`.
+- `snntopo run tests/specs/tiny.py --dry-run` (run as `python -m snntopo.cli` from the worktree; the venv's `snntopo` script points at the main checkout):
+```
+spec .../tests/specs/tiny.py | shard all | run dir (new)
+topo_id d8c80deadabf2a4f | cmp_id b2af5b74ed7d9f5c | persist {'spikes': 'none', 'weights': False}
+activities   expanded 10 | done 0 | failed 0 (not retried without --retry-failed) | to do 10
+signatures   rows done 0 | to do: every row of the 10 activities to produce (conditions known after produce)
+nulls        rows done 0 of 24 known (self + pair) | + self-nulls of the 10 activities to produce
+comparisons  rows done 0 of 12 | pairs: 0 done, 0 ready, 5 waiting on activities, 0 blocked
+cost         ~0.5 min serial (produce 10 s, train 1x 5 s, measure 10x 10 s, compare 6x 1 s, phase-2 SNN retrain <= 1x 5 s); rough, from orchestration.md's cost model, assumes a 16-core pool
+```
+- `snntopo status` after `run --shard 0/2`, `1/2`, `0/2`, `1/2` into one `--out`. First-pass logs: shard 0 `2 waiting`, shard 1 `0 waiting`; second pass: shard 0 `1 pairs compared, 1 blocked`.
+```
+run /tmp/tmp.czGWy8xi6l/runs/sharded
+shard 0/2: done (last of 2 invocations, 2026-09-27T16:23:57-0400 -> 2026-09-27T16:23:57-0400, code_rev d27af89-dirty, clean False, exploratory)
+shard 1/2: done (last of 2 invocations, 2026-09-27T16:23:59-0400 -> 2026-09-27T16:23:59-0400, code_rev d27af89-dirty, clean False, exploratory)
+rows per file:
+  activities.s0of2.jsonl           5
+  activities.s1of2.jsonl           5
+  signatures.s0of2.jsonl           24
+  signatures.s1of2.jsonl           30
+  nulls.s0of2.jsonl                24
+  nulls.s1of2.jsonl                38
+  comparisons.s0of2.jsonl          4
+  comparisons.s1of2.jsonl          6
+failed activities (1): 641baf1d8f355d51
+vs expansion of .../tests/specs/tiny.py:
+  activities   expanded 10 | done 9 | failed 1 (not retried without --retry-failed) | to do 0
+  signatures   rows done 54 | to do: every row of the 0 activities to produce (conditions known after produce)
+  nulls        rows done 62 of 62 known (self + pair) | + self-nulls of the 0 activities to produce
+  comparisons  rows done 10 of 10 (+2 blocked) | pairs: 4 done, 0 ready, 0 waiting on activities, 1 blocked
+  cost         ~0.0 min serial (produce 0 s, train 0x 0 s, measure 0x 0 s, compare 0x 0 s); rough, from orchestration.md's cost model, assumes a 16-core pool
+  blocked: too-big: h=7 needs 14 trials; activity 7a0fc3b828c807cb 'all' has 12
+```
+- design.md's M3 check `snntopo run sweeps/validate_instrument.py --mini --dry-run` moves to M4, because that file is Track A's. The same check ran above on `tests/specs/tiny.py`.
+
+**v1 test edits:** `tests/test_topology.py::test_split_halves_serial_fallback_is_bitwise_identical_to_pool` gains `monkeypatch.setattr(stats, "_SERIAL_WARNED", False)`, since the fallback now logs once per process (intended change). The message keeps "computing topology serially".
+
+**Cross-module gaps (not changed; for the orchestrator):**
+1. **`--retry-failed` is shadowed in `dataset.load`.** `load` dedups activities first-seen-wins, so a retried activity's new ok row stays hidden behind its earlier `failed` row. The runner's own anti-join treats "any ok/degenerate row" as done, so resume and phase 2 are right; downstream `load` users are not. Proposed fix in `dataset.load`: for activities, prefer an ok/degenerate row over a failed one (e.g. a stable sort on `status == "failed"` before `drop_duplicates`). That's M1's module, so I didn't touch it.
+2. With `PERSIST_DEFAULT = spikes "none"` (M2), an SNN-vs-SNN pair whose sides aren't in the in-process cache (another shard, a later invocation, >16 sides) retrains in phase 2. It's correct, and the content_hash is checked, but slow at zoo scale. Specs with SNN pairs should set `PERSIST spikes="paired"`.
+3. The halves disk cache stores SNN activities too, about 0.1-0.2 MB per (activity, condition, h, seed): roughly 0.5 GB for zoo v0's ~970 activities × 3 conditions. orchestration.md suggests skipping non-persisted SNNs. That needs activity kind inside stats, so it's left as is.
+4. A measurement exception on a produced activity (a bug in measure/stats) stops the run with `run.json` status `failed`, and the resume retries that activity. It isn't turned into a row.
