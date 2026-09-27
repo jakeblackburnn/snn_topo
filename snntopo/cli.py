@@ -1,11 +1,12 @@
 """Command-line entry point: `snntopo <command> ...`."""
 import argparse
 import random
+import sys
 from pathlib import Path
 
 import torch
 
-from . import controls, objective
+from . import controls, objective, runner
 from .atlas import bio_entry, control_entry, rescore, snn_entry, write_tables
 from .config import RESULTS_DIR
 from .contracts import ModelConfig, Task, TopoConfig, TrainConfig
@@ -153,6 +154,25 @@ def cmd_rescore(args):
         df.to_csv(args.out, index=False)
 
 
+def parse_shard(text: str) -> tuple[int, int]:
+    try:
+        i, n = (int(x) for x in text.split("/"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"--shard wants i/N, e.g. 0/2, not {text!r}")
+    if not 0 <= i < n:
+        raise argparse.ArgumentTypeError(f"--shard {text}: need 0 <= i < N")
+    return i, n
+
+
+def cmd_run(args):
+    runner.run(args.spec, out=args.out, shard=args.shard, mini=args.mini, dry_run=args.dry_run,
+               retry_failed=args.retry_failed, argv=args.argv)
+
+
+def cmd_status(args):
+    print("\n".join(runner.status(args.run_dir)))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="snntopo")
     sub = p.add_subparsers(dest="command", required=True)
@@ -236,7 +256,21 @@ def main(argv=None):
     rs.add_argument("--out", help="CSV output path; omit to print to stdout")
     rs.set_defaults(fn=cmd_rescore)
 
+    ru = sub.add_parser("run", help="expand a spec file and produce/measure what its run dir is missing")
+    ru.add_argument("spec", help="spec file (sweeps/*.py, experiments/*.py)")
+    ru.add_argument("--out", help="run dir to resume or create; default results/runs/<YYYYMMDD-HHMM>-<stem>/")
+    ru.add_argument("--shard", type=parse_shard, help="i/N: this process's share; all shards use one --out")
+    ru.add_argument("--mini", action="store_true", help="expand(mini=True); labels the run exploratory")
+    ru.add_argument("--dry-run", action="store_true", help="print counts and a cost estimate; produce nothing")
+    ru.add_argument("--retry-failed", action="store_true", help="produce failed activities again")
+    ru.set_defaults(fn=cmd_run)
+
+    st = sub.add_parser("status", help="counts, failures and missing work of a run dir")
+    st.add_argument("run_dir")
+    st.set_defaults(fn=cmd_status)
+
     args = p.parse_args(argv)
+    args.argv = ["snntopo", *argv] if argv is not None else sys.argv
     args.fn(args)
 
 
