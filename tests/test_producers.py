@@ -5,7 +5,7 @@ import pytest
 import torch
 
 from snntopo import producers
-from snntopo.contracts import ModelConfig, TrainConfig
+from snntopo.contracts import Activity, ModelConfig, TrainConfig
 from snntopo.models import build_model
 from snntopo.tasks import TASKS
 from snntopo.training import train
@@ -68,6 +68,55 @@ def test_snn_recipe_is_cpu_stable_and_shared_training_runs_once(monkeypatch):
     assert rows[0][2]["content_hash"] == again["content_hash"]
 
 
+def test_snn_controls_produce_an_activity_instead_of_reading_wrapper_fields():
+    controls = [{"kind": "control", "of": SNN, "surrogate": surrogate, "seed": 8}
+                for surrogate in ("shuffled", "untrained")]
+    rows = list(producers.produce(controls))
+    assert [recipe["surrogate"] for recipe, _, _ in rows] == ["shuffled", "untrained"]
+    assert all(activity is not None and row["status"] in {"ok", "degenerate"}
+               for _, activity, row in rows)
+
+
+def test_control_promoted_columns_come_from_its_source_recipe():
+    source = {**SYNTHETIC, "dataset": "synthetic-source", "session": "source-session",
+              "subject": "source-subject"}
+    _, _, row = _one({"kind": "control", "of": source, "surrogate": "shuffled", "seed": 8})
+    assert row["dataset"] == "synthetic-source"
+    assert row["session"] == "source-session"
+    assert row["subject"] == "source-subject"
+    assert row["seed"] == SYNTHETIC["seed"]
+
+
+def test_constant_snn_activity_is_degenerate_by_signature_skip(monkeypatch):
+    constant = Activity(np.ones((4, 12, 10), dtype=np.float32),
+                        {"all": np.ones(12, dtype=bool),
+                         "left": np.arange(12) < 6, "right": np.arange(12) >= 6},
+                        slice(0, 10), 1.0)
+    monkeypatch.setattr(producers, "_model_and_train", lambda *args: ({}, None, None))
+    monkeypatch.setattr(producers, "_produce_one", lambda *args: (constant, {}, None))
+    _, activity, row = _one(SNN)
+    assert activity is not None and row["status"] == "degenerate"
+
+
+def test_produce_uses_one_training_key_lookup_for_each_output_recipe(monkeypatch):
+    calls = []
+    real_training_key = producers.training_key
+    constant = Activity(np.ones((4, 12, 10), dtype=np.float32),
+                        {"all": np.ones(12, dtype=bool),
+                         "left": np.arange(12) < 6, "right": np.arange(12) >= 6},
+                        slice(0, 10), 1.0)
+
+    def counted(recipe):
+        calls.append(recipe)
+        return real_training_key(recipe)
+
+    monkeypatch.setattr(producers, "training_key", counted)
+    monkeypatch.setattr(producers, "_model_and_train", lambda *args: ({}, None, None))
+    monkeypatch.setattr(producers, "_produce_one", lambda *args: (constant, {}, None))
+    list(producers.produce([SNN]))
+    assert len(calls) == 4
+
+
 def test_checkpoint_zero_is_seeded_initial_weights():
     task = TASKS["steinmetz_2afc"]
     cfg = TrainConfig(n_updates=2, batch_size=4, max_seconds=30, seed=11)
@@ -100,3 +149,16 @@ def test_bio_recipe_is_content_stable_and_uses_full_trial_masks():
     assert activity.conditions["all"].sum() == 20
     assert row["activity_id"] == row2["activity_id"] and row["content_hash"] == row2["content_hash"]
     assert np.array_equal(activity.spikes, activity2.spikes)
+
+
+@pytest.mark.data
+def test_bio_control_promotes_its_source_session_columns():
+    source = {"kind": "bio", "dataset": "steinmetz", "session": "11", "block": "active",
+              "trials": {"select": "responded", "contrast": None, "range": [0, 20]},
+              "units": {"area": None, "subsample": None, "split": None}}
+    _, _, source_row = _one(source)
+    _, activity, control_row = _one({"kind": "control", "of": source, "surrogate": "shuffled", "seed": 8})
+    assert activity is not None
+    assert {field: control_row[field] for field in ("dataset", "session", "subject")} == {
+        field: source_row[field] for field in ("dataset", "session", "subject")}
+    assert control_row["independence_group"] == "steinmetz:11"

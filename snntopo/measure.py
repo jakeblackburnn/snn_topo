@@ -45,7 +45,7 @@ def signature_rows(activity_id: str, activity: Activity, topo: TopoConfig, root=
                 rows.append({"activity_id": activity_id, "condition": condition, "topo_id": topo_key, "dim": dim,
                              "n_features": None, "total_persistence": None, "max_persistence": None,
                              "raw_diameter": None, "n_trials": n_trials, "skipped": signature.skipped[condition],
-                             "diagram": blob, "diagram_key": blob, "participation_ratio": None, "mean_rate": None,
+                             "diagram": None, "participation_ratio": None, "mean_rate": None,
                              "trajectory_length": None, "h1_present": False})
             continue
         anchors = _anchors(activity, condition, topo)
@@ -58,7 +58,6 @@ def signature_rows(activity_id: str, activity: Activity, topo: TopoConfig, root=
                          "max_persistence": float(persistence.max()) if len(persistence) else 0.0,
                          "raw_diameter": float(signature.raw_diameter[condition]), "n_trials": n_trials,
                          "skipped": None, "diagram": blob, **anchors, "h1_present": h1_present})
-            rows[-1]["diagram_key"] = blob
     return rows
 
 

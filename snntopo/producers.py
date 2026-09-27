@@ -27,6 +27,7 @@ from .evaluate import evaluate, policy_logits
 from .models import build_model
 from .tasks import TASKS
 from .training import train
+from .topology.pipeline import compute_signature
 
 
 # M2's small CUDA probe produced bit-identical repeats (and CPU output), so SNN
@@ -229,15 +230,15 @@ def _row(recipe: dict, activity: Activity | None, status: str, meta: dict, accur
     train_cfg = base.get("train", {}) if base.get("kind") == "snn" else {}
     return {
         "activity_id": dataset.recipe_id(recipe), "recipe": recipe, "label": _label(recipe),
-        "kind": kind, "family": base.get("family"), "dataset": recipe.get("dataset"),
-        "session": str(recipe["session"]) if recipe.get("session") is not None else None,
-        "subject": meta.get("subject"), "task": base.get("task"), "arch": model.get("arch"),
+        "kind": kind, "family": base.get("family"), "dataset": base.get("dataset"),
+        "session": str(base["session"]) if base.get("session") is not None else None,
+        "subject": base.get("subject", meta.get("subject")), "task": base.get("task"), "arch": model.get("arch"),
         "neuron": model.get("neuron"), "connectivity": model.get("connectivity"),
-        "n_hidden": model.get("n_hidden"), "seed": train_cfg.get("seed", recipe.get("seed")),
-        "checkpoint": base.get("checkpoint") if kind == "control" else recipe.get("checkpoint"),
-        "regime": base.get("eval", {}).get("regime") if kind == "control" else recipe.get("eval", {}).get("regime"),
+        "n_hidden": model.get("n_hidden"), "seed": train_cfg.get("seed", base.get("seed")),
+        "checkpoint": base.get("checkpoint"), "regime": base.get("eval", {}).get("regime"),
         "n_units": None if activity is None else int(activity.spikes.shape[0]),
-        "independence_group": f"steinmetz:{recipe['session']}" if kind == "bio" else f"{kind}:{dataset.recipe_id(recipe)}",
+        "independence_group": (f"steinmetz:{base['session']}" if base.get("kind") == "bio"
+                               else f"{kind}:{dataset.recipe_id(recipe)}"),
         "status": status, "accuracy": accuracy,
         "content_hash": None if activity is None else content_hash(activity), "meta": meta,
     }
@@ -309,7 +310,6 @@ def produce(recipes: list[dict], persist_weights: bool = False) -> Iterator[tupl
         try:
             key = training_key(recipe)
             source = recipe.get("of") if recipe.get("kind") == "control" else recipe
-            key = training_key(source) or key
             state = trained.get(key) if key else None
             if isinstance(state, Exception):
                 raise state
@@ -317,9 +317,12 @@ def produce(recipes: list[dict], persist_weights: bool = False) -> Iterator[tupl
             if state and persist_weights:
                 checkpoint = 0 if recipe.get("kind") == "control" and recipe.get("surrogate") == "untrained" else int(source.get("checkpoint", 0))
                 meta["weights"] = state[0].get("weight_keys", {}).get(checkpoint)
-            status = "degenerate" if (source.get("kind") == "snn" and any(
-                int(activity.conditions.get(c, np.zeros(0, dtype=bool)).sum()) < TopoConfig().min_trials
-                for c in (set() if recipe.get("eval", {}).get("regime") == "spontaneous" else TASKS[recipe["task"]].action_names))) else "ok"
+            if source.get("kind") == "snn":
+                required = ("all",) if source.get("eval", {}).get("regime") == "spontaneous" else TASKS[source["task"]].action_names
+                signature = compute_signature(activity, TopoConfig())
+                status = "degenerate" if any(condition in signature.skipped for condition in required) else "ok"
+            else:
+                status = "ok"
             yield recipe, activity, _row(recipe, activity, status, meta, accuracy)
         except Exception as error:
             meta = {"error": f"{type(error).__name__}: {error}"}
