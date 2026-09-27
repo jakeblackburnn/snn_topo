@@ -30,9 +30,15 @@ A run dir holds one spec at one (topo_id, cmp_id) and one --mini setting; resumi
 a different one is refused. Each shard writes its own jsonl files and its own
 run[.sIofN].json (a list of invocations), and holds an flock on .lock[.sIofN] while it
 runs, so no two processes ever write one file.
+
+`snntopo verdict` (D35): an experiment's PREREG constants and its verdict() source are bound
+at the spec's first commit where PREREG is not None. Every invocation records the hashes of
+both as they were on disk, and a verdict counts only complete runs from a clean tree whose
+hashes equal the bound ones. expand() is not bound, so a crash fix there voids nothing.
 """
 from __future__ import annotations
 
+import ast
 import fcntl
 import hashlib
 import importlib.util
@@ -64,7 +70,10 @@ COST_COMPARE = 3.0  # one compare call (one pair, one seed) at n_resamples=50 (E
 # --- spec ----------------------------------------------------------------------------
 
 def load_spec(path):
-    """Import a spec file by path. Registered in sys.modules so dataclasses in it work."""
+    """Import a spec file by path. Registered in sys.modules so dataclasses in it work.
+    Compiled from the source text, never a __pycache__ .pyc: a .pyc is trusted on (mtime
+    seconds, size), so an edit within the same second could run stale code under the
+    hashes of the new text."""
     path = Path(path).resolve()
     name = "snntopo_spec_" + hashlib.sha256(str(path).encode()).hexdigest()[:12]
     spec = importlib.util.spec_from_file_location(name, path)
@@ -72,7 +81,7 @@ def load_spec(path):
         raise ValueError(f"cannot import spec {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
-    spec.loader.exec_module(module)
+    exec(compile(path.read_text(), str(path), "exec"), module.__dict__)
     for attr in ("TOPO", "CMP", "expand"):
         if not hasattr(module, attr):
             raise ValueError(f"spec {path} does not define {attr}")
@@ -373,11 +382,15 @@ def run(spec_path, out=None, shard: tuple[int, int] | None = None, mini: bool = 
         raise SystemExit("--shard needs --out: all shards of one run share its dir")
     module = load_spec(spec_path)
     git = git_state(spec_path)
+    prereg = prereg_hashes(spec_path.read_text())
     exploratory = mini or not is_experiment(spec_path)
     refusal = None
     if is_experiment(spec_path) and not mini and not git["clean"]:
         refusal = (f"refusing {spec_path}: experiments run only from a clean tree with the spec committed "
                    f"(clean={git['clean']}, spec tracked={git['spec_tracked']}); use --mini for an exploratory run")
+    elif is_experiment(spec_path) and not mini and prereg["prereg_hash"] is None:
+        refusal = (f"refusing {spec_path}: PREREG is None (not preregistered yet), so only --mini runs, "
+                   f"labelled exploratory")
     persist = getattr(module, "PERSIST", None) or producers.PERSIST_DEFAULT
 
     if dry_run:
@@ -412,7 +425,7 @@ def run(spec_path, out=None, shard: tuple[int, int] | None = None, mini: bool = 
 
     log = setup_logging(f"run{dataset.shard_suffix(shard)}", run_dir / "logs")
     json_path = run_json_path(run_dir, shard)
-    record = {"spec": str(spec_path), **git, "argv": argv if argv is not None else sys.argv,
+    record = {"spec": str(spec_path), **git, **prereg, "argv": argv if argv is not None else sys.argv,
               "host": socket.gethostname(), "shard": list(shard) if shard else None, "mini": mini,
               "exploratory": exploratory, "retry_failed": retry_failed, "topo_id": topo_key, "cmp_id": cmp_key,
               "persist": persist, "start": _now(), "end": None, "status": "running"}
@@ -561,6 +574,146 @@ def _sides(pair, activities, state, cache, remember):
             return None, (f"activity {aid} did not reproduce its content_hash ({got} != {state.content[aid]}); "
                           f"persist its spikes (PERSIST spikes='paired')")
     return tuple((aid, cache[aid]) for aid in ids), None
+
+
+# --- preregistration binding and verdict (D35) ---------------------------------------
+
+def prereg_hashes(source: str) -> dict:
+    """-> {"prereg_hash", "verdict_hash"} of a spec's source text; each None when absent
+    (prereg_hash also when PREREG is None). PREREG must be a literal: its constants are what
+    bind. verdict_hash covers verdict()'s source and every module-level def or assignment it
+    reaches by name, so a helper it calls can't move a criterion either."""
+    tree = ast.parse(source)
+    defs = {}  # module-level name -> its statement (the last one wins, as at import)
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            defs[node.name] = node
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target]):
+                for name in ast.walk(target):
+                    if isinstance(name, ast.Name):
+                        defs[name.id] = node
+    prereg_hash = None
+    if "PREREG" in defs:
+        try:
+            value = ast.literal_eval(defs["PREREG"].value)
+        except ValueError as e:
+            raise ValueError(f"PREREG must be a literal (dicts, lists, numbers, strings, None): {e}") from e
+        prereg_hash = None if value is None else dataset.short_hash(value)
+    verdict_hash = None
+    if "verdict" in defs:
+        reached, todo = [], ["verdict"]
+        while todo:
+            node = defs[todo.pop()]
+            if node in reached:
+                continue
+            reached.append(node)
+            todo += [n.id for n in ast.walk(node) if isinstance(n, ast.Name) and n.id in defs
+                     and n.id != "PREREG" and defs[n.id] not in reached]
+        reached.sort(key=lambda n: n.lineno)
+        text = "\n".join(ast.get_source_segment(source, n) for n in reached)
+        verdict_hash = hashlib.sha256(text.encode()).hexdigest()[:16]
+    return {"prereg_hash": prereg_hash, "verdict_hash": verdict_hash}
+
+
+def binding(spec_path) -> dict | None:
+    """The spec's first commit whose PREREG is not None, with its hashes; None if no
+    commit has one. A commit whose spec doesn't parse is skipped (it can't have run)."""
+    spec_path = Path(spec_path).resolve()
+    top = _git(["rev-parse", "--show-toplevel"], spec_path.parent)
+    if top is None:
+        return None
+    rel = spec_path.relative_to(Path(top).resolve()).as_posix()
+    for commit in (_git(["log", "--reverse", "--format=%H", "--", rel], top) or "").split():
+        source = _git(["show", f"{commit}:{rel}"], top)
+        try:
+            hashes = prereg_hashes(source)
+        except SyntaxError:
+            continue
+        if hashes["prereg_hash"] is not None:
+            return {"commit": commit, **hashes}
+    return None
+
+
+def _same_spec(recorded: str, spec_path: Path) -> bool:
+    # worktrees and the main checkout hold one spec at different absolute paths
+    return Path(recorded).parts[-2:] == spec_path.parts[-2:]
+
+
+def _complete(invocations: list[dict]) -> str | None:
+    """None if the run finished (unsharded, or every shard of some N), else why not."""
+    last = {}
+    for inv in invocations:
+        last[shard_label(inv["shard"])] = inv
+    if last.get("all", {}).get("status") == "done":
+        return None
+    for n in sorted({inv["shard"][1] for inv in invocations if inv["shard"]}):
+        if all(last.get(f"{i}/{n}", {}).get("status") == "done" for i in range(n)):
+            return None
+    return "incomplete: " + ", ".join(f"shard {k} {v['status']}" for k, v in last.items())
+
+
+def _not_counted(invocations: list[dict], bound: dict, topo_key: str, cmp_key: str) -> list[str]:
+    why = []
+    if any(inv["mini"] for inv in invocations):
+        why.append("exploratory (--mini)")
+    if not all(inv["clean"] for inv in invocations):
+        why.append("dirty tree (clean=false)")
+    for field, what in (("prereg_hash", "PREREG"), ("verdict_hash", "verdict()")):
+        seen = {inv.get(field) for inv in invocations}
+        if seen != {bound[field]}:
+            why.append(f"{what} hash {sorted(map(str, seen))} != bound {bound[field]}")
+    if {(inv["topo_id"], inv["cmp_id"]) for inv in invocations} != {(topo_key, cmp_key)}:
+        why.append("topo_id/cmp_id differ from the spec's TOPO/CMP")
+    incomplete = _complete(invocations)
+    if incomplete:
+        why.append(incomplete)
+    return why
+
+
+def verdict(spec_path) -> list[str]:
+    """Lines to print: the binding, counted and not-counted runs, verdict()'s table and
+    its verdict line. A spec whose PREREG is None, absent or not yet committed gets a
+    NOT PREREGISTERED header, and verdict() reads every run of it, as description. Once
+    bound, a spec whose current PREREG or verdict() differs from the bound one (even PREREG
+    set back to None) is refused a verdict."""
+    spec_path = Path(spec_path).resolve()
+    module = load_spec(spec_path)
+    if not hasattr(module, "verdict"):
+        raise SystemExit(f"spec {spec_path} defines no verdict()")
+    topo_key = dataset.topo_id(module.TOPO)
+    cmp_key = dataset.cmp_id(module.CMP["metrics"], module.CMP["n_resamples"])
+    current = prereg_hashes(spec_path.read_text())
+    bound = binding(spec_path)
+    runs = [(d, inv) for d in dataset.run_dirs() for inv in [read_invocations(d)]
+            if inv and all(_same_spec(i["spec"], spec_path) for i in inv)]
+    out = [f"spec {spec_path} | topo_id {topo_key} | cmp_id {cmp_key}"]
+    if bound is None:
+        why = "PREREG is None" if current["prereg_hash"] is None else "PREREG is not committed yet"
+        out.append(f"NOT PREREGISTERED ({why}): descriptive only, every run of this spec is read")
+        counted = [d for d, _ in runs]
+    else:
+        out.append(f"bound at {bound['commit'][:12]} (first commit with PREREG): prereg_hash "
+                   f"{bound['prereg_hash']} verdict_hash {bound['verdict_hash']}")
+        counted, skipped = [], []
+        for d, invocations in runs:
+            why = _not_counted(invocations, bound, topo_key, cmp_key)
+            (skipped.append((d, why)) if why else counted.append(d))
+        out.append(f"not counted ({len(skipped)}):" + ("" if skipped else " -"))
+        out += [f"  {d.name}: {'; '.join(why)}" for d, why in skipped]
+        for field, what in (("prereg_hash", "PREREG"), ("verdict_hash", "verdict()")):
+            if current[field] != bound[field]:
+                out.append(f"refusing to judge: the spec's {what} (hash {current[field]}) differs from the "
+                           f"version bound at {bound['commit'][:12]} ({bound[field]}); restore it")
+                return out
+    out.append(f"counted ({len(counted)}): {' '.join(d.name for d in counted) if counted else '-'}")
+    if not counted:
+        out.append("no counted runs: no verdict")
+        return out
+    table, line = module.verdict(dataset.load(counted, topo_key, cmp_key))
+    out.append(table.to_string(index=False, float_format=lambda x: f"{x:.4g}"))
+    out.append(("verdict (NOT PREREGISTERED): " if bound is None else "VERDICT: ") + line)
+    return out
 
 
 # --- status --------------------------------------------------------------------------

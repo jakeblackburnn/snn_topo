@@ -173,6 +173,10 @@ def cmd_status(args):
     print("\n".join(runner.status(args.run_dir)))
 
 
+def cmd_verdict(args):
+    print("\n".join(runner.verdict(args.spec)))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="snntopo")
     sub = p.add_subparsers(dest="command", required=True)
@@ -268,6 +272,10 @@ def main(argv=None):
     st = sub.add_parser("status", help="counts, failures and missing work of a run dir")
     st.add_argument("run_dir")
     st.set_defaults(fn=cmd_status)
+
+    v = sub.add_parser("verdict", help="judge a spec's counted runs with its verdict() (PREREG-bound runs only)")
+    v.add_argument("spec", help="spec file (experiments/*.py; a spec without PREREG is read as description)")
+    v.set_defaults(fn=cmd_verdict)
 
     args = p.parse_args(argv)
     args.argv = ["snntopo", *argv] if argv is not None else sys.argv
