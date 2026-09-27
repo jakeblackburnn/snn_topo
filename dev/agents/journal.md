@@ -219,3 +219,64 @@ vs expansion of .../tests/specs/tiny.py:
 - `producers.produce` trained every model before yielding any row (a zoo shard would hold all models and lose all training on a kill); now trains lazily in recipe order and frees each model after its last recipe. SNN training was hard-coded to CPU; now `producers.DEVICE` = `SNNTOPO_DEVICE` or cuda-if-available, and `tests/conftest.py` pins tests to CPU. Replaced M2's `training_key`-call-count test with one on train/yield interleaving.
 - CUDA determinism, re-measured (M2's probe was untrained-size): recurrent LIF n_hidden 256, 200 updates, CUDA twice → identical content_hash `c90a816209ced3d3` both times. CUDA vs CPU at 20 updates: checkpoint 0 identical, trained checkpoint differs. So `PERSIST_DEFAULT spikes="none"` holds per device; regenerating on another device is caught by the runner's content_hash check (pair blocked with "persist its spikes").
 - Known, not fixed: resuming one `--out` with a different shard N repartitions work (duplicate compute, no bad rows; M3 review #2). The halves disk cache also stores SNN halves (~0.5 GB for zoo v0; M3 gap 3). M3 check `validate_instrument --mini --dry-run` moved to M4 (the file is Track A's).
+
+## Track B · 2026-09-27 16:52 EDT
+
+**Built:** Atomic Steinmetz part download: each fetch now writes a unique sibling temporary
+file, fsyncs it, and publishes with `os.replace`; a failed transfer removes its temporary
+file and cannot leave a final partial archive. Added `sweeps/bio_core.py`, an exploratory
+resolved-data spec for part0's 13 sessions. It has active responded, passive, and active
+no-go for every whole session and each non-`root` region with >=50 units, plus two seeded,
+disjoint neuron halves and an `all` comparison for each region/selection. `CMP` is
+`("wasserstein", "bottleneck")`, 50 resamples, so R1 integration reads each H1 signature
+diagram row and its matching `nulls` bottleneck `null_q95` (same activity/condition/topo/cmp,
+self-null `h=n_trials//2`, seed 0). The neuron-split `comparisons` are the stated-h control,
+not R1's threshold source.
+
+**Counts:** real expansion found the inventory's 77 region populations. Thus 3 selections ×
+`(13 whole + 77 regional + 2*77 split-half)` = **732 activities**; 3 × 77 = **231 pairs**;
+each pair has 2 metrics × H0/H1 = **924 comparison rows**. The planned signature total is
+732 × 3 conditions × 2 dimensions = **4,392**. With responded/passive's three usable
+conditions and no-go's `all` condition, self-null rows are
+244 × (12 + 12 + 4) = **6,832**; pair `h` equals the same selection's self-null `h`, so
+those null keys deduplicate rather than add rows.
+
+**Checks:**
+
+```text
+$ python -m pytest -q tests/test_steinmetz_download.py tests/test_bio_core.py
+3 passed in 0.95s
+
+$ python -m snntopo.cli run sweeps/bio_core.py --dry-run
+activities   expanded 732 | done 0 | failed 0 (not retried without --retry-failed) | to do 732
+signatures   rows done 0 | to do: every row of the 732 activities to produce (conditions known after produce)
+nulls        rows done 0 of 1848 known (self + pair) | + self-nulls of the 732 activities to produce
+comparisons  rows done 0 of 924 | pairs: 0 done, 0 ready, 231 waiting on activities, 0 blocked
+cost         ~218.9 min serial (produce 3660 s, train 0x 0 s, measure 732x 8784 s, compare 231x 693 s); rough, from orchestration.md's cost model, assumes a 16-core pool
+
+$ python -m pytest -q
+165 passed, 1 skipped, 11 deselected, 2 warnings in 42.89s
+```
+
+**Timing/run:** mini (session 0) run
+`/home/jake/Code/main/experiments/snn_topo/results/runs/20260927-1645-bio_core` took
+4m05s (16:45:49–16:49:54), with 57 activities and 18 pairs. Its completed status was:
+
+```text
+rows per file:
+  activities.jsonl                 57
+  signatures.jsonl                 342
+  nulls.jsonl                      532
+  comparisons.jsonl                72
+failed activities (0): -
+activities   expanded 57 | done 57 | failed 0 (not retried without --retry-failed) | to do 0
+signatures   rows done 342 | to do: every row of the 0 activities to produce (conditions known after produce)
+nulls        rows done 532 of 532 known (self + pair) | + self-nulls of the 0 activities to produce
+comparisons  rows done 72 of 72 | pairs: 18 done, 0 ready, 0 waiting on activities, 0 blocked
+```
+
+Extrapolating by 732/57 gives **~52.3 minutes**. Per the 30-minute rule, the full run was
+not launched; it needs orchestrator/user approval to resume. I inspected the other processed
+download paths: Allen and IBL both still write `np.savez_compressed` directly to their final
+cache paths, so they are not concurrent-download atomic; they are outside this track's file
+scope and were not changed.
