@@ -38,7 +38,7 @@ data platform) — see the sibling files in this directory.
 |---|---|
 | `snntopo/` | 30 modules, 2644 lines. No file over 253 lines. |
 | `tests/` | 9 files, **110 passed, 7 deselected, 40.5 s** (`pytest -q`, venv, this session) |
-| `prototype/` | 98 MB, self-contained (own `snntopo/` package, own `io_utils`, own `viz/`). Cited once: `dev/SPEC.md:13` "archived at `prototype/`". Nothing in the live package imports it. |
+| `prototype/` | 98 MB, self-contained (own `snntopo/` package, own `io_utils`, own `viz/`). Cited once: `dev/agents/spec.md:13` "archived at `prototype/`". Nothing in the live package imports it. |
 | `.claude/worktrees/` | **13 GB**, 3 worktrees, all 3 branches already merged into `main` |
 | `data/` | 13 GB (gitignored) |
 | `results/` | 47 MB, 16 run dirs with `atlas.jsonl`: 235 bio, 317 snn, **0 control** |
@@ -115,7 +115,7 @@ codes against". A stale enumeration comment there is worse than a stale comment 
 
 ### F3 · Controls are cited as evidence but exist nowhere on disk (severity: high, scientific)
 
-`dev/SPEC.md` Validity: *"D19's controls corroborate: an untrained SNN and a shuffled-bio
+`dev/agents/spec.md` Validity: *"D19's controls corroborate: an untrained SNN and a shuffled-bio
 surrogate ... both land in the same range trained SNNs do (E3)."* That claim is load-bearing
 for D20.
 

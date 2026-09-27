@@ -80,7 +80,7 @@ The right control for Allen is not within-IBL (that is *within*-dataset). It is 
 feature count is driven by how *noisy* a session is: `unit_diameter` divides by signal, so a
 low-SNR session grows spurious micro-loops. That is a **multiplicative** per-session noise effect.
 **E11 fitted an additive linear offset** — which is why it could not have worked, and is a better
-explanation of D27's failure than the one currently in `dev/DECISIONS.md`.
+explanation of D27's failure than the one currently in `dev/agents/decisions.md`.
 
 It also means the project has been requiring its yardstick to pass on a dimension that may carry no
 biological signal at this construction. `H0_n` is identical (150) across all 22 sessions — the
@@ -182,7 +182,7 @@ Independently, and this is the strongest signal in the fan-out:
   all arrived at the same #1 priority by different routes: **the project has never established that
   its pipeline can detect a difference it should detect.** Until it has, D20 is ambiguous between
   "no topological difference exists at this construction" and "the instrument is broken", and every
-  negative in `dev/experiments.md` is uninterpretable. The three candidate positive controls are
+  negative in `dev/agents/experiments.md` is uninterpretable. The three candidate positive controls are
   synthetic manifolds (`model-zoo` Tier 1), Steinmetz active-vs-passive (`bio-data-expansion` #1),
   and the Gardner grid-cell torus (`bio-data-expansion` #3, 320 MB, CC0, known answer β=(1,2,1)).
 - **The cheapest extension point is `Activity`, not `ModelConfig`.** `atlas.measure_activity`
@@ -227,8 +227,8 @@ Independently, and this is the strongest signal in the fan-out:
   within a pair — but across pairs `h` varies freely and nobody can check the heterogeneity.
 - **12.7 GB of merged worktrees**, and 12.4 GB of that is bio data re-downloaded because
   `config.py:5` makes `DATA_DIR` package-relative. Every future agent worktree pays it again.
-- **Zero `kind:"control"` records exist in any run directory**, yet `dev/SPEC.md` and the poster
-  both cite the D19 controls as corroborating D20. `dev/experiments.md:307` says why — the numbers
+- **Zero `kind:"control"` records exist in any run directory**, yet `dev/agents/spec.md` and the poster
+  both cite the D19 controls as corroborating D20. `dev/agents/experiments.md:307` says why — the numbers
   are logged but "no local raw data for that run". The evidence is not fabricated, it is
   **unreproducible**, and re-running it is cheap.
 - **`forkserver` is hardcoded with no fallback** (`stats.py:150`), so in a sandboxed environment no

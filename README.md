@@ -3,7 +3,7 @@
 snntopo builds a topology atlas of biological and spiking-neural-network population
 activity. It measures persistence signatures across datasets, model configurations,
 and tasks, then records statistically tested distances in portable atlas artifacts.
-The project specification is in `dev/SPEC.md`.
+The project specification is in `dev/agents/spec.md`.
 
 ## Install
 

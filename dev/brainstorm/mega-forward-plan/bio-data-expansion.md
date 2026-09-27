@@ -137,7 +137,7 @@ similar at this scale; (b) the measurement chain is broken/underpowered somewher
 trial-averaging, PCA to 10 components, unit-diameter normalization, Rips at full diameter,
 Wasserstein-2, and a 50-resample split-half null. Five failed fixes (E5–E11) have been searching
 within explanation (a)'s framing. **A positive control settles it.** Until one passes, every negative
-result in `dev/experiments.md` is ambiguous, and a poster claiming a negative finding is not
+result in `dev/agents/experiments.md` is ambiguous, and a poster claiming a negative finding is not
 defensible. I would rank this above every other item except the free Tier 0 ones.
 
 ### 2a. Gardner et al. 2022 — grid cells, toroidal topology ✅ 320 MB, CC0

@@ -334,7 +334,7 @@ utilization for one config before committing to either.
 ## Analysis ergonomics
 
 The recurring failure: E8/E9/E10's scripts lived in `/tmp/snntopo_e8/`, which has rotated out;
-the methodology survives only as prose in `dev/experiments.md`. Every reanalysis since E5 has
+the methodology survives only as prose in `dev/agents/experiments.md`. Every reanalysis since E5 has
 been an uncommitted throwaway over `results/baseline-wide/*.csv`.
 
 Proposal: a committed **`snntopo/analysis/`** — pure functions over DuckDB queries, returning
@@ -347,7 +347,7 @@ def allen_contrast(con, dist_id, correction=None) -> tuple[pd.DataFrame, bool]:
 ```
 
 Then `snntopo check allen-contrast --dist-id <...>` re-runs E4/E11 against **any** stored
-distance construction in seconds, and each E-number in `dev/experiments.md` cites a function
+distance construction in seconds, and each E-number in `dev/agents/experiments.md` cites a function
 name instead of a dead `/tmp` path. Combined with corrections-as-views, this is what makes
 trying 20 more D20 candidates cheap.
 

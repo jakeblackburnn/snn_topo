@@ -220,7 +220,7 @@ condition, 20 pairs): H0 range 1.945-13.877 (mean 8.394, 19/20 p<0.05), H1 range
 ## E4 · 2026-09-22 · held-out discriminative-validity check (Allen contrast) · status: done
 **Hypothesis, preregistered before the run:** the objective (`objective.py`) never sees Allen
 Visual Coding — it's passive viewing with no choice/reward, deliberately unmatched to the 2AFC
-task family, included from the start as a contrast (`dev/context/research.md`). E2/E3's entire
+task family, included from the start as a contrast (`dev/agents/project/context/research.md`). E2/E3's entire
 "support" result rests on SNN configs landing inside the IBL-vs-IBL bio-vs-bio distance range;
 that range is only a meaningful bar if it excludes something that obviously isn't bio-2AFC-like.
 **Criterion, fixed in advance:** the topology signature has discriminative validity iff

@@ -381,7 +381,7 @@ thing that needs to change. Which is where the project goes next (Panel 8).
 
 ## Panel 7 — Standing decisions & what they mean for the poster's "so what"
 
-A running decision log (`dev/DECISIONS.md`, 28 entries) records every architectural and
+A running decision log (`dev/agents/decisions.md`, 28 entries) records every architectural and
 methodological choice with its rationale; the ones load-bearing for this poster:
 
 - **D18/D20 — the bio-vs-bio range is the correct idea, currently an unvalidated instrument.**

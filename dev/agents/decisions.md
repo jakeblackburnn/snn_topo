@@ -1,7 +1,7 @@
 # Decisions
 
 D1-D10 were taken while building the context packet and are copied from
-`dev/context/decisions.md` (left untouched as the frozen input to the build). D11-D16
+`dev/agents/project/context/decisions.md` (left untouched as the frozen input to the build). D11-D16
 were taken during the build itself.
 
 ## D1 · 2026-09-19 · Atlas + paired comparison, not a pure hypothesis test or pure survey
@@ -138,7 +138,7 @@ datasets / model families / tasks), then fans out to parallel workers per workst
 loaders, model registry, task suite, topology+stats module, search harness, package/tests),
 each in its own worktree, with an orchestrator review/merge gate before integration. Codex
 takes mechanical/boilerplate workstreams; spawned Claude agents take design-sensitive ones.
-Full detail in `dev/context/agent-team.md`.
+Full detail in `dev/agents/project/context/agent-team.md`.
 **Why:** User confirmed as proposed. Defining interfaces before fanning out avoids
 integration conflicts between parallel agents; worktree-per-agent keeps their changes
 isolated until the review gate.

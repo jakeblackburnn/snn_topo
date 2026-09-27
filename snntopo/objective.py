@@ -1,6 +1,6 @@
 """Search objective: how close an SNN's topology is to a bio reference.
 
-D17/D18 background (dev/DECISIONS.md; full re-analysis in dev/experiments.md, E1):
+D17/D18 background (dev/agents/decisions.md; full re-analysis in dev/agents/experiments.md, E1):
 raw wasserstein distance is H0-dominated -- H0's per-dim noise floor (null_mean) is
 roughly an order of magnitude larger than H1/H2's, so an unweighted mean of raw
 distances (E1's original objective) is functionally an H0-only metric, and even
@@ -21,8 +21,8 @@ import numpy as np
 from .contracts import DistanceResult
 
 OBJECTIVE_VERSION = "ratio_count_v1"
-STRUCTURE_WEIGHT = 2.0   # see dev/experiments.md E1 offline re-scoring; tune further if you re-run the sweep
-METRIC = "wasserstein"   # H1 bottleneck is underpowered (see dev/DECISIONS.md D6 2026-09-20 status)
+STRUCTURE_WEIGHT = 2.0   # see dev/agents/experiments.md E1 offline re-scoring; tune further if you re-run the sweep
+METRIC = "wasserstein"   # H1 bottleneck is underpowered (see dev/agents/decisions.md D6 2026-09-20 status)
 
 
 def feature_counts(summary: dict) -> dict[tuple[str, int], int]:

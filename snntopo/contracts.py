@@ -113,7 +113,7 @@ class TopoConfig:
     n_resamples: int = 50  # split-half resamples per significance test; see topology/stats.py for cost
     metrics: tuple[str, ...] = ("wasserstein",)  # objective.py only ever reads wasserstein
                       # (objective.METRIC); bottleneck is supported but off by default since it's
-                      # both unread and underpowered (dev/DECISIONS.md D6) -- pass
+                      # both unread and underpowered (dev/agents/decisions.md D6) -- pass
                       # --metrics wasserstein bottleneck to compute both
     residualize_raw_diameter: bool = False  # subtract the D26/D27 raw-diameter nuisance fit
 

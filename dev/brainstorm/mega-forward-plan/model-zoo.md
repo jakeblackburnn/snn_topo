@@ -457,7 +457,7 @@ exactly as the existing mini-run discipline does.
 
 - Sibling notes in this folder cover the topology/metric side, the storage side, and the
   scientific reframe; this file deliberately stops at "what produces an `Activity`".
-- Related project records: `dev/DECISIONS.md` D3 (searched model suite), D14 (every config becomes
+- Related project records: `dev/agents/decisions.md` D3 (searched model suite), D14 (every config becomes
   a record), D15 (validity in the registry), D19 (controls are first-class), D20/D26/D27 (the
-  validity blocker); `dev/experiments.md` E4 (Allen contrast), E9 (raw_diameter diagnostic),
+  validity blocker); `dev/agents/experiments.md` E4 (Allen contrast), E9 (raw_diameter diagnostic),
   E11 (residualization FAIL).

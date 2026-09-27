@@ -152,7 +152,7 @@ overfitting):
    accept a raw-diameter detector, per §1(c). This condition is what makes the learned version
    *stricter* than the hand-built one, not looser.
 5. One preregistered fit per experiment entry. A second attempt is a new E-number with its own
-   prereg, so the number of attempts stays visible in `dev/experiments.md`. The project's five
+   prereg, so the number of attempts stays visible in `dev/agents/experiments.md`. The project's five
    visible FAILs are exactly what would make a later PASS credible; hiding attempt count would
    destroy that.
 

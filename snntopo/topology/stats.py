@@ -41,7 +41,7 @@ The statistic is a mean over resamples while null draws are single resamples, so
 H0 the statistic sits near the middle of the null (median p ~0.45 on synthetic data;
 false-positive rate at alpha=0.05 was 0-8% over 12 seeds, whether neuron counts, trial
 counts or both differed; at bio scale, 300 neurons x 340 trials, it was 1/40 on H0 and
-0/40 on H1 -- dev/experiments.md E12). A true null pair shares its embedding: two
+0/40 on H1 -- dev/agents/experiments.md E12). A true null pair shares its embedding: two
 circles with different random embeddings differ in geometry, and compare flags them
 (E12 arm B), so a significant compare means a different signature, not a different
 topology. The cost is power: the averaged cross distance has to pass
@@ -85,7 +85,7 @@ METRICS = ("wasserstein", "bottleneck")  # every metric diagram_distance support
 # these actually get computed per call is TopoConfig.metrics (default: wasserstein only)
 
 # Linear fit of within-IBL pairwise wasserstein distance/null_mean on |Δraw_diameter|
-# (dev/experiments.md E9 methodology, n=190 within-IBL pairs, condition "all", refit
+# (dev/agents/experiments.md E9 methodology, n=190 within-IBL pairs, condition "all", refit
 # for D27): ratio ≈ intercept + slope * |Δraw_diameter|. This is measured data, not a
 # tuning constant; scripts/refit_raw_diameter_fit.py recreates and checks this file.
 _RAW_DIAMETER_FIT_PATH = Path(__file__).with_name("raw_diameter_fit.json")
