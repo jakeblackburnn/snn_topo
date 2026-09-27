@@ -22,10 +22,12 @@ def policy_logits(out_spk: torch.Tensor, task: Task) -> torch.Tensor:
     return out_spk[task.response_steps].sum(dim=0)
 
 
-def train(model, task: Task, cfg: TrainConfig, device: str, log_every: int = 100) -> dict:
+def train(model, task: Task, cfg: TrainConfig, device: str, log_every: int = 100,
+          checkpoints=()) -> dict:
     """Trains in place and loads the best checkpoint. Returns {"curve": DataFrame,
     "status": "ok" | "timeout" | "failed", "elapsed_s", "n_updates_done",
-    "best_baseline", "error"}. Timeout keeps the best checkpoint so far; a non-finite
+    "best_baseline", "error", "checkpoints"}.  Requested checkpoint snapshots are
+    the exact post-update state (with 0 before update one). Timeout keeps the best checkpoint so far; a non-finite
     loss stops training and reports "failed" instead of raising, since the search
     treats bad configs as routine outcomes."""
     log = get_logger()
@@ -34,6 +36,10 @@ def train(model, task: Task, cfg: TrainConfig, device: str, log_every: int = 100
     opt = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     baseline, best_baseline, best_state = 0.0, -math.inf, None
     rows, status, error = [], "ok", None
+    requested = set(checkpoints)
+    if any(not isinstance(n, int) or n < 0 or n > cfg.n_updates for n in requested):
+        raise ValueError("checkpoints must be integer update counts in [0, n_updates]")
+    snapshots = {0: copy.deepcopy(model.state_dict())} if 0 in requested else {}
 
     t0 = time.time()
     for update in range(1, cfg.n_updates + 1):
@@ -54,6 +60,9 @@ def train(model, task: Task, cfg: TrainConfig, device: str, log_every: int = 100
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=cfg.grad_clip)
         opt.step()
 
+        if update in requested:
+            snapshots[update] = copy.deepcopy(model.state_dict())
+
         baseline = cfg.baseline_momentum * baseline + (1 - cfg.baseline_momentum) * reward.mean().item()
         if baseline > best_baseline:
             best_baseline, best_state = baseline, copy.deepcopy(model.state_dict())
@@ -70,4 +79,5 @@ def train(model, task: Task, cfg: TrainConfig, device: str, log_every: int = 100
     if error:
         log.warning(error)
     return {"curve": pd.DataFrame(rows), "status": status, "elapsed_s": time.time() - t0,
-            "n_updates_done": len(rows), "best_baseline": best_baseline, "error": error}
+            "n_updates_done": len(rows), "best_baseline": best_baseline, "error": error,
+            "checkpoints": snapshots}

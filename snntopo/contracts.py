@@ -148,6 +148,10 @@ class DistanceResult:
     # additional measurements, never replacements, so stored rows remain re-analysable.
     distance_residual: float | None = None
     construction: str = "raw"  # "raw" | "resid_rawdiam_<fit hash>"
+    h: int | None = None
+    seed: int | None = None
+    null_mean_a: float | None = None
+    null_mean_b: float | None = None
 
 
 @dataclass

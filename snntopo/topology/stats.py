@@ -196,11 +196,13 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
 
 def _result(target: str, cond: str, dim: int, metric: str, distance: float, null: np.ndarray,
             p_value: float, distance_residual: float | None = None,
-            construction: str = "raw") -> DistanceResult:
+            construction: str = "raw", h: int | None = None, seed: int | None = None,
+            null_mean_a: float | None = None, null_mean_b: float | None = None) -> DistanceResult:
     return DistanceResult(target=target, condition=cond, dim=dim, metric=metric, distance=distance,
                           null_mean=float(null.mean()), null_q95=float(np.quantile(null, 0.95)),
                           p_value=p_value, n_resamples=len(null), distance_residual=distance_residual,
-                          construction=construction)
+                          construction=construction, h=h, seed=seed,
+                          null_mean_a=null_mean_a, null_mean_b=null_mean_b)
 
 
 def _usable(activity: Activity, cond: str, topo: TopoConfig) -> bool:
@@ -214,14 +216,17 @@ def _raw_diameter(activity: Activity, cond: str, topo: TopoConfig) -> float:
 
 
 def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: TopoConfig,
-            seed: int = 0) -> list[DistanceResult]:
+            seed: int = 0, h: int | None = None) -> list[DistanceResult]:
     """Distance between a's and b's signatures for each condition x dim x metric, each
     with a resampling p-value and null summary. One result per (condition, dim,
     metric); conditions missing on either side are omitted. distance is the mean
     half-vs-half cross-source distance; see the module docstring for the null."""
     conds = [c for c in conditions if _usable(a, c, topo) and _usable(b, c, topo)]
-    h = {c: int(min(a.conditions[c].sum(), b.conditions[c].sum())) // 2 for c in conds}
-    halves = _split_halves([(a, c, h[c]) for c in conds] + [(b, c, h[c]) for c in conds], topo, seed)
+    hs = {c: (int(min(a.conditions[c].sum(), b.conditions[c].sum())) // 2 if h is None else h) for c in conds}
+    for c, hc in hs.items():
+        if hc < 1 or 2 * hc > int(a.conditions[c].sum()) or 2 * hc > int(b.conditions[c].sum()):
+            raise ValueError(f"h={hc} needs 2h trials in both sides of condition {c!r}")
+    halves = _split_halves([(a, c, hs[c]) for c in conds] + [(b, c, hs[c]) for c in conds], topo, seed)
     results = []
     for cond, ha, hb in zip(conds, halves[:len(conds)], halves[len(conds):]):
         delta = (abs(_raw_diameter(a, cond, topo) - _raw_diameter(b, cond, topo))
@@ -245,21 +250,29 @@ def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: 
                     distance_residual = (distance / null_mean - (intercept + slope * delta)) * null_mean
                     construction = _residual_construction()
                 results.append(_result(target, cond, d, m, distance, null, p_value,
-                                       distance_residual, construction))
+                                       distance_residual, construction, hs[cond], seed,
+                                       float(ha["within"][m][:, d].mean()),
+                                       float(hb["within"][m][:, d].mean())))
     return results
 
 
-def split_half_null(a: Activity, conditions: list[str], topo: TopoConfig, seed: int = 0) -> list[DistanceResult]:
+def split_half_null(a: Activity, conditions: list[str], topo: TopoConfig, seed: int = 0,
+                    h: int | None = None) -> list[DistanceResult]:
     """Within-source null baseline: distance between random trial halves of `a`, per
     condition x dim x metric, reported with target="self" and its resampling
     distribution (null_mean/null_q95). distance is the null mean; p_value is NaN (a
     baseline, not a test; see the module docstring)."""
     conds = [c for c in conditions if _usable(a, c, topo)]
     results = []
-    halves = _split_halves([(a, c, int(a.conditions[c].sum()) // 2) for c in conds], topo, seed)
+    hs = {c: (int(a.conditions[c].sum()) // 2 if h is None else h) for c in conds}
+    for c, hc in hs.items():
+        if hc < 1 or 2 * hc > int(a.conditions[c].sum()):
+            raise ValueError(f"h={hc} needs 2h trials in condition {c!r}")
+    halves = _split_halves([(a, c, hs[c]) for c in conds], topo, seed)
     for cond, ha in zip(conds, halves):
         for d in range(topo.maxdim + 1):
             for m in topo.metrics:
                 null = ha["within"][m][:, d]
-                results.append(_result("self", cond, d, m, float(null.mean()), null, float("nan")))
+                results.append(_result("self", cond, d, m, float(null.mean()), null, float("nan"),
+                                       h=hs[cond], seed=seed, null_mean_a=float(null.mean())))
     return results

@@ -1,117 +1,19 @@
-# Journal · 2026-09-27 13:24 · main · 25c78e2
+# Journal · 2026-09-27 15:24 · v3-m2 · e7ef821
 ## Start
-**State:** E12-E15 done. The null is valid (0/40). The Steinmetz engaged-vs-passive H1 contrast
-clears the matched-noise floor (3.07 vs 1.09) and replicates in 11/12 sessions. D28 reframes D20;
-the `steinmetz_2afc` search block still stands. 128 tests pass (rerun this session, after the
-migration below).
-**Since:** Nothing committed since `25c78e2`. This session migrated `dev/` to the human/agent split:
-`journal.md`, `DECISIONS.md` → `decisions.md`, `SPEC.md` → `spec.md` and `experiments.md` moved
-under `dev/agents/`; `context/` and the poster report moved to `dev/agents/project/`, all via
-`git mv`. `dev/` path references were updated in README, `snntopo/{objective,contracts,topology/stats}.py`
-(comments only), the moved docs and `brainstorm/`. Past journal Close entries and the frozen
-`project/context/` keep their old paths. The user's `dev/main.md` and `dev/journal.md` don't
-exist yet; they're the user's to write.
-**Next:** (no user tasks yet)
-1. Preregister E16: active no-go vs passive, contrast-matched, Steinmetz sessions 0-12. No-go
-   trials (`response == 0`, 56-155/session) are the only engaged-without-movement set. Add a
-   `nogo` contrast to `scripts/engagement_contrast.py`, then rerun the E14 floor scan at the no-go
-   null scale.
-2. Stress-test the floor (D28 revisit): latent shape, embedding dimension, firing rate at fixed
-   null_mean.
-3. Re-derive SNN-vs-bio against a matched-noise floor, with a preregistered criterion, before
-   unblocking the search.
-4. Rerun the D19 controls (untrained/shuffled); their run directory is gone.
-**Traps:**
-- Never compare a `distance/null_mean` ratio to a bar measured at a different null_mean (the same
-  difference reads 115, 35 or 2.8). Scan `split_half_null` on `circle(seed=500)` to match noise;
-  matching H0 needs a higher noise than matching H1.
-- Generators with different `seed` also differ in embedding. For a null pair, share `mixing_seed`.
-- `compare` tests "same signature", and signatures include geometry: significant ≠ different topology.
-- `results/` is gitignored; CSVs regenerate from the scripts (commands in their docstrings and the E-entries).
-- Stats code run from `python -` (stdin) falls back to serial with noisy tracebacks. Run a script file.
-- Venv is `~/Code/python_venv_01_main`; bare `python3` has no numpy.
-- Steinmetz passive `left`/`right` = stimulus side; use condition `all` for active-vs-passive.
-  Active `all` = responded trials only (`snntopo/data/steinmetz.py:103`).
-- `_CACHE_SIZE = 32` is still undersized for 20 references.
-**Pointers:**
-- `dev/agents/experiments.md:609` E12, `:664` E13, `:707` E14, `:750` E15.
-- `dev/agents/decisions.md:455` D28.
-- `snntopo/generators.py:25` `_activity`; `:46` `mixing_seed`.
-- `scripts/null_calibration.py` (`--n-neurons --n-trials --runs A:x B:x C:x`);
-  `scripts/engagement_contrast.py:49` block rule.
-- `dev/agents/project/2026-09-22-poster-report.md` Panel 8 (d).
+**State:** M1 is committed on this branch: `snntopo/dataset.py` supplies stable IDs, JSONL writing, content-addressed storage, and loading. The v3 implementation packet defines M2 as producers, measurement rows, Steinmetz selectors, stats additions, training checkpoints, and seeding.
+**Since:** `e7ef821` added M1 after the previous session's v3 packet; this worktree is otherwise clean.
+**Next:** Implement and test M2's owned modules, run the complete suite plus targeted data/CUDA checks, journal the evidence, and commit the result for the orchestrator gate.
+**Traps:** Seed before SNN model construction; statistics must be run from a file or pytest because stdin disables the intended forkserver execution; Steinmetz active `all` means responded trials only.
+**Pointers:** `dev/agents/project/context/design.md` M2 and recipes/rows; `snntopo/dataset.py`; v1 `atlas.py`, `topology/stats.py`, and `data/steinmetz.py`.
 
-## Task: Reframe snntopo as a general SNN-TDA data-gathering platform, through to an implementation packet · 13:38
-**Goal:** Turn snntopo from a D20-centred SNN-vs-bio search into an organized setup that gathers TDA results across many SNNs (and brain data) at scale. This session ends when the implementation packet for a separate nodeterm build session is ready.
-**Now:**
-- `dev/main.md` sets the new frame: a flexible workspace, a large TDA dataset over varied SNNs, brain signatures plus comparison metrics, and a poster.
-- The code (~2.9k lines, `snntopo/`) is organized around search/objective (`search.py`, `objective.py`, D17/D18), with a matched-noise floor as yardstick (D28). `results/` is ad hoc per-run directories (gitignored).
-- `dev/brainstorm/mega-forward-plan/` (09-23) already holds the data-platform schema, model zoo tiers, bio expansion and a codebase audit. Its index is D20-centred and partly stale (E12 retracted the anticonservative claim).
-- `dev/agents/project/context/` holds the v1 build packet. Four merged worktrees are still checked out, and the dev/ path migration is uncommitted.
-**Scope:** in: pre-flight commit → `/brainstorm` → `/consolidate` → `/context-builder` packet (including a nodeterm addendum) → worktree cleanup. out: any code change, any experiment (E16 and the D28 stress tests are paused), launching the build.
-**Constraints:**
-- `/brainstorm` goes in a new topic, `dev/brainstorm/snn-tda-dataset/`, with mega-forward-plan read as seed input. It doesn't extend that folder.
-- `/context-builder` rewrites `dev/agents/project/context/` in place; git keeps v1 (last at `0374c27`). Assumption: this is fine even though D1-D10 cite it as a "frozen input", since the old pointers resolve through git.
-- The agent-team addendum names nodeterm: a Claude orchestrator node that spawns subagents and leans on codex in permissive mode (sandbox off, which ripser's process pool needs; see mega index, forkserver trap).
-- Carry forward: the preregistration discipline (never move a criterion after seeing a result), "never overwrite a measured number" (store raw + correction + construction id), the pair-policy wall (all-pairs is infeasible above ~10³ entries), and `SNNTOPO_DATA_DIR` (shared data across worktrees).
-- Git: commit the dev/ path migration as its own commit before `/brainstorm`. Remove the four merged worktrees and their branches before any launch. Confirm each step with you first.
-**Approach:**
-1. Pre-flight: run `pytest -q` (expect 128 pass), then commit the uncommitted dev/ migration (README, 3 comment-only .py edits, moved docs).
-2. Brainstorm + consolidate in one **general-purpose subagent**, to save context. `/brainstorm` is user-invoke-only, so the subagent reads `~/.claude/skills/brainstorm/SKILL.md` and `consolidate/SKILL.md` and follows them. It may fork per angle. The prompt hands it the topic, the seed files and the facets: dataset organization and schema, the pair/reference-panel policy, SNN breadth (model zoo), brain-signature extraction, run orchestration at scale, and what search/objective becomes. It must not ask questions or touch code. It returns index.md's recommendation plus open questions, and I relay them to you.
-3. `/context-builder` stays in the main session, since its interview needs you: interview, then write requirements, research, decisions, design (milestones with runnable checks) and agent-team with the nodeterm addendum, then `/consolidate` it.
-4. Hygiene: remove the four merged worktrees and branches. Leave you a one-paragraph launch note: open a Claude node, `/project-builder`.
-**Risks:**
-- The brainstorm rediscovers the 09-23 work. To catch it, the new index should cite mega's files rather than restate them.
-- The subagent's work is invisible until it reports. To catch problems, I read its index.md before relaying it; the facet files I only spot-check.
-- Scope creep into running science. The guard is that no `results/` writes happen this session.
-- project-builder says it's "not for incremental features on an already-built project". This reorg is big enough, but the packet's design must name what survives from v1, or the builder will one-shot over working code.
-- Codex in permissive mode touches shared data. The packet sets which paths each role may write.
-**Done when:**
-- `git status` is clean apart from this session's dev/ docs, the migration is its own commit, and `git worktree list` shows only main.
-- `dev/brainstorm/snn-tda-dataset/index.md` exists, links every facet file, and gives a recommendation.
-- `dev/agents/project/context/` has requirements.md (Done-when list, sandbox), research.md, decisions.md, design.md (milestones, each with a runnable check), and agent-team.md with a nodeterm/codex addendum. No blocking open question remains.
-- design.md's acceptance includes: E15 reproduces through the new pipeline, the existing tests pass, and E16 is runnable as the first experiment on the new setup.
-**Open:** none blocking. Pause/resume of E16 and the stop point are decided (above).
+## M2 · 2026-09-27 15:36 EDT
+**Built:** `producers.py` for bio, synthetic, control, and existing SNN recipes; deterministic pre-build SNN seeding; grouped training/checkpoint evaluation; content-addressed activity and optional weight storage; and failed-row handling. Added measurement signature/null/comparison rows with diagrams, R2 H1 presence, R4 anchors, and stated construction IDs. Added explicit `h`, seed, and per-side null means to stats results; training snapshots; and Steinmetz full-trial selector arrays.
 
-## Progress · 13:54
-- Pre-flight: 128 passed. Path migration committed `5d91f47`. Four merged worktrees and branches removed, and `snn_topo.worktrees/` rmdir'd.
-- Brainstorm (subagent): `dev/brainstorm/snn-tda-dataset/` committed `479b25d` and `3fa110a`. Recommendation: the recipe-hashed activity is the unit of record, pairs are declared only, storage is jsonl plus a content-addressed store, search/objective are frozen, experiments are committed specs with prereg bound by blob hash, and v1 numerics are frozen behind golden checks G1-G7 (E15 string-identical).
-- Verified by hand: E16 as framed is nearly empty. Passive has 0 zero-contrast trials, so contrast-matched no-go means misses only, with 14/14/9 in sessions 6/11/12 (`checks/e16_and_determinism.out`). Model built before seeding: `atlas.py:237` vs `training.py:32`.
-- Next: `/context-builder`. The ranked open questions are in the subagent report and `snn-tda-dataset/index.md`.
+**Checks:**
+- `pytest -m data tests/test_producers.py -q` → `1 passed, 4 deselected in 4.28s`.
+- `pytest tests/test_producers.py tests/test_measure.py -m 'not data' -q` → `7 passed, 1 deselected in 4.72s`.
+- `pytest -q` → `144 passed, 1 skipped, 10 deselected, 2 warnings in 42.73s`.
 
-## Progress · 14:49
-- /context-builder: v3 packet written in `dev/agents/project/context/` (requirements, research, decisions D29-D38, design M1-M9, agent-team + nodeterm addendum). Consolidated by subagent: `afd2d9d`, `f0006e1`.
-- User calls: freeze search; jsonl storage; declared pairs only; no old-results oracle, validated by a known-answer spec instead (D33); fresh dataset with v1 kept parallel; specs at root binding PREREG+verdict; new families smoke-gated into zoo v1; E15 fresh + E16 skeleton; team and gates as drafted.
-- After consolidate, fixed design gaps: Steinmetz trial arrays moved to M2 (the bio producer and E16 --mini need them); ModelConfig fields moved to M8; file-ownership section added; E16 uses `PREREG = None` so the binding can't lock it by accident; SNNTOPO_WORKERS 6/5/5 across tracks. Uncommitted, for /devlog.
-- Stale cite outside the packet: `snn-tda-dataset/experiments-and-prereg.md` §5 has `steinmetz.py:121-135`, which should be about 103-117.
-- Next: the user starts the build session (nodeterm orchestrator node → `/project-builder`).
+**CUDA determinism:** small SNN recipe twice on CUDA and once on CPU: `cuda_cuda_bit_identical True`; `cuda_cpu_bit_identical True`. Set `PERSIST_DEFAULT = dict(spikes="none", weights=False)`.
 
-## Close · 2026-09-27 15:08 · 0374c27..07c6eae
-- **changed:** dev/ split: agent docs moved under `dev/agents/`, path refs updated (README, 3 comment-only .py edits)
-- **changed:** `dev/brainstorm/snn-tda-dataset/`: new brainstorm (schema, pair policy, SNN breadth, brain signatures, orchestration, prereg, v1 survival, checks/)
-- **changed:** `dev/agents/project/context/`: v3 build packet (requirements, research, D29-D38, design M1-M9, agent-team + nodeterm addendum), rewritten in place over v1
-- **why:** reframe snntopo per `dev/main.md` from a D20-centred search into a general SNN-TDA data-gathering platform; the packet is the input for `/project-builder`
-- **verified:** `pytest -q` → 128 passed (13:54, before the migration commit). No code change after that. Packet fixes post-consolidate are docs only
-- **by:** pair
-- `07c6eae` notes: SNN-TDA reframe (main.md) and 09-27 session plan
-- `f0006e1` consolidate: v3 context packet, fix stale path:line citations, dedupe validation facts
-- `afd2d9d` journal: snapshot before consolidate
-- `3fa110a` consolidate: snn-tda-dataset brainstorm, dedupe no-go check, fix cross-file facts
-- `479b25d` journal: snapshot before consolidate
-- `5d91f47` dev: update path references after agent-docs move
-- 36 files, +2078 −419 (excl. journal)
-- ⚠ uncommitted: `.nodeterm/` (canvas state, not project code)
-
-### Next
-1. `/project-builder` from the nodeterm orchestrator node in the main checkout. It reads the packet and shows the phase-1 plan for a go-ahead (checkpoint 1, `agent-team.md`)
-2. Before any codex node: add an explicit permission rule for codex permissive mode (see Traps)
-3. E16 population (misses vs zero-contrast withholds, `snn-tda-dataset/experiments-and-prereg.md` §5) is the user's call. It blocks only E16's PREREG commit
-4. Paused science (after the build): D28 floor stress tests, SNN-vs-bio against a matched floor, D19 controls rerun
-### Traps
-- E16 as first framed is nearly empty: passive has 0 zero-contrast trials, so contrast-matched no-go = misses only, 14/14/9 trials in sessions 6/11/12 (`dev/brainstorm/snn-tda-dataset/checks/e16_and_determinism.out`)
-- SNN model is built before seeding (`atlas.py:237` vs `training.py:32`); the M2 seeding fix covers it
-- Worktrees branch from HEAD: commit packet edits before spawning workers, or they build on the old design
-### Pointers
-- `dev/agents/project/context/design.md` milestones table (M1-M9 checks), "File ownership"; `agent-team.md` Addendum: nodeterm, Checkpoints
-- `dev/brainstorm/snn-tda-dataset/index.md`: recommendation + links to all facets
-- `dev/agents/experiments.md:750` E15 (must reproduce through the new pipeline, design.md acceptance)
+**v1 test edits:** none. **Cross-module gaps:** none encountered.
