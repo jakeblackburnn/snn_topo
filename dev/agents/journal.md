@@ -219,3 +219,61 @@ vs expansion of .../tests/specs/tiny.py:
 - `producers.produce` trained every model before yielding any row (a zoo shard would hold all models and lose all training on a kill); now trains lazily in recipe order and frees each model after its last recipe. SNN training was hard-coded to CPU; now `producers.DEVICE` = `SNNTOPO_DEVICE` or cuda-if-available, and `tests/conftest.py` pins tests to CPU. Replaced M2's `training_key`-call-count test with one on train/yield interleaving.
 - CUDA determinism, re-measured (M2's probe was untrained-size): recurrent LIF n_hidden 256, 200 updates, CUDA twice → identical content_hash `c90a816209ced3d3` both times. CUDA vs CPU at 20 updates: checkpoint 0 identical, trained checkpoint differs. So `PERSIST_DEFAULT spikes="none"` holds per device; regenerating on another device is caught by the runner's content_hash check (pair blocked with "persist its spikes").
 - Known, not fixed: resuming one `--out` with a different shard N repartitions work (duplicate compute, no bad rows; M3 review #2). The halves disk cache also stores SNN halves (~0.5 GB for zoo v0; M3 gap 3). M3 check `validate_instrument --mini --dry-run` moved to M4 (the file is Track A's).
+
+## Track C · 2026-09-27 17:12 EDT
+**M7 built:** `sweeps/measure_gpu.py` and `sweeps/zoo_v0.py`. Zoo v0 is exactly
+27 valid triples × 2 hidden sizes × 3 seeds × 3 checkpoints × 2 regimes = **972**
+activities, all self-null only (no declared pairs). Its MINI is six existing triples,
+one seed, task regime, checkpoint 200, trained for 200 updates.
+
+**GPU measurement:** Before the clean run, `nvidia-smi` showed only nodeterm's Wayland
+renderer (242 MiB); no other compute app. Each cell is 200 recurrent-LIF/random updates,
+with `peak_mib` from `torch.cuda.max_memory_allocated()`, then mean/max `nvidia-smi`
+utilization and max observed total GPU memory.
+
+| hidden | trainers | wall s | updates/s/trainer | total updates/s | peak MiB | util mean/max % | total GPU MiB max |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 64 | 1 | 11.13 | 22.14 | 17.97 | 76.3 | 30.6/50 | 1662 |
+| 64 | 2 | 16.51 | 15.62 | 24.23 | 76.3 | 51.6/97 | 2150 |
+| 64 | 4 | 20.98 | 11.76 | 38.13 | 76.3 | 68.6/99 | 3539 |
+| 256 | 1 | 20.43 | 13.40 | 9.79 | 113.4 | 21.3/45 | 2028 |
+| 256 | 2 | 22.34 | 12.39 | 17.90 | 113.4 | 41.5/90 | 2770 |
+| 256 | 4 | 33.68 | 8.74 | 23.75 | 113.4 | 55.1/98 | 3393 |
+| 1024 | 1 | 60.05 | 8.58 | 3.33 | 286.0 | 17.7/79 | 2551 |
+| 1024 | 2 | 65.52 | 10.26 | 6.10 | 286.0 | 28.7/99 | 3291 |
+| 1024 | 4 | 89.83 | 6.51 | 8.91 | 286.0 | 39.0/100 | 4529 |
+
+**N = 2 zoo shards.** Four trainers maximized raw GPU throughput, but at 256–1024 it
+reduced per-trainer throughput sharply and its gain over two was modest; with the two other
+topology tracks each capped at five workers, two zoo shards retain useful CPU headroom.
+
+**M7 check:** `python -m snntopo.cli run sweeps/zoo_v0.py --mini` → run
+`results/runs/20260927-1659-zoo_v0`, 6/6 activities, 36 signatures, 36 self-null rows,
+0 failed/missing; `summarize_smoke.py` → 0/6 degenerate, all six accuracy 1.0. `zoo_v0
+--dry-run` reported 972 activities; no real zoo run was launched.
+
+**M8 built:** deterministic per-neuron beta spread (`beta + spread*linspace(-1,1,n)`,
+clamped to `(0,1]`), Dale recurrent columns (last rounded `frac_inhibitory*n` columns
+inhibitory; effective recurrent weights use `abs(raw) * sign * mask` every forward), rate CTRNN
+with count-valued Poisson sampling at recipe gain, and balanced three-action
+`steinmetz_nogo` (`left`, `right`, `nogo`). `frac_inhibitory` is rejected unless Dale is on;
+Dale is rejected for feedforward networks. The rate policy uses the passing 200-update
+large-batch/low-learning-rate settings. `zoo_v1.py` contains v0 plus the eight passing configs
+over the standard grid: 1,260 activities in `--dry-run` (no real run).
+
+**Smoke checks (all `status` 0 missing):**
+- tau spread: `results/runs/20260927-1701-smoke_tau_spread`, 0/2 degenerate; accuracies 1.0,
+  1.0; PASS.
+- Dale: `results/runs/20260927-1702-smoke_dale`, 0/2 degenerate; accuracies 1.0, 1.0; PASS.
+- rate: final passing run `results/runs/20260927-1707-smoke_rate`, 0/2 degenerate; accuracies
+  1.0, 1.0; PASS. Earlier `1702`, `1703`, `1704`, `1705`, `1706` exploratory attempts record
+  the rejected small-batch rate configuration (and one implementation-fix failure) rather than
+  overwrite any measurement.
+- Steinmetz no-go: final passing run `results/runs/20260927-1709-smoke_steinmetz_nogo`, 0/2
+  degenerate; accuracies 0.9896, 1.0; PASS at chance 1/3. The preceding `1708` run recorded the
+  unbalanced-sampler failure (2/2 degenerate); balancing the three classes fixed it.
+
+**Verification:** targeted Track-C tests → `87 passed, 2 deselected in 4.90s`; full suite
+`pytest -q` → `175 passed, 1 skipped, 11 deselected, 2 warnings in 61.63s`. New tests cover
+CPU recipe determinism for tau/rate, Dale signs after optimizer steps, no-go shapes/targets,
+and sweep expansion counts. **Gaps:** none.

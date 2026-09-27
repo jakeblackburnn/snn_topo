@@ -25,7 +25,7 @@ from .contracts import Activity, ModelConfig, TopoConfig, TrainConfig
 from .data import load_session
 from .data import steinmetz
 from .evaluate import evaluate, policy_logits
-from .models import build_model
+from .models import build_model, build_rate_model
 from .tasks import TASKS
 from .training import train
 from .topology.pipeline import compute_signature
@@ -44,7 +44,7 @@ DEVICE = os.environ.get("SNNTOPO_DEVICE") or ("cuda" if torch.cuda.is_available(
 def training_key(recipe: dict) -> str | None:
     """The one unit that may share a training run across recipes."""
     base = recipe.get("of", recipe) if recipe.get("kind") == "control" else recipe
-    if base.get("kind") != "snn" or base.get("family") != "snn":
+    if base.get("kind") != "snn" or base.get("family") not in ("snn", "rate"):
         return None
     return dataset.short_hash({k: base[k] for k in ("family", "task", "model", "train")})
 
@@ -184,20 +184,26 @@ def _evaluate_spontaneous(model, task, n_eval: int, device: str, seed: int) -> t
 
 def _model_and_train(base: dict, checkpoints: set[int], device: str) -> tuple[dict, object, object]:
     task = TASKS[base["task"]]
-    model_cfg = ModelConfig(**base["model"])
     train_cfg = TrainConfig(**base["train"])
     torch.manual_seed(train_cfg.seed)  # before build_model: this is the v1 seeding bug fix.
-    model = build_model(model_cfg, task.n_in, task.n_actions).to(device)
+    if base.get("family") == "snn":
+        model = build_model(ModelConfig(**base["model"]), task.n_in, task.n_actions)
+    elif base.get("family") == "rate":
+        model = build_rate_model(base["model"], task.n_in, task.n_actions)
+    else:
+        raise ValueError(f"unknown SNN family {base.get('family')!r}")
+    model = model.to(device)
     result = train(model, task, train_cfg, device, checkpoints=sorted(checkpoints))
     return result, model, task
 
 
 def snn_activity(recipe: dict, trained: tuple[dict, object, object] | None = None,
                  device: str | None = None) -> tuple[Activity, dict, float | None]:
-    """Evaluate a checkpointed existing SNN family.  Track C adds the rate branch here."""
+    """Evaluate a checkpointed spiking or rate family into count-valued Activity."""
     device = device or DEVICE
-    if recipe.get("family") != "snn":
-        raise NotImplementedError(f"SNN family {recipe.get('family')!r} is not implemented")
+    family = recipe.get("family")
+    if family not in ("snn", "rate"):
+        raise NotImplementedError(f"SNN family {family!r} is not implemented")
     checkpoint = int(recipe.get("checkpoint", 0))
     if trained is None:
         trained = _model_and_train(recipe, {checkpoint}, device)
@@ -215,6 +221,16 @@ def snn_activity(recipe: dict, trained: tuple[dict, object, object] | None = Non
         accuracy, activity = _evaluate_spontaneous(model, task, n_eval, device, seed)
     else:
         raise ValueError(f"unknown SNN evaluation regime {regime!r}")
+    if family == "rate":
+        gain = recipe.get("gain")
+        if gain is None or float(gain) <= 0:
+            raise ValueError("rate recipes require a positive recorded gain")
+        # This generator is deliberately separate from evaluation/model RNG: a resolved
+        # recipe's eval seed fixes the Poisson draw as well as the task trials.
+        generator = torch.Generator(device=device).manual_seed(seed)
+        rates = torch.from_numpy(activity.spikes).to(device)
+        counts = torch.poisson(rates * float(gain), generator=generator).cpu().numpy().astype(np.float32)
+        activity = Activity(counts, activity.conditions, activity.window, activity.bin_size_s)
     return activity, {"train_elapsed_s": result["elapsed_s"], "n_updates_done": result["n_updates_done"],
                        "device": device, "max_memory_allocated": int(torch.cuda.max_memory_allocated(device))
                        if device.startswith("cuda") else 0}, accuracy

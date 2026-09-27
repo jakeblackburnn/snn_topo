@@ -157,6 +157,32 @@ def test_masked_recurrent_matrix_has_target_radius_and_masked_weights_get_no_gra
     assert (w.grad[model.rec_mask == 0] == 0).all()
 
 
+def test_tau_spread_is_deterministic_per_neuron_and_changes_hidden_betas():
+    model = build_model(ModelConfig("recurrent", "lif", "random", 64, beta=0.8, tau_spread=0.1), 2, 2)
+    assert model.beta_by_neuron[0].item() == pytest.approx(0.7)
+    assert model.beta_by_neuron[-1].item() == pytest.approx(0.9)
+    assert torch.unique(model.beta_by_neuron).numel() == 64
+
+
+@pytest.mark.parametrize("arch,n_modules", [("recurrent", 1), ("modular", 2)])
+def test_dale_effective_recurrent_columns_keep_their_sign_after_optimizer_steps(arch, n_modules):
+    torch.manual_seed(3)
+    model = build_model(ModelConfig(arch, "lif", "random", 64, n_modules=n_modules,
+                                    dale=True, frac_inhibitory=0.25), 2, 2)
+    opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+    inputs = torch.rand(10, 4, 2)
+    for _ in range(3):
+        _, out = model(inputs)
+        opt.zero_grad()
+        out.sum().backward()
+        opt.step()
+    effective = model.effective_recurrent_weight().detach()
+    excitatory = model.dale_sign > 0
+    inhibitory = ~excitatory
+    assert (effective[:, excitatory] >= 0).all()
+    assert (effective[:, inhibitory] <= 0).all()
+
+
 @pytest.mark.parametrize("cfg,reason", [
     (ModelConfig("feedforward", "lif", "random", 64), "connectivity must be 'none'"),
     (ModelConfig("recurrent", "lif", "none", 64), "needs a recurrent wiring"),
@@ -167,6 +193,9 @@ def test_masked_recurrent_matrix_has_target_radius_and_masked_weights_get_no_gra
     (ModelConfig("modular", "lif", "random", 64, n_modules=3), "fewer than 32"),
     (ModelConfig("feedforward", "lif", "none", 64, n_layers=4), "fewer than 32"),
     (ModelConfig("recurrent", "lif", "random", 64, beta=0.0), "beta"),
+    (ModelConfig("recurrent", "lif", "random", 64, tau_spread=-0.1), "tau_spread"),
+    (ModelConfig("feedforward", "lif", "none", 64, dale=True), "dale applies"),
+    (ModelConfig("recurrent", "lif", "random", 64, frac_inhibitory=0.3), "frac_inhibitory applies"),
     (ModelConfig("recurrent", "lif", "random", 64, spectral_radius=-1.0), "spectral_radius"),
 ])
 def test_validate_rejects_with_reason(cfg, reason):

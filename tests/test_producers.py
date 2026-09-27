@@ -17,6 +17,10 @@ SNN = {"kind": "snn", "family": "snn", "task": "steinmetz_2afc",
        "model": {"arch": "feedforward", "neuron": "lif", "connectivity": "none", "n_hidden": 32},
        "train": {"n_updates": 2, "batch_size": 4, "max_seconds": 30, "seed": 7},
        "checkpoint": 1, "eval": {"n_eval": 12, "seed": 3, "regime": "task"}, "gain": None}
+RATE = {"kind": "snn", "family": "rate", "task": "steinmetz_2afc",
+        "model": {"n_hidden": 32, "tau": 10.0, "dt": 1.0, "spectral_radius": 0.9},
+        "train": {"n_updates": 2, "batch_size": 4, "max_seconds": 30, "seed": 7},
+        "checkpoint": 1, "eval": {"n_eval": 12, "seed": 3, "regime": "task"}, "gain": 2.0}
 
 
 def _one(recipe):
@@ -66,6 +70,19 @@ def test_snn_recipe_is_cpu_stable_and_shared_training_runs_once(monkeypatch):
     _, _, again = _one(copy.deepcopy(SNN))
     assert rows[0][2]["activity_id"] == again["activity_id"]
     assert rows[0][2]["content_hash"] == again["content_hash"]
+
+
+@pytest.mark.parametrize("recipe", [
+    {**SNN, "model": {**SNN["model"], "tau_spread": 0.05}}, RATE,
+])
+def test_new_family_and_axes_are_cpu_content_stable(recipe):
+    _, activity, row = _one(recipe)
+    _, activity2, row2 = _one(copy.deepcopy(recipe))
+    assert activity is not None and activity2 is not None
+    assert row["activity_id"] == row2["activity_id"]
+    assert row["content_hash"] == row2["content_hash"]
+    if recipe["family"] == "rate":
+        assert np.all(activity.spikes >= 0) and np.any(activity.spikes > 1)
 
 
 def test_snn_controls_produce_an_activity_instead_of_reading_wrapper_fields():
@@ -129,8 +146,8 @@ def test_checkpoint_zero_is_seeded_initial_weights():
 
 
 def test_bad_recipe_is_a_failed_row_not_an_exception():
-    recipe, activity, row = _one({"kind": "snn", "family": "rate"})
-    assert recipe["family"] == "rate" and activity is None and row["status"] == "failed"
+    recipe, activity, row = _one({"kind": "snn", "family": "bogus"})
+    assert recipe["family"] == "bogus" and activity is None and row["status"] == "failed"
     assert "not implemented" in row["meta"]["error"]
 
 

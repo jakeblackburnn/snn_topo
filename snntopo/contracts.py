@@ -84,6 +84,16 @@ class ModelConfig:
     n_modules: int = 1  # modular only
     spectral_radius: float | None = 1.0  # recurrent weight rescale; None keeps init
     beta: float = 0.9  # membrane decay
+    # ``tau_spread`` is a half-width in the discrete membrane-decay coefficient beta,
+    # not a physical-time-unit standard deviation.  Models assign evenly spaced values
+    # beta + tau_spread * linspace(-1, 1, n) to their hidden neurons (then clamp to
+    # (0, 1]); zero retains the homogeneous model exactly.
+    tau_spread: float = 0.0
+    # Dale's law is meaningful only for recurrent/modular populations.  A fraction of
+    # presynaptic columns are inhibitory and their effective recurrent weights remain
+    # non-positive throughout optimisation.
+    dale: bool = False
+    frac_inhibitory: float = 0.2
 
     def to_dict(self) -> dict:
         return asdict(self)
