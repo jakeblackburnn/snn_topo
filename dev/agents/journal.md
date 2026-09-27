@@ -337,3 +337,18 @@ over the standard grid: 1,260 activities in `--dry-run` (no real run).
 `pytest -q` → `175 passed, 1 skipped, 11 deselected, 2 warnings in 61.63s`. New tests cover
 CPU recipe determinism for tau/rate, Dale signs after optimizer steps, no-go shapes/targets,
 and sweep expansion counts. **Gaps:** none.
+
+## Orchestrator · 2026-09-27 18:00 EDT · phase 2 integration, paused
+- Merged into v3-build: Track B (M6, `8dac864`), Track C (M7+M8, `8ad1b48`). Reviewers: ship for both. `pytest -q` at 8ad1b48: 179 passed, 11 deselected.
+- bio_core full run: `results/runs/20260927-1703-bio_core`, 16 min wall (Track B's mini extrapolated 52), `status`: 732/732 activities, 6832 nulls, 924 comparisons, 0 missing, 0 failed. No R1 derived rows yet (see below).
+- User decision (derived rows): optional spec hook `derive(activity_id, activity)`, called in phase 1 before the activity row; no new subcommand. Per activity, not over tables, because R1 needs the activity's diagrams and halves. Built in `85dee0e`; recorded in design.md "Spec interface"/"Runner" and requirements.md open questions.
+- Track C notes accepted: producers.py `training_key`/`_model_and_train` also changed for the rate family (needed); `nogo` action has no bio condition of that name; `validate()` hard-codes 0.2; `tau_spread` unbounded (clamped).
+- Track A resumed as a new node (A2) after the first hit the usage limit; brief-a2 answers its gaps: validation run OK (<=60 min); gap 1 (synthetic halves cost) left; gap 2 -> derive hook; gap 3 accepted (library numerics versioned by PIPELINE/STATS_VERSION); gap 4 is the user's E16 call.
+- Orchestrator error: brief-a2 gave `--out` as a relative path, so the resume started an empty run dir inside the v3-a worktree; A2 killed and removed it (user approved) and reran against the shared dir.
+
+**To resume (in order):**
+1. CHECKPOINT 3: relay Track A2's scan table, chosen noise and intended PREREG to the user; on approval, a new Claude node in the Track A group commits PREREG, runs E15 (arms + contrasts), `snntopo verdict`, E-entry.
+2. Gate Track A (floor/binding/verdict/E15/E16): run checks, `pytest -q`, reviewer; merge `--no-ff`.
+3. `sweeps/bio_core.py`: add `derive()` calling `floor.robust_count_rows`; drop the dead `TOPO.metrics`; rerun into a new dir (~16 min) so every activity has R1 rows.
+4. M9 docs: README, docs/architecture.md, dev/agents/spec.md (v3, replacing v1's), D29-D38 appended to dev/agents/decisions.md (continues from D28, no renumber), CLAUDE.md (sandbox from requirements.md, commands used, layout). `snntopo --help` lists 11 subcommands.
+5. Check every requirements.md Done-when item with a real command. 6. CHECKPOINT 4: user OK to merge v3-build to main.
