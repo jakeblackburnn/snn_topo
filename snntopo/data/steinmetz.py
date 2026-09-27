@@ -19,6 +19,8 @@ pooled with parent sessions in the bio-vs-bio yardstick (pseudo-replication).
 """
 from pathlib import Path
 from functools import cache
+import os
+import tempfile
 
 import numpy as np
 import requests
@@ -41,12 +43,26 @@ def _download(part: int) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     osf_id, filename = PARTS[part]
     url = f"https://osf.io/{osf_id}/download?filename={filename}"
-    with requests.get(url, stream=True, timeout=120) as response:
-        response.raise_for_status()
-        with path.open("wb") as out:
-            for chunk in response.iter_content(1 << 20):
-                if chunk:
-                    out.write(chunk)
+    # Never expose a partly transferred archive at the cache path.  Several shards can
+    # discover a missing part together; each writes a private sibling temporary file and
+    # the last successful replace wins, with a complete archive in either case.
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as out:
+            with requests.get(url, stream=True, timeout=120) as response:
+                response.raise_for_status()
+                for chunk in response.iter_content(1 << 20):
+                    if chunk:
+                        out.write(chunk)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(tmp_name, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except FileNotFoundError:
+            pass
+        raise
     return path
 
 
