@@ -1,0 +1,51 @@
+== 1. legacy results inventory ==
+baseline-matched-n50                     {'bio': 21} meta.topo=21 construction={'<absent>': 1318} h_or_seed_field=[]
+baseline-matched-n50-seed1               {'bio': 21} meta.topo=21 construction={'<absent>': 1318} h_or_seed_field=[]
+baseline-matched-n50-seed2               {'bio': 21} meta.topo=21 construction={'<absent>': 1318} h_or_seed_field=[]
+baseline-matched-n50-seed3               {'bio': 21} meta.topo=21 construction={'<absent>': 1318} h_or_seed_field=[]
+baseline-matched-n50-seed4               {'bio': 21} meta.topo=21 construction={'<absent>': 1318} h_or_seed_field=[]
+baseline-matched-trial340                {'bio': 22} meta.topo=22 construction={'<absent>': 1446} h_or_seed_field=[]
+baseline-matched-trial340-seed1          {'bio': 22} meta.topo=22 construction={'<absent>': 1446} h_or_seed_field=[]
+baseline-matched-trial340-seed2          {'bio': 22} meta.topo=22 construction={'<absent>': 1446} h_or_seed_field=[]
+baseline-matched-trial340-seed3          {'bio': 22} meta.topo=22 construction={'<absent>': 1446} h_or_seed_field=[]
+baseline-matched-trial340-seed4          {'bio': 22} meta.topo=22 construction={'<absent>': 1446} h_or_seed_field=[]
+baseline-wide                            {'bio': 22} meta.topo=22 construction={'<absent>': 4338} h_or_seed_field=[]
+search-e2-ibl_2afc                       {'bio': 3, 'snn': 17} meta.topo=20 construction={'<absent>': 954} h_or_seed_field=[]
+search-e2-steinmetz_2afc                 {'bio': 1, 'snn': 11} meta.topo=12 construction={'<absent>': 324} h_or_seed_field=[]
+search-e2-steinmetz_2afc-modular         {'bio': 1, 'snn': 21} meta.topo=22 construction={'<absent>': 612} h_or_seed_field=[]
+search-ibl_2afc-2h                       {'bio': 3, 'snn': 77} meta.topo=80 construction={'<absent>': 3906} h_or_seed_field=[]
+search-steinmetz_2afc                    {'bio': 1, 'snn': 191} meta.topo=0 construction={'<absent>': 5628} h_or_seed_field=[]
+script output (no atlas record): engagement-contrast/contrasts.csv header=contrast,seed,dim,distance,null_mean,null_q95,ratio,p_value
+script output (no atlas record): engagement-contrast-e15/contrasts.csv header=session,block,contrast,seed,dim,distance,null_mean,null_q95,ratio,p_value
+script output (no atlas record): null-calibration/pairs.csv header=arm,noise_level,pair,dim,distance,null_mean,null_q95,ratio,p_value
+script output (no atlas record): null-calibration-c2/pairs.csv header=arm,noise_level,pair,dim,distance,null_mean,null_q95,ratio,p_value
+script output (no atlas record): null-calibration-e14/pairs.csv header=arm,noise_level,pair,dim,distance,null_mean,null_q95,ratio,p_value
+
+== 2. Steinmetz part0 trial counts ==
+session n_units active responded nogo passive subject
+      0     734    214       140   74     150 Cori
+      1    1070    251       157   94     150 Cori
+      2     619    228       151   77     150 Cori
+      3    1769    249       123  126     110 Forssmann
+      4    1077    254       150  104     110 Forssmann
+      5    1169    290       198   92     110 Forssmann
+      6     584    252       190   62     110 Forssmann
+      7    1156    250       157   93     110 Hench
+      8     788    372       238  134     110 Hench
+      9    1172    447       292  155     110 Hench
+     10     857    342       245   97     110 Hench
+     11     698    340       276   64     110 Lederberg
+     12     983    300       244   56     110 Lederberg
+
+== 3. masked vs sliced trial selection (Steinmetz 11, E13 block 110) ==
+bit-identical: False  max abs diff: 1.686e-15
+sorted vs unsorted half, masked path, bit-identical: True
+diagrams identical: True
+
+== 4. payload sizes ==
+steinmetz 11 activity (698, 340, 250) as compressed int8 npz: 2.38 MB
+SNN-shaped 0/1 activity (256, 340, 150) at 5% rate: packbits+npz 0.62 MB, uint8 npz 0.81 MB
+  recurrent weights 256x256 float32: 0.26 MB
+SNN-shaped 0/1 activity (1024, 340, 150) at 5% rate: packbits+npz 2.47 MB, uint8 npz 3.23 MB
+  recurrent weights 1024x1024 float32: 4.19 MB
+split-half diagram set (100 diagrams x ~153 bars, float64): 0.23 MB, float32 0.11 MB

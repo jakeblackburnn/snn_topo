@@ -1,0 +1,59 @@
+== 1. Steinmetz part0 regions by unit count ==
+ 0 >=50:  6 >=100:  4  VISp:178, LS:139, MOs:113, ACA:109, SUB:75, CA3:68
+ 1 >=50:  4 >=100:  4  VISpm:302, VISl:231, POST:191, CA1:190
+ 2 >=50:  4 >=100:  3  MG:137, VISam:114, VISp:114, POST:63
+ 3 >=50: 10 >=100:  6  LSr:435, ACA:304, TH:256, DG:144, LGd:140, SUB:108, CA1:98, MOs:92, VISa:81, VPL:72
+ 4 >=50:  4 >=100:  2  OLF:181, SUB:101, VISa:99, ACA:53
+ 5 >=50:  2 >=100:  2  TH:248, AUD:246
+ 6 >=50:  5 >=100:  2  CA3:130, VPL:106, PIR:67, CP:59, EPd:52
+ 7 >=50:  8 >=100:  5  PO:255, ILA:144, PL:144, LP:120, MOs:112, TT:82, VISa:63, CA1:56
+ 8 >=50:  9 >=100:  2  ORBm:122, VISl:104, CA1:90, CA3:86, LD:79, VPL:73, TT:55, TH:52, PL:50
+ 9 >=50:  9 >=100:  4  MB:275, POL:154, VISrl:136, VISp:105, VISl:99, CA1:76, DG:73, MRN:72, GPe:63
+10 >=50:  3 >=100:  2  MOp:447, CP:275, LSc:72
+11 >=50:  7 >=100:  2  MD:126, SUB:105, VISam:79, VISp:66, DG:65, PL:56, CA1:50
+12 >=50:  6 >=100:  2  PL:184, LGd:150, MB:63, RN:58, ACA:58, MRN:51
+total region-sessions (excl. root): >=50 units 77, >=100 units 40
+
+== 2. baseline-wide H1 on 'all' (legacy, descriptive) ==
+                                              sum.all_H1_n  sum.all_H1_max_persistence  sum.all_raw_diameter  H1_null_mean  H0_null_mean
+entry_id                                                                                                                                
+bio:steinmetz:11                                         2                       0.136                 1.264        0.0546       0.05286
+bio:ibl:004d8fd5-41e7-4f1b-a45b-0d4ad76fe446             1                       0.316                 2.455       0.02894       0.03137
+bio:ibl:0deb75fb-9088-42d9-b744-012fb8fc4afb             9                    0.005555                 0.629         0.016       0.03724
+bio:ibl:1a507308-c63a-4e02-8f32-3239a07dc578             0                           0                 1.621      0.004039       0.03285
+bio:ibl:25f77e81-c1af-46ab-8686-73ac3d67c4a7             4                     0.01103                0.4839       0.02379       0.03199
+bio:ibl:36280321-555b-446d-9b7d-c2e17991e090            37                      0.0799                0.1477        0.1157        0.1515
+bio:ibl:465c44bd-2e67-4112-977b-36e1ac7e3f8c             1                    0.002572                 1.024      0.006902       0.02297
+bio:ibl:53738f95-bd08-4d9d-9133-483fdb19e8da            13                     0.04961                0.3754        0.0608       0.08276
+bio:ibl:5d6aa933-4b00-4e99-ae2d-5003657592e9             0                           0                 1.187      0.003269       0.01911
+bio:ibl:6a601cc5-7b79-4c75-b0e8-552246532f82             1                    0.002431                 1.388      0.006503       0.03698
+bio:ibl:746d1902-fa59-4cab-b0aa-013be36060d5             0                           0                 1.689     4.925e-05       0.01192
+bio:ibl:8207abc6-6b23-4762-92b4-82e05bed5143             0                           0                0.4668       0.01584       0.03642
+bio:ibl:90c61c38-b9fd-4cc3-9795-29160d2f8e55             1                   0.0003013                0.5603      0.006176       0.02847
+bio:ibl:9e9c6fc0-4769-4d83-9ea4-b59a1230510e             0                           0                0.6277      0.004777       0.01959
+bio:ibl:aa20388b-9ea3-4506-92f1-3c2be84b85db            10                     0.01339                0.9301       0.02348         0.031
+bio:ibl:be164a14-6e73-42c3-ab60-d29c48693c0f             3                      0.0095                0.8212       0.01837       0.04304
+bio:ibl:d0ea3148-948d-4817-94f8-dcaf2342bbbe             4                    0.002622                0.3578       0.02547       0.05112
+bio:ibl:dd87e278-999d-478b-8cbd-b5bf92b84763             1                   0.0002391                0.8703      0.006386       0.03594
+bio:ibl:eacc49a9-f3a1-49f1-b87f-0972f90ee837             0                           0                 1.509     0.0004837       0.02624
+bio:ibl:f359281f-6941-4bfd-90d4-940be22ed3c3             8                     0.01039                 1.226        0.0322       0.04304
+bio:ibl:ffef0311-8ffa-49e3-a857-b3adf6d86e12             1                    0.001523                0.9709       0.00758       0.03118
+bio:allen:719161530                                     21                     0.05634                0.3176       0.07821       0.07881
+H1_n == 0: 6/22; median 1.0
+H1 self null_mean range 4.925e-05-0.1157 (x2348.4)
+
+== 3. Steinmetz no-go trials: contrast mix ==
+session nogo nogo_zero_contrast nogo_nonzero passive passive_zero(both 0)
+      0   74                 34           40     150                    0
+      1   94                 47           47     150                    0
+      2   77                 47           30     150                    0
+      3  126                 61           65     110                    0
+      4  104                 53           51     110                    0
+      5   92                 62           30     110                    0
+      6   62                 48           14     110                    0
+      7   93                 31           62     110                    0
+      8  134                 57           77     110                    0
+      9  155                 71           84     110                    0
+     10   97                 66           31     110                    0
+     11   64                 50           14     110                    0
+     12   56                 47            9     110                    0
