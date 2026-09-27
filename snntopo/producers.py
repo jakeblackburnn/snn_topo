@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import io
+import os
 import time
 import traceback
 from collections import defaultdict
@@ -30,9 +31,14 @@ from .training import train
 from .topology.pipeline import compute_signature
 
 
-# M2's small CUDA probe produced bit-identical repeats (and CPU output), so SNN
-# activities can be regenerated unless a spec explicitly asks to retain them.
+# CUDA re-runs are bit-identical (recurrent LIF, 256 units, 200 updates), so SNN activities can be
+# regenerated on the same device unless a spec asks to keep them. Trained CUDA and CPU spikes differ
+# (checkpoint 0 agrees), which the runner's content_hash check on regeneration catches.
 PERSIST_DEFAULT = dict(spikes="none", weights=False)
+
+# SNNTOPO_DEVICE=cpu forces CPU (tests, a busy GPU). The device goes in meta, not the recipe, so one
+# recipe names one model; a run's content_hash records which spikes it actually measured
+DEVICE = os.environ.get("SNNTOPO_DEVICE") or ("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def training_key(recipe: dict) -> str | None:
@@ -187,8 +193,9 @@ def _model_and_train(base: dict, checkpoints: set[int], device: str) -> tuple[di
 
 
 def snn_activity(recipe: dict, trained: tuple[dict, object, object] | None = None,
-                 device: str = "cpu") -> tuple[Activity, dict, float | None]:
+                 device: str | None = None) -> tuple[Activity, dict, float | None]:
     """Evaluate a checkpointed existing SNN family.  Track C adds the rate branch here."""
+    device = device or DEVICE
     if recipe.get("family") != "snn":
         raise NotImplementedError(f"SNN family {recipe.get('family')!r} is not implemented")
     checkpoint = int(recipe.get("checkpoint", 0))
@@ -279,6 +286,24 @@ def _checkpoint_requests(recipe: dict, out: dict[str, set[int]]) -> None:
             out[training_key(recipe["of"])].add(0)
 
 
+def _train(base: dict, checkpoints: set[int], persist_weights: bool):
+    """-> _model_and_train's result, or the exception, so every recipe of a failed training
+    becomes a failed row instead of stopping the others."""
+    try:
+        trained = _model_and_train(base, checkpoints, DEVICE)
+        if persist_weights:
+            result = trained[0]
+            for checkpoint, state in result["checkpoints"].items():
+                buf = io.BytesIO()
+                torch.save(state, buf)
+                weight_key = hashlib.sha256(buf.getvalue()).hexdigest()[:16]
+                dataset.store_put_bytes("weights", weight_key, "pt", buf.getvalue())
+                result.setdefault("weight_keys", {})[checkpoint] = weight_key
+        return trained
+    except Exception as error:
+        return error
+
+
 def produce(recipes: list[dict], persist_weights: bool = False) -> Iterator[tuple[dict, Activity | None, dict]]:
     """Yield one completed producer result per input recipe; bad inputs become rows."""
     requests: dict[str, set[int]] = defaultdict(set)
@@ -292,24 +317,26 @@ def produce(recipes: list[dict], persist_weights: bool = False) -> Iterator[tupl
                 bases.setdefault(key, base)
         except Exception:
             pass
-    trained = {}
-    for key, base in bases.items():
-        try:
-            trained[key] = _model_and_train(base, requests[key], "cpu")
-            if persist_weights:
-                result = trained[key][0]
-                for checkpoint, state in result["checkpoints"].items():
-                    buf = io.BytesIO()
-                    torch.save(state, buf)
-                    weight_key = hashlib.sha256(buf.getvalue()).hexdigest()[:16]
-                    dataset.store_put_bytes("weights", weight_key, "pt", buf.getvalue())
-                    result.setdefault("weight_keys", {})[checkpoint] = weight_key
-        except Exception as error:
-            trained[key] = error
+    remaining = defaultdict(int)  # recipes still to yield per training, so a model is freed after its last one
     for recipe in recipes:
         try:
             key = training_key(recipe)
+        except Exception:
+            key = None
+        if key is not None:
+            remaining[key] += 1
+    trained = {}
+    for recipe in recipes:
+        try:
+            key = training_key(recipe)
+        except Exception:
+            key = None
+        try:
             source = recipe.get("of") if recipe.get("kind") == "control" else recipe
+            if key is not None and key not in trained:
+                # trained lazily, in recipe order: the runner puts a training's recipes next to each
+                # other, so rows land as each training finishes and only one model is held at a time
+                trained[key] = _train(bases[key], requests[key], persist_weights)
             state = trained.get(key) if key else None
             if isinstance(state, Exception):
                 raise state
@@ -323,10 +350,14 @@ def produce(recipes: list[dict], persist_weights: bool = False) -> Iterator[tupl
                 status = "degenerate" if any(condition in signature.skipped for condition in required) else "ok"
             else:
                 status = "ok"
-            yield recipe, activity, _row(recipe, activity, status, meta, accuracy)
+            row = _row(recipe, activity, status, meta, accuracy)
         except Exception as error:
-            meta = {"error": f"{type(error).__name__}: {error}"}
-            yield recipe, None, _row(recipe, None, "failed", meta)
+            activity, row = None, _row(recipe, None, "failed", {"error": f"{type(error).__name__}: {error}"})
+        if key is not None:
+            remaining[key] -= 1
+            if remaining[key] == 0:
+                trained.pop(key, None)
+        yield recipe, activity, row
 
 
 PRODUCERS = {"bio": bio_activity, "synthetic": synthetic_activity, "snn": snn_activity}

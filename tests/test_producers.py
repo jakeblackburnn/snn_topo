@@ -98,23 +98,19 @@ def test_constant_snn_activity_is_degenerate_by_signature_skip(monkeypatch):
     assert activity is not None and row["status"] == "degenerate"
 
 
-def test_produce_uses_one_training_key_lookup_for_each_output_recipe(monkeypatch):
-    calls = []
-    real_training_key = producers.training_key
-    constant = Activity(np.ones((4, 12, 10), dtype=np.float32),
-                        {"all": np.ones(12, dtype=bool),
-                         "left": np.arange(12) < 6, "right": np.arange(12) >= 6},
-                        slice(0, 10), 1.0)
+def test_produce_yields_each_training_before_starting_the_next(monkeypatch):
+    events = []
+    real = producers._model_and_train
 
-    def counted(recipe):
-        calls.append(recipe)
-        return real_training_key(recipe)
+    def counted(base, checkpoints, device):
+        events.append(("train", base["train"]["seed"]))
+        return real(base, checkpoints, device)
 
-    monkeypatch.setattr(producers, "training_key", counted)
-    monkeypatch.setattr(producers, "_model_and_train", lambda *args: ({}, None, None))
-    monkeypatch.setattr(producers, "_produce_one", lambda *args: (constant, {}, None))
-    list(producers.produce([SNN]))
-    assert len(calls) == 4
+    monkeypatch.setattr(producers, "_model_and_train", counted)
+    other = {**SNN, "train": {**SNN["train"], "seed": 8}}
+    for recipe, _, _ in producers.produce([SNN, {**SNN, "checkpoint": 0}, other]):
+        events.append(("row", recipe["train"]["seed"]))
+    assert events == [("train", 7), ("row", 7), ("row", 7), ("train", 8), ("row", 8)]
 
 
 def test_checkpoint_zero_is_seeded_initial_weights():
