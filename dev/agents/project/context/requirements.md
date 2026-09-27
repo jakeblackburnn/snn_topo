@@ -82,4 +82,4 @@ number (corrections are `derived` rows).
 - When to retire v1 (atlas.py and the 8 old subcommands). This is a later cleanup, once nothing
   reads v1 run dirs.
 - (Raised during the build, answered 2026-09-27) Who writes `derived` rows into a run dir?
-  Answer: an optional spec hook `derive(tables)`; see design.md "Spec interface" and "Runner".
+  Answer: an optional spec hook `derive(activity_id, activity)`; see design.md "Spec interface" and "Runner".

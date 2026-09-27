@@ -11,8 +11,8 @@ run dir (every shard's files) and does only what is missing. There is no state f
 
 Phase 1, one activity at a time, sharded by stable_hash(training key or activity_id) % N so
 one SNN training is never split across shards: produce -> spikes blob (if PERSIST) ->
-signature rows -> self-null rows (each usable condition, h = n//2, seed 0) -> the activity
-row, written last. The activity row is the commit marker: if an ok/degenerate one exists,
+signature rows -> self-null rows (each usable condition, h = n//2, seed 0) -> the spec's
+`derive(activity_id, activity)` rows, if it defines one -> the activity row, written last. The activity row is the commit marker: if an ok/degenerate one exists,
 all of that activity's signature and self-null rows exist too. So resume never has to
 guess an activity's conditions, and a concurrent shard's phase 2 never sees an activity
 whose signature rows are still being written. A kill before the marker means the
@@ -169,7 +169,7 @@ class State:
         for row in rows["signatures"]:
             if row["topo_id"] == topo_key:
                 self.sigs[(row["activity_id"], row["condition"])] = (row["n_trials"], row["skipped"])
-        self.keys = {t: {row_key(t, row) for row in rows[t]} for t in ("signatures", "nulls", "comparisons")}
+        self.keys = {t: {row_key(t, row) for row in rows[t]} for t in ("signatures", "nulls", "comparisons", "derived")}
 
     def self_null_keys(self, aid: str) -> set[tuple]:
         return {(aid, cond, self.topo_key, self.cmp_key, n // 2, 0, m, d)
@@ -445,6 +445,7 @@ def shard_label(shard) -> str:
 
 def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log) -> dict:
     topo, cmp = module.TOPO, module.CMP
+    derive = getattr(module, "derive", None)
     p = plan(module, mini, run_dir, shard, retry_failed)
     state, activities, pairs = p["state"], p["activities"], p["pairs"]
     persisted = _persisted_ids(activities, pairs, persist.get("spikes", "none"))
@@ -464,7 +465,7 @@ def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log
         while len(cache) > SIDE_CACHE_SIZE:
             cache.popitem(last=False)
 
-    # phase 1: activities -> signatures -> self-nulls -> activity row (the commit marker)
+    # phase 1: activities -> signatures -> self-nulls -> the spec's derived rows -> activity row (the commit marker)
     groups: OrderedDict[str, list[str]] = OrderedDict()
     for aid in p["todo"]:
         groups.setdefault(group_key(activities[aid]), []).append(aid)
@@ -483,6 +484,8 @@ def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log
                     write_new("signatures", r)
                 for r in measure.null_rows(aid, activity, topo, cmp, None, 0):
                     write_new("nulls", r)
+                for r in derive(aid, activity) if derive is not None else ():
+                    write_new("derived", r)
                 if aid in pair_sides:
                     remember(aid, activity)
             writer.write("activities", row)

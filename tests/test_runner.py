@@ -58,6 +58,8 @@ def test_uninterrupted_run_rows_and_status(baseline):
     assert statuses.count("failed") == 1
     labels = {r["label"] for r in rows["comparisons"]}
     assert labels == {"c0-c1", "c0-f0", "c2-c3", "snn0-snn2"}  # too-big is blocked
+    ok = {r["activity_id"] for r in rows["activities"] if r["status"] != "failed"}
+    assert sorted(r["source_key"] for r in rows["derived"]) == sorted(ok)  # spec derive(), once each
     assert {r["seed"] for r in rows["comparisons"] if r["label"] == "c0-c1"} == {0, 1}
     # pair nulls exist for both sides at the pair's h and seed
     c0 = next(r["a"] for r in rows["comparisons"] if r["label"] == "c0-c1")
@@ -128,7 +130,7 @@ def test_phase2_reproduces_sides_and_checks_their_content_hash(baseline, tmp_pat
     again; the two SNN checkpoints share one training."""
     run = tmp_path / "run"
     run.mkdir()
-    for name in ("run.json", "activities.jsonl", "signatures.jsonl", "nulls.jsonl"):
+    for name in ("run.json", "activities.jsonl", "signatures.jsonl", "nulls.jsonl", "derived.jsonl"):
         shutil.copy(baseline / name, run / name)
     calls = []
     real_train = producers.train

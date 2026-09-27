@@ -1,7 +1,8 @@
 """A tiny runner test spec: synthetic circles, one 2-update SNN trained once for two
 checkpoints, and one recipe that fails (unknown generator). Pairs cover a side outside the
 recipes, a non-default condition, two seeds, an h too large to run (blocked) and
-SNN-vs-SNN."""
+SNN-vs-SNN. derive() adds one derived row per produced activity."""
+from snntopo import dataset
 from snntopo.contracts import TopoConfig
 
 TOPO = TopoConfig(n_pca=4, smooth_win=1, maxdim=1, min_trials=5, n_resamples=4)
@@ -36,3 +37,8 @@ def expand(mini=False):
         {"a": _snn(0), "b": _snn(2), "condition": "all", "h": 5, "seeds": [0], "label": "snn0-snn2"},
     ]
     return recipes, pairs
+
+
+def derive(activity_id, activity):
+    return [{"source_key": activity_id, "derivation_id": dataset.derivation_id("total_spikes"),
+             "name": "total_spikes", "value": float(activity.spikes.sum())}]
