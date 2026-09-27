@@ -91,6 +91,39 @@ def _split_session_id(session_id: str) -> tuple[str, str | None]:
     return base, suffix or None
 
 
+def trial_arrays(session_id: str, block: str = "active") -> dict[str, np.ndarray]:
+    """Trial-aligned Steinmetz metadata for recipe selectors.
+
+    This intentionally leaves :func:`load` untouched.  Active trials expose response,
+    contrasts, feedback and timing fields; passive trials expose their passive contrast
+    and any trial-aligned passive fields in the source archive.  Arrays retain the full
+    trial axis, so consumers make boolean masks rather than slicing activities.
+    """
+    base_id, suffix = _split_session_id(session_id)
+    if suffix is not None and suffix != "passive":
+        raise KeyError(f"trial arrays require a base session or /passive, got {session_id!r}")
+    if block not in ("active", "passive"):
+        raise ValueError("block must be 'active' or 'passive'")
+    if suffix == "passive" and block != "passive":
+        raise ValueError("a /passive session requires block='passive'")
+    dat = _session_data(base_id)
+    suffix_text = "_passive" if block == "passive" else ""
+    n_trials = np.asarray(dat["spks" + suffix_text]).shape[1]
+    names = ("contrast_left", "contrast_right", "response", "feedback_time", "feedback_type",
+             "reaction_time", "response_time", "stim_onset", "gocue", "active_trials")
+    out = {}
+    for name in names:
+        key = name + suffix_text
+        if key not in dat:
+            key = name
+        if key in dat:
+            value = np.asarray(dat[key])
+            if value.ndim and value.shape[0] == n_trials:
+                out[name] = value
+    out["block"] = np.full(n_trials, block)
+    return out
+
+
 def load(session_id: str) -> BioSession:
     base_id, suffix = _split_session_id(session_id)
     dat = _session_data(base_id)

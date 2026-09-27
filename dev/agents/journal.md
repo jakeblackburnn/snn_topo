@@ -115,3 +115,16 @@ exist yet; they're the user's to write.
 - `dev/agents/project/context/design.md` milestones table (M1-M9 checks), "File ownership"; `agent-team.md` Addendum: nodeterm, Checkpoints
 - `dev/brainstorm/snn-tda-dataset/index.md`: recommendation + links to all facets
 - `dev/agents/experiments.md:750` E15 (must reproduce through the new pipeline, design.md acceptance)
+
+## M2 · 2026-09-27 15:55 EDT
+**Built:** `producers.py` for bio, synthetic, control, and existing SNN recipes; deterministic pre-build SNN seeding; grouped training/checkpoint evaluation; content-addressed activity and optional weight storage; and failed-row handling. Added measurement signature/null/comparison rows with diagrams, R2 H1 presence, R4 anchors, and stated construction IDs. Added explicit `h`, seed, and per-side null means to stats results; training snapshots; and Steinmetz full-trial selector arrays.
+
+**Gate fixes:** controls now read SNN and promoted source fields from their unwrapped recipes; SNN degeneracy uses `compute_signature` skip semantics (including zero diameter); skipped signature rows have no diagram pointer and `diagram_key` was removed; duplicate training-key calculation was collapsed; explicit oversized-`h` raises are covered; and this journal was restored from `v3-build` before appending this entry.
+
+**Checks:**
+- `pytest -q` → `150 passed, 1 skipped, 11 deselected, 2 warnings in 41.62s`.
+- `pytest -m data tests/test_producers.py -q` → `2 passed, 9 deselected in 5.19s`.
+
+**CUDA determinism:** small SNN recipe twice on CUDA and once on CPU: `cuda_cuda_bit_identical True`; `cuda_cpu_bit_identical True`. Set `PERSIST_DEFAULT = dict(spikes="none", weights=False)`.
+
+**v1 test edits:** none. **Cross-module gaps:** none encountered.
