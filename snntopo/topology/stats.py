@@ -81,6 +81,7 @@ from ..contracts import Activity, DistanceResult, TopoConfig
 from ..logging_utils import get_logger
 from .pipeline import build_trajectories, persistence, unit_diameter
 
+STATS_VERSION = 1  # part of dataset.cmp_id; bump by hand whenever distance/null numerics change
 METRICS = ("wasserstein", "bottleneck")  # every metric diagram_distance supports; which of
 # these actually get computed per call is TopoConfig.metrics (default: wasserstein only)
 

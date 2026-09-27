@@ -9,6 +9,8 @@ from scipy.spatial.distance import pdist
 
 from ..contracts import Activity, Signature, TopoConfig
 
+PIPELINE_VERSION = 1  # part of dataset.topo_id; bump by hand whenever signature numerics change
+
 
 def build_trajectories(spikes: np.ndarray, trial_sets: list[np.ndarray], window: slice,
                        topo: TopoConfig) -> np.ndarray:
