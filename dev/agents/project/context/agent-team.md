@@ -1,81 +1,68 @@
-# snn_topo v2 — agent team
+# snntopo v3: agent team
 
-**Scope of this team: build only.** It scaffolds and implements the framework
-(data loaders, model registry, search harness, topology/stats, tests, docs). Once
-built, the actual multi-objective search runs (per task, wall-clock-capped) happen
-afterward as normal sequential jobs on the one shared 16GB GPU — this team does not
-run or schedule those. See decisions.md D9.
+**Scope: build only.** The team delivers design.md's M1-M9. It runs the validation sweep, E15, the
+bio core, and smoke sweeps, because those are milestone checks. It never launches zoo v0/v1 for
+real, never runs E16 beyond `--mini`, and never picks E16's population.
 
-**Explicitly in bounds for validation**: smoke tests (each registry entry
-constructs and runs one step without error) and small mini-experiments (a
-handful of search trials / a few minutes of training, enough to prove the
-pipeline works end-to-end). **Explicitly out of bounds**: running the full
-experiment suite — the complete wall-clock-capped search across all bio
-datasets/model axes/tasks. If a worker finishes a workstream and is tempted to
-"just kick off the real run to check it" — that's the line; don't cross it.
+## Pattern: hierarchical; foundation sequential, then parallel fan-out
 
-## Coordination pattern: hierarchical, interfaces-first, then parallel fan-out
+Everything depends on the row schema, recipe ids and the runner (M1-M3), so these land first,
+one at a time. After M3 the remaining work splits into three independent tracks.
 
-Two phases:
-
-1. **Interface phase (sequential, orchestrator-only).** The opusplan Claude
-   orchestrator designs and lands the shared contracts before anyone else starts:
-   - Bio-dataset registry interface (what a dataset loader must expose: trial-
-     aligned spike arrays, condition splits, metadata — the shape
-     `prototype/snntopo/data/steinmetz.py` already establishes for one dataset).
-   - SNN model registry interface (how architecture family × neuron model ×
-     connectivity structure × scale compose into a buildable model config).
-   - Task registry interface (matched vs. generic tasks, what a task must expose
-     to both the training loop and the search harness).
-   - Atlas record schema (what one row of the atlas contains — model config,
-     task, accuracy, topology signature, distance + significance test result
-     where applicable).
-
-   This phase exists because every downstream workstream needs to code against
-   these shapes; skipping straight to parallel work risks five agents inventing
-   five incompatible interfaces.
-
-2. **Parallel fan-out (worktree-per-agent).** Once interfaces are landed, workers
-   start in parallel, each in its own git worktree, against the frozen interface
-   contracts:
-
-   | Workstream | Owner | Why this split |
-   |---|---|---|
-   | Bio data loaders (Steinmetz refactor, IBL + ONE API auth, Allen) | Codex | Largely mechanical: each is "fetch, align to schema" against an already-working Steinmetz reference implementation in `prototype/`. |
-   | CSV/report/logging utilities | Codex | Direct generalization of `prototype/snntopo/io_utils.py` / `logging_utils.py` — established pattern, low design risk. |
-   | Test scaffolding + package infra (installable package, CI-ish checks) | Codex | Mechanical once interfaces exist; benefits from a dedicated owner so it isn't an afterthought on other workstreams. |
-   | SNN model registry (4 axes: architecture × neuron model × connectivity × scale) | spawned Claude agent | Design-sensitive — this is the axis the prototype's own findings (D3) point at; needs judgment about how axes compose, not just plumbing. |
-   | Multi-objective search harness (accuracy vs. bio-topology-distance, wall-clock budget, degenerate-run handling) | spawned Claude agent | Design-sensitive — owns the actual research mechanism (D3, D5); needs to correctly implement the prototype's learned lesson about treating degenerate policy collapse as a routine outcome, not an exception. |
-   | Topology/stats module extension (H0/H1/H2, Wasserstein + bottleneck, permutation/bootstrap significance) | spawned Claude agent | Design-sensitive — extends validated prototype code (`prototype/snntopo/topology/`); correctness here underpins every atlas entry, warrants a focused owner rather than being bolted onto another workstream. |
-
-   Task-suite work (matched 2AFC-family tasks per bio dataset + generic tasks)
-   splits across whichever workstream it's closest to: bio-matched task variants
-   ride with the relevant data-loader worker; generic tasks (N-back, delayed
-   match-to-sample) ride with the search-harness worker, since they're primarily
-   exercised by the search.
+| phase | milestone | owner | why this owner |
+|---|---|---|---|
+| 1 | M1 `dataset.py`: ids, row keys, RunWriter, store, loader + tests | **orchestrator** (Claude) | this is the interface every other track codes against; keep it in one head |
+| 1 | M2 producers, measure, the additive stats/contracts changes, the seeding fix, checkpoints | **codex** | mechanical against M1 plus existing v1 functions; the checks are unit tests |
+| 1 | M3 runner: resume, shards, `SNNTOPO_WORKERS`, disk halves cache, `run`/`status` | **Claude subagent** | concurrency and crash-safety correctness is design-sensitive |
+| 2 | Track A: M4 floor + validation → M5 prereg binding, `verdict`, E15, E16 skeleton | **Claude subagent** | owns the scientific safeguards (D28, D35); mistakes here are silent |
+| 2 | Track B: M6 Steinmetz trial selectors, atomic download, `bio_core` sweep, R1/R2/R4 | **codex** | loader and spec plumbing against a settled recipe format |
+| 2 | Track C: M7 GPU measurement, `zoo_v0` → M8 Dale/τ-spread, rate family, `steinmetz_nogo`, smoke sweeps, `zoo_v1` | **codex** | model code in established idioms (`build_model` dispatch), gated by smoke results |
+| 3 | M9 docs: README, architecture, `dev/agents/spec.md`, `CLAUDE.md` | **codex** | mechanical once the code has settled |
+| 3 | final: every requirements.md *Done when* checked against a real command | **orchestrator** | — |
 
 ## Boundaries
 
-- Each parallel worker operates in its own git worktree off the interface-phase
-  commit — no shared branch during fan-out, to avoid merge conflicts between
-  agents editing adjacent code.
-- The orchestrator reviews each workstream's output against the frozen interfaces
-  before merging — a review/merge gate, not a rubber stamp. Interface violations
-  get sent back to the worker, not silently patched by the orchestrator.
-- `prototype/` is read-only reference material during the build (already frozen
-  by convention per its own reports) — workers read it for validated logic to
-  port/extend, never edit it.
-- Model tier: orchestrator runs opusplan (planning-grade model) since it owns
-  architecture and integration judgment; Codex and spawned Claude agents run at
-  whatever tier is standard for mechanical vs. design-sensitive work respectively
-  — no specific tier constraint beyond that split.
+- **Branches.** The orchestrator creates the integration branch `v3-build` off main. Each worker
+  gets its own worktree and branch off `v3-build` at the phase boundary it starts from. Nobody
+  commits to main. At the end the orchestrator asks the user to merge `v3-build` to main.
+- **Review/merge gate.** Before merging a worker branch into `v3-build`, the orchestrator runs that
+  milestone's check from design.md, runs `pytest -q`, and has the `reviewer` agent read the diff
+  against design.md and decisions.md. Anything that breaks an interface goes back to the worker;
+  the orchestrator doesn't patch around it.
+- **Shared data.** Every worktree exports `SNNTOPO_DATA_DIR=<main>/data/raw`. Real runs use
+  `SNNTOPO_RESULTS_DIR=<main>/results` (run dirs are unique and `store/` is write-once). Tests use
+  a tmp dir.
+- **Compute.** Only Track C uses the GPU. Tracks A and B each set `SNNTOPO_WORKERS=8`, so two
+  topology runs split the 16 cores. A single run over 30 min needs the orchestrator's OK. The
+  orchestrator asks the user before anything over 1 h.
+- **Ownership.** A worker writes only its track's files (design.md module table). A cross-track
+  change (e.g. Track B needing a new row field) is raised in the worker's report and settled by
+  the orchestrator in design.md. It is never made unilaterally.
+- **Stop rule for workers.** Decide anything internal to your module. At a gap that crosses a
+  module boundary or is hard to change later, stop and report.
+- Workers never edit `dev/main.md`, `dev/journal.md`, `dev/agents/project/context/`, or existing
+  `results/` run dirs. Each worker appends its milestone results to `dev/agents/journal.md` on its
+  own branch, and the orchestrator reconciles those on merge.
 
-## Tool-agnostic note
+## Checkpoints with the user
 
-Described here in terms of roles and coordination, not a specific tool — this
-shape works whether driven via nodeterm (as planned — opusplan orchestrator node,
-a Codex node, spawned Claude agent nodes, worktree-per-node), a background
-worktree loop, or a plain sequential session working through the same phases one
-at a time. The nodeterm-specific execution (which nodes, which links, canvas
-layout) is a `manage-nodeterm-canvas` concern at build-kickoff time, not fixed
-here.
+1. Before phase 1 (project-builder's go-ahead).
+2. Before the phase 2 fan-out: M1-M3 merged and green.
+3. Before E15's PREREG commit: the user sees the scanned noise and the criteria.
+4. Before merging `v3-build` to main.
+
+## Addendum: nodeterm
+
+The user drives this through nodeterm (`manage-nodeterm-canvas` skill).
+- **Orchestrator node:** Claude Code in the main checkout, running `/project-builder`. It owns the
+  canvas: a group per phase-2 track, each group bound to that track's worktree, with a context
+  link from each worker node back to the orchestrator so it can read their output.
+- **Codex nodes (M2, Track B, Track C, M9):** codex in permissive mode (sandbox and approvals off,
+  e.g. `--dangerously-bypass-approvals-and-sandbox`). This is required: the forkserver ripser pool
+  needs AF_UNIX sockets (`stats.py:170-181`), and Track C needs the GPU. Each node's prompt is
+  assembled from requirements.md, design.md (its milestones + the module table + recipe/row/spec
+  interfaces) and decisions.md.
+- **Claude subagent nodes (M3, Track A):** Claude Code nodes in their worktrees. The orchestrator
+  may use in-process subagents instead when a node isn't worth a canvas slot (e.g. the `reviewer`
+  gate).
+- Kanban: one card per milestone. The orchestrator moves cards as gates pass.
