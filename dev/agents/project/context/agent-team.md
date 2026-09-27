@@ -40,7 +40,7 @@ one at a time. After M3 the remaining work splits into three independent tracks.
   the orchestrator in design.md. It is never made unilaterally.
 - **Stop rule for workers.** Decide anything internal to your module. At a gap that crosses a
   module boundary or is hard to change later, stop and report.
-- Workers never edit `dev/main.md`, `dev/journal.md`, `dev/agents/project/context/`, or existing
+- Workers never edit the user's `dev/` root files, `dev/agents/project/context/`, or existing
   `results/` run dirs. Each worker appends its milestone results to `dev/agents/journal.md` on its
   own branch, and the orchestrator reconciles those on merge.
 

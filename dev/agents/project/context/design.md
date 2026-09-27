@@ -2,7 +2,8 @@
 
 Load-bearing interfaces and build order. Module internals are the builder's call. Detail and
 rationale: `dev/brainstorm/snn-tda-dataset/` (`dataset-schema.md`, `orchestration.md`,
-`experiments-and-prereg.md`, `brain-signatures.md`, `snn-breadth.md`, `pair-policy.md`).
+`experiments-and-prereg.md`, `brain-signatures.md`, `snn-breadth.md`, `pair-policy.md`);
+`checks/` below means its `checks/`. Code facts and costs: research.md.
 
 ## Shape
 
@@ -141,17 +142,16 @@ entry). `expand()` may load data.
   match at different noise, so there's no default dim.
 - `arms(n_neurons, n_trials, noise, n) -> list[pair]`: A = same-topology, shared `mixing_seed`
   (true null); B = same shape, different embedding (geometry); C = circle vs figure-8 (topology).
-  Same construction as `scripts/null_calibration.py:103`.
+  Same construction as `scripts/null_calibration.py:27-33`.
 - `floor(tables, dim) -> dict(B_q50, B_q95, C_q5, C_q50, sane=C_q5 > B_q95)`.
 - An experiment's floor is computed at its own scale. The chosen noise goes into PREREG before
   arms run (the scan is a separate exploratory run).
 - **`sweeps/validate_instrument.py` acceptance** (M4), at two scales, 300×340 at noise 0.25 and
-  698×110 at noise 16. These are settings E12/E14 used, not an oracle: C was 40/40 there, and
-  B H1 q95 was 1.09 at 698×110.
+  698×110 at noise 16: E12/E14's settings (their results in research.md), not an oracle.
   - arm A significant at α=0.05 in ≤ 4/40, per dim;
   - arm C significant in ≥ 36/40 on H1;
   - `floor(...).sane` on H1;
-  - the pooled/serial/disk paths agree (unit test).
+  - the pooled/serial/disk paths agree (M3's unit test).
 
   It is exploratory (a sweep, not a preregistered experiment), so its pass/fail printout is the
   record.
@@ -162,7 +162,7 @@ entry). `expand()` may load data.
 |---|---|---|
 | M1 | `dataset.py` (ids, RunWriter, store, load) | `pytest tests/test_dataset.py`: round-trip, dedup, torn last line dropped, mid-file corruption raises, `load` requires topo_id/cmp_id |
 | M2 | `producers.py` (bio/synthetic/control/snn existing families, seeding fix, checkpoints), `measure.py`, stats/contracts additive changes | `pytest`: same recipe → same id + content_hash (bio, synthetic, control, SNN on CPU); explicit-h compare equals default-h compare when h = min//2; v1 suite green. Record the CUDA determinism result (same SNN recipe twice on CUDA and once on CPU) in the journal, and set the `PERSIST` default from it |
-| M3 | `runner.py`, CLI `run`/`status`, shards, `SNNTOPO_WORKERS`, disk halves cache | `pytest`: kill-and-resume gives the same row set; 2 shards = 1 shard; pooled = serial = disk-cached. `snntopo run sweeps/validate_instrument.py --mini --dry-run` prints counts |
+| M3 | `runner.py`, CLI `run`/`status`, shards, `SNNTOPO_WORKERS`, disk halves cache | `pytest`: kill-and-resume gives the same row set; 2 shards = 1 shard; pooled = serial = disk-cached. `snntopo run sweeps/validate_instrument.py --mini --dry-run` prints counts and a cost estimate |
 | M4 | `floor.py` + `sweeps/validate_instrument.py` | full run passes the acceptance above; append an E-entry to `dev/agents/experiments.md` |
 | M5 | prereg binding, `verdict`, `experiments/e15_engagement.py`, `experiments/e16_nogo.py` | `pytest`: a changed PREREG or verdict voids runs, a changed expand doesn't, a dirty tree is refused. E15: scan → PREREG commit → run (~20 min incl. arms) → `snntopo verdict` prints; E-entry appended. E16 `--mini` runs one session and verdict executes |
 | M6 | `sweeps/bio_core.py` (13 sessions × blocks × regions ≥50 units, R1/R2/R4, neuron-split region controls) | `--dry-run` counts match `checks/bio_inventory.out` (77 regions); full run completes; `status` shows 0 missing |

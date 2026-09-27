@@ -27,10 +27,9 @@ core, and zoo v0/v1 sweep specs. That gives the user a dataset to grow and a pos
       synthetic, control and SNN on CPU. The SNN CUDA determinism result is measured and recorded,
       and it sets the `PERSIST` default.
 - [ ] Split-half results are equal whether computed pooled, serial or from the disk cache (test).
-- [ ] `sweeps/validate_instrument.py` runs and passes its known-answer criteria (design.md M4):
-      same-topology false-positive rate within bound at 2 scales, circle vs figure-8 detected at
-      matched noise, and the floor band sane (C q5 > B q95). It is recorded in
-      `dev/agents/experiments.md`.
+- [ ] `sweeps/validate_instrument.py` passes its known-answer acceptance (design.md, Floor and
+      validation: arm A false positives, arm C detection, `floor().sane`, at 2 scales). It is
+      recorded in `dev/agents/experiments.md`.
 - [ ] `snntopo verdict <spec>` counts only runs from a clean tree whose recorded PREREG constants
       and `verdict()` source hash match the first committed version. Tests show that a changed
       criterion voids old runs, and a changed `expand()` does not.

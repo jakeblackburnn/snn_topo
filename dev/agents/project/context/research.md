@@ -12,12 +12,12 @@ listed in its `seed-errata.md`.
   (`stats.py:108-111, 148`). That's unsafe to persist without adding `topo_id`/`cmp_id`.
 - `snn_entry` builds the model before `train` seeds torch (`atlas.py:237`, `training.py:32`), so
   initial weights depend on earlier RNG state. `controls.untrained` seeds first (`controls.py:18`).
-- `train` keeps the best checkpoint and has no hook for snapshots at fixed updates
-  (`training.py:25-60`).
+- `train` keeps the best checkpoint (`training.py:58-59, 67-68`) and has no hook for snapshots
+  at fixed updates (`training.py:25-73`).
 - The readout never feeds back into the hidden layer (`models/networks.py`), so "task stimuli,
   readout ignored" is byte-identical to the task regime. Spontaneous means zero input.
 - Steinmetz: active `all` = responded trials only (`data/steinmetz.py:103-117`); passive
-  left/right = stimulus side; the download isn't atomic (`steinmetz.py:57-67`).
+  left/right = stimulus side; the download isn't atomic (`steinmetz.py:37-50`).
 - `contracts.py:4`: dataclass fields may only be added with defaults.
 - The forkserver pool falls back to serial in a sandbox (`stats.py:170-181`) at about 1/16 the
   throughput. Real runs need the sandbox off.
