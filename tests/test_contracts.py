@@ -38,6 +38,16 @@ def test_train_and_evaluate_produce_bio_layout():
     assert set(activity.conditions) == {"all", *task.action_names}
 
 
+def test_steinmetz_nogo_has_three_named_actions_and_zero_contrast_targets():
+    task = TASKS["steinmetz_nogo"]
+    inputs, target = task.sample_batch(256, "cpu", torch.Generator().manual_seed(4))
+    assert task.action_names == ("left", "right", "nogo")
+    assert inputs.shape == (150, 256, 2)
+    # Zero input over the complete trial is precisely the rewarded withhold.
+    zero_contrast = inputs.sum(dim=(0, 2)) == 0
+    assert zero_contrast.any() and torch.all(target[zero_contrast] == 2)
+
+
 def test_signature_on_ring_trajectory():
     # 150 time bins tracing a circle through 20-neuron rate space: one dominant H1 loop
     t = np.linspace(0, 2 * np.pi, 150, endpoint=False)

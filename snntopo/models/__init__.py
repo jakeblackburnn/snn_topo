@@ -19,7 +19,7 @@ import torch
 
 from ..contracts import ModelConfig
 from .connectivity import modular_mask, population_mask, split_sizes
-from .networks import FeedforwardSNN, RecurrentSNN
+from .networks import FeedforwardSNN, RateCTRNN, RecurrentSNN
 
 ARCHS = ("feedforward", "recurrent", "modular")
 NEURONS = ("lif", "alif", "izhikevich")
@@ -60,6 +60,14 @@ def validate(cfg: ModelConfig) -> None:
                          f"{MIN_POPULATION} neurons per population")
     if not 0 < cfg.beta <= 1:
         raise ValueError(f"beta={cfg.beta}: membrane decay must be in (0, 1]")
+    if cfg.tau_spread < 0:
+        raise ValueError(f"tau_spread={cfg.tau_spread}: must be >= 0")
+    if cfg.dale and cfg.arch == "feedforward":
+        raise ValueError("dale applies only to recurrent or modular architectures")
+    if not 0 < cfg.frac_inhibitory < 1:
+        raise ValueError(f"frac_inhibitory={cfg.frac_inhibitory}: must be in (0, 1)")
+    if not cfg.dale and cfg.frac_inhibitory != 0.2:
+        raise ValueError("frac_inhibitory applies only when dale=True")
     if cfg.spectral_radius is not None and cfg.spectral_radius <= 0:
         raise ValueError(f"spectral_radius={cfg.spectral_radius}: must be > 0 or None")
 
@@ -69,7 +77,8 @@ def build_model(cfg: ModelConfig, n_in: int, n_out: int):
     for a reproducible init. spectral_radius is ignored by feedforward models."""
     validate(cfg)
     if cfg.arch == "feedforward":
-        return FeedforwardSNN(n_in, split_sizes(cfg.n_hidden, cfg.n_layers), n_out, cfg.neuron, cfg.beta)
+        return FeedforwardSNN(n_in, split_sizes(cfg.n_hidden, cfg.n_layers), n_out, cfg.neuron, cfg.beta,
+                              cfg.tau_spread)
 
     seed = int(torch.randint(2**31 - 1, ()).item())
     n = cfg.n_hidden
@@ -81,4 +90,17 @@ def build_model(cfg: ModelConfig, n_in: int, n_out: int):
         rec_mask = modular_mask(cfg.connectivity, sizes, seed)
         in_mask[sizes[0]:] = 0
         out_mask[:, :n - sizes[-1]] = 0
-    return RecurrentSNN(n_in, n_out, rec_mask, in_mask, out_mask, cfg.neuron, cfg.beta, cfg.spectral_radius)
+    return RecurrentSNN(n_in, n_out, rec_mask, in_mask, out_mask, cfg.neuron, cfg.beta, cfg.spectral_radius,
+                        cfg.tau_spread, cfg.dale, cfg.frac_inhibitory)
+
+
+def build_rate_model(model: dict, n_in: int, n_out: int) -> RateCTRNN:
+    """Build the rate family from its plain recipe dictionary (not ModelConfig)."""
+    allowed = {"n_hidden", "tau", "dt", "spectral_radius"}
+    unknown = set(model) - allowed
+    if unknown:
+        raise ValueError(f"unknown rate model parameters: {sorted(unknown)}")
+    if "n_hidden" not in model:
+        raise ValueError("rate model requires n_hidden")
+    return RateCTRNN(n_in, int(model["n_hidden"]), n_out, float(model.get("tau", 10.0)),
+                     float(model.get("dt", 1.0)), model.get("spectral_radius", 0.9))
