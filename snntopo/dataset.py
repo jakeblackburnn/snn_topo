@@ -188,7 +188,8 @@ def _as_run_dirs(runs) -> list[Path]:
 def load(runs, topo_id: str, cmp_id: str) -> dict[str, pd.DataFrame]:
     """-> {record_type: DataFrame} over every jsonl (all shards) of `runs` (a run dir,
     a glob, or a list of either). Rows are deduped on their keys, first seen wins, in
-    run order then file order. signatures are filtered to `topo_id`; nulls and
+    run order then file order, except that an activity's ok/degenerate row beats a
+    `failed` one (a --retry-failed rerun appends the success after the failure). signatures are filtered to `topo_id`; nulls and
     comparisons to both ids. activities and derived rows are returned whole."""
     tables = {}
     dirs = _as_run_dirs(runs)
@@ -202,6 +203,8 @@ def load(runs, topo_id: str, cmp_id: str) -> dict[str, pd.DataFrame]:
             df = df[df["topo_id"] == topo_id]
         if t in ("nulls", "comparisons"):
             df = df[df["cmp_id"] == cmp_id]
+        if t == "activities" and not df.empty:
+            df = df.sort_values("status", key=lambda s: s == "failed", kind="stable")
         tables[t] = df.drop_duplicates(subset=list(KEYS[t]), keep="first").reset_index(drop=True)
     return tables
 

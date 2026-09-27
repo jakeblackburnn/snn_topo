@@ -141,3 +141,12 @@ def test_store_and_run_dirs_default_to_results_dir(tmp_path: Path, monkeypatch):
     (tmp_path / "runs" / "20260927-1600-b").mkdir(parents=True)
     (tmp_path / "runs" / "20260927-1500-a").mkdir()
     assert [p.name for p in dataset.run_dirs()] == ["20260927-1500-a", "20260927-1600-b"]
+
+
+def test_retried_activity_success_beats_earlier_failure(tmp_path: Path):
+    with dataset.RunWriter(tmp_path / "r") as w:
+        w.write("activities", {"activity_id": "x", "status": "failed"})
+        w.write("activities", {"activity_id": "y", "status": "ok"})
+        w.write("activities", {"activity_id": "x", "status": "ok"})
+    acts = dataset.load(tmp_path / "r", TOPO, CMP)["activities"]
+    assert dict(zip(acts["activity_id"], acts["status"])) == {"x": "ok", "y": "ok"}
