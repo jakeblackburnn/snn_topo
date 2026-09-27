@@ -3,7 +3,7 @@
 > Brainstorm notes, 2026-09-27. Nothing here is a decision. Options with a recommendation.
 > Seed: `../mega-forward-plan/bio-data-expansion.md` (availability, costs, the pseudo-replication
 > trap) and `distance-construction.md` §2 (H1 under-sampling, non-TDA anchors). Record types and
-> ids are those of `dataset-schema.md`. New read-only facts are in `checks/bio_inventory.out`.
+> ids are those of `dataset-schema.md`. New read-only facts are in `checks/bio_inventory.out` and `checks/e16_and_determinism.out`.
 
 ## Recommendation up front
 
@@ -35,18 +35,14 @@ yardstick, and E13/E15 found the useful contrast. The ranking now:
 | 1 | Steinmetz no-go block | new | the E16 population. See the contrast-mix finding below |
 | 2 | Steinmetz regions | §8 | 77 region-sessions at ≥50 units, 40 at ≥100, excluding `root` (`checks/bio_inventory.out` §1). This confirms mega's "~50-100" |
 | 3 | Gardner grid-cell torus | §2a | positive control for the *whole* chain, trial averaging included. The synthetic arms enter after the loader, so they can't test that step |
-| 4 | Steinmetz parts 1-2 | §1c | more animals for replication (part0 has 5 mice); ~175 MB, one tuple |
+| 4 | Steinmetz parts 1-2 | §1c | more animals for replication (part0 has 4 mice: Cori, Forssmann, Hench, Lederberg); ~175 MB, one tuple |
 | 5 | MC_Maze (NLB) | §3a | new species/area/paradigm; loader is an `allen.py` clone |
 | 6 | Allen Visual Coding 1 → 32 | §5 | demoted. Its role was E4's held-out probe, which D28 retired. Still a passive-viewing paradigm for the descriptive atlas |
 | 7 | IBL beyond 20 | §4 | still last. IBL has no passive block and its loader drops no-go (`ibl.py:1-5`) |
 
-**Finding for E16 (flag for `experiments-and-prereg.md`).** Every passive trial has a nonzero
-contrast: 0 of 110-150 per session are zero-contrast. No-go trials split into zero-contrast (31-71
-per session, correct withholds) and nonzero-contrast (9-84, i.e. misses) (`checks/bio_inventory.out`
-§3). So a *contrast-matched* no-go vs passive contrast can only use misses. Misses may be lapses
-of engagement, not "engaged without movement", and sessions 6/11/12 have only 14/14/9 of them
-(h = 4-7). The engaged no-go set (zero-contrast withholds) has no passive counterpart at matched
-contrast. E16's preregistration has to choose between these, knowing the trade, before it runs.
+**E16 constraint:** passive blocks have no zero-contrast trials. So a contrast-matched no-go
+set is only misses (9-84 per session), and those may be lapses. The facts and the design options
+are in `experiments-and-prereg.md` §5 (`checks/e16_and_determinism.out` §1).
 
 ## What gets stored per session
 
@@ -121,8 +117,8 @@ has been turned into a floor multiple; any statistic across rows sharing an `ind
 
 | option | what | trust | cost |
 |---|---|---|---|
-| **F1 per experiment** | E14 practice: scan `circle(seed=500)` noise until the split-half null matches the experiment's `null_mean` at its (n_neurons, h), then arms A/B/C × 40 pairs | what D28 rests on | ~1-2 h per experiment |
-| F2 calibration grid | arms A/B/C over (n_neurons, h, noise), stored as ordinary comparison rows; floor(null_mean) by interpolation | **not yet**: D28's revisit condition (latent shape, embedding dim, firing rate) is untested, and only circle/figure-8 with softplus-Poisson has run | order 5 h for 4 scales × 6 noise × 3 arms × 40 pairs, at E12's ~6 s/pair |
+| **F1 per experiment** | E14 practice: scan `circle(seed=500)` noise until the split-half null matches the experiment's `null_mean` at its (n_neurons, h), then arms A/B/C × 40 pairs | what D28 rests on | ~10 min per experiment (E14: 5.7 min for 120 pairs, plus the scan) |
+| F2 calibration grid | arms A/B/C over (n_neurons, h, noise), stored as ordinary comparison rows; floor(null_mean) by interpolation | **not yet**: D28's revisit condition (latent shape, embedding dim, firing rate) is untested, and only circle/figure-8 with softplus-Poisson has run | ~2.5 h for 4 scales × 6 noise × 3 arms × 40 pairs, at ~3 s/pair (`orchestration.md` cost model) |
 | F3 both | F2 for descriptive panels and screening; F1 for every verdict | — | — |
 
 **Recommend F3, with a gate.** Before the grid backs a verdict, a preregistered stress test must

@@ -40,7 +40,7 @@ def expand() -> tuple[list[dict], list[dict]]:
     loaded session and written into the recipe as a number."""
 
 # experiments only
-PREREG = dict(floor_source="e14", min_detected=7, ...)  # constants, never edited after a run
+PREREG = {...}                           # constants; shape and binding rules in experiments-and-prereg.md §3
 def verdict(tables: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, str]: ...
 ```
 
@@ -197,7 +197,7 @@ forces that.
 | `baseline` | 22 refs, 231 pairs, 3 conditions | ~12 min | mega `codebase-consolidation.md` Track B |
 | SNN mini-run | 200-300 updates | ~15 s train + 12-15 s topology | `spec.md` Known limits |
 | SNN full | 3000 updates | ~150-180 s train + ~13 s signature/null + ~10 s per ref (2 conditions) | mega; `stats.py:61-64` |
-| E1 as measured | 192 trials, 2000 updates, 1 ref | 54 s/trial, 3.98 h | `experiments.md:18` |
+| E1 as measured | 192 trials, 1500 updates, 1 ref | 54 s/trial, 3.98 h | `experiments.md:18` |
 | zoo sweep | 10³ SNN configs, signature+null, no pairs | ~42 GPU-h serial → ~10-11 h at N=4 *if* the GPU scales (unmeasured) | above |
 | + 10-ref panel on `all` | 10⁴ pairs | +1-3 s each, split over N gudhi loops | `pair-policy.md` |
 

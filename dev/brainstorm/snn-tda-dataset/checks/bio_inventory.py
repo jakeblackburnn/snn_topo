@@ -4,8 +4,7 @@
 2. baseline-wide (legacy, n_pca=10, condition "all"): H1 feature count and self split-half
    H1 null_mean per bio session -- how often H1 is empty, and the spread of null scales
    a floor would have to be matched to.
-3. Steinmetz no-go trials: stimulus contrast mix (zero-contrast vs nonzero) per session,
-   since E16 wants no-go vs passive matched on contrast.
+The no-go contrast mix is in e16_and_determinism.py section 1.
 
     ~/Code/python_venv_01_main/bin/python dev/brainstorm/snn-tda-dataset/checks/bio_inventory.py
 """
@@ -47,21 +46,6 @@ def baseline_h1() -> None:
           f"(x{t.H1_null_mean.max() / t.H1_null_mean.min():.1f})")
 
 
-def nogo_contrasts() -> None:
-    print("\n== 3. Steinmetz no-go trials: contrast mix ==")
-    print("session nogo nogo_zero_contrast nogo_nonzero passive passive_zero(both 0)")
-    for s in steinmetz.list_sessions():
-        dat = steinmetz._session_data(s)
-        r = np.asarray(dat["response"])
-        cl, cr = np.asarray(dat["contrast_left"]), np.asarray(dat["contrast_right"])
-        nogo = r == 0
-        zero = (cl == 0) & (cr == 0)
-        pl, pr = np.asarray(dat["contrast_left_passive"]), np.asarray(dat["contrast_right_passive"])
-        print(f"{s:>7s} {nogo.sum():4d} {int((nogo & zero).sum()):18d} {int((nogo & ~zero).sum()):12d} "
-              f"{len(pl):7d} {int(((pl == 0) & (pr == 0)).sum()):20d}")
-
-
 if __name__ == "__main__":
     regions()
     baseline_h1()
-    nogo_contrasts()

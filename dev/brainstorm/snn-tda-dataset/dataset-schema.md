@@ -153,10 +153,10 @@ results/
     diagrams/<activity_id>__<topo_id>.npz
     logs/
   store/                content-addressed, shared by all runs, write-once
-    halves/<key>.npz    split-half diagram sets + within distances (see pair-policy.md)
+    halves/<key>.npz    split-half diagram sets + within distances; key rules in orchestration.md
     spikes/<activity_id>.npz   persisted activities (SNN/synthetic, when a spec asks)
     weights/<hash>.pt   trained SNN checkpoints
-  <22 legacy run dirs>  untouched; read by the legacy adapter
+  <existing run dirs>  untouched; the legacy adapter reads the 16 atlas.jsonl dirs
 ```
 
 Sizes (`checks/inventory.out` §4): a bio activity is ~2.4 MB compressed. An SNN-shaped 0/1
@@ -184,7 +184,8 @@ activity is 0.6 MB (256 units) to 2.5 MB (1024 units) with `packbits`. A split-h
 - Should failed/degenerate SNN activities get signature rows? D14 says every config becomes a
   record, and that holds for the activity row. Degenerate ones still have measurable conditions.
   Recommendation: yes for degenerate, no for failed (there is nothing to measure).
-- Is the recipe for a trained SNN reproducible enough to regenerate spikes on demand? CUDA
-  nondeterminism may make re-evaluation not bit-identical. If so, spikes for any SNN in a panel or
-  experiment must be persisted, not regenerated. This needs a one-off check before the build
-  commits to regenerate-on-demand.
+- Is the recipe for a trained SNN reproducible enough to regenerate spikes on demand? Two
+  obstacles: `snn_entry` builds the model before training seeds torch (`atlas.py:237`,
+  `training.py:32`), so the producer must seed first (`snn-breadth.md`); and CUDA
+  nondeterminism may make re-evaluation not bit-identical (`v1-survival.md` G7). If it isn't,
+  any SNN in a panel or experiment must have its spikes persisted, not regenerated.

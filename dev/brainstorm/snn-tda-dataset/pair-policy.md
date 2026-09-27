@@ -37,15 +37,16 @@ condition, and parallelizable.
 | policy | pairs for N activities | 10⁴ activities, 1 condition, 16 cores | what it answers |
 |---|---|---|---|
 | P0 all-pairs | N²/2 | ~2,120 wall-h (mega, 3 conditions) | everything; infeasible past ~10³ |
-| **P1 none by default** | 0 | 0 (signatures and self-nulls only: ~4 s × N) | per-activity TDA: the bulk of "a huge set of topological data" |
-| **P2 frozen bio panel, opt-in** | N × R | R=13: ~2.9 CPU-h ≈ 0.2 wall-h if parallelized (0.8 s × 13 × 10⁴ = 1.0e5 s) | distance from each SNN to a fixed set of brain signatures |
+| **P1 none by default** | 0 | no pair cost; signatures + self-nulls ~4 s wall each on the full pool → ~11 wall-h | per-activity TDA: the bulk of "a huge set of topological data" |
+| **P2 frozen bio panel, opt-in** | N × R | R=13 cross work: 0.8 s × 13 × 10⁴ ≈ 29 CPU-h ≈ 1.8 wall-h parallelized, plus a halves set at the panel `h` (~11 wall-h) unless the self-null is taken at that `h` too | distance from each SNN to a fixed set of brain signatures |
 | P3 anchor panel (bio + synthetic shapes) | N × (R + S) | S≈5 adds ~40% | as P2, plus "which known shape is it nearest" with a built-in positive control |
 | **P4 replicate pairs** | configs × k²/2 | 5 seeds: 10 pairs per config | the within-config spread (model-zoo §4), i.e. the model-side geometry floor |
 | **P5 experiment-scoped** | declared by the spec | E15: 13 × 3 contrasts × 5 seeds = 195 compares | preregistered contrasts: the only pairs that carry verdicts |
 | P6 vectorized screen | 0 exact pairs | O(N) features, then exact compare on a chosen subset | exploratory maps (embeddings, clustering) |
 
-Cost figures assume halves are cached at a fixed `h` and cross work is parallel. Without either
-fix, multiply P2 by about 10.
+Cost figures assume halves are cached at a fixed `h` and cross work is parallel. Taking the
+self-null at the panel `h` (a null row at that `h`) makes the entry's halves serve both.
+Without the disk cache and parallel cross work, multiply P2 by about 10.
 
 ### Recommendation
 

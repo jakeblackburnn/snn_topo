@@ -41,19 +41,3 @@ bio:ibl:ffef0311-8ffa-49e3-a857-b3adf6d86e12             1                    0.
 bio:allen:719161530                                     21                     0.05634                0.3176       0.07821       0.07881
 H1_n == 0: 6/22; median 1.0
 H1 self null_mean range 4.925e-05-0.1157 (x2348.4)
-
-== 3. Steinmetz no-go trials: contrast mix ==
-session nogo nogo_zero_contrast nogo_nonzero passive passive_zero(both 0)
-      0   74                 34           40     150                    0
-      1   94                 47           47     150                    0
-      2   77                 47           30     150                    0
-      3  126                 61           65     110                    0
-      4  104                 53           51     110                    0
-      5   92                 62           30     110                    0
-      6   62                 48           14     110                    0
-      7   93                 31           62     110                    0
-      8  134                 57           77     110                    0
-      9  155                 71           84     110                    0
-     10   97                 66           31     110                    0
-     11   64                 50           14     110                    0
-     12   56                 47            9     110                    0

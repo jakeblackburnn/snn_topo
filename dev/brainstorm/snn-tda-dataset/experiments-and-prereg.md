@@ -55,7 +55,8 @@ interpolated. `brain-signatures.md` covers the grid.
 
 ## 3. Preregistration mechanics
 
-An experiment is one committed file, `experiments/eNN_<slug>.py`, exporting:
+An experiment is one committed file, `experiments/eNN_<slug>.py`. It exports what every spec
+exports (`TOPO`, `CMP`, `PERSIST`, `expand()` → recipes + pairs; `orchestration.md`), plus:
 
 ```python
 PREREG = {
@@ -64,7 +65,6 @@ PREREG = {
     "excluded": ["steinmetz:11"],            # already-seen units, E15-style
     "depends_on": {"floor": "e14"},          # verdict inputs from other experiments' runs
 }
-def expand() -> Plan: ...                   # resolved recipes + declared pairs + topo/cmp configs + seeds
 def verdict(tables) -> tuple[pd.DataFrame, str]: ...   # pure; reads rows, returns table + verdict line
 ```
 
