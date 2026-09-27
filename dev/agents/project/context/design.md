@@ -125,6 +125,8 @@ def expand(mini: bool = False) -> tuple[list[dict], list[dict]]:  # (recipes, pa
 # experiments only:
 PREREG = {"hypothesis":..., "prediction":..., "criteria": {...}, "excluded": [...], "depends_on": {...}}
 def verdict(tables: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, str]: ...
+# optional, sweeps and experiments:
+def derive(tables: dict[str, pd.DataFrame]) -> list[dict]: ...   # derived rows from this run's rows
 ```
 
 A spec may set `PREREG = None` as a placeholder (E16's skeleton does, until the user picks its
@@ -145,6 +147,11 @@ entry). `expand()` may load data.
     which labels the run `exploratory`. `failed` activities aren't retried without
     `--retry-failed`.
   - The pool is in forkserver fallback (sandbox) → one loud log line.
+  - After phase 2, if the spec defines `derive(tables)`, the runner calls it on this run dir's rows
+    and appends rows whose [source_key, derivation_id] aren't already in derived.jsonl (so a
+    resume is safe). Per-activity numbers (R1 robust count) live here; numbers that need another
+    run (floor multiple, band position vs a calibration run) are computed in `verdict()`.
+    (User decision 2026-09-27, raised during the build.)
 - `snntopo status <run_dir>` gives counts per type and shard, failed ids, and torn-line warnings.
 - `snntopo verdict <experiments/eNN.py>`: finds runs with `clean=true`, matching `prereg_hash`
   and `verdict_hash` equal to the values at the first commit that added PREREG (from `git log`),
