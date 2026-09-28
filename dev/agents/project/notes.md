@@ -6,6 +6,8 @@
 - Stats code run from `python -` (stdin) falls back to serial with noisy tracebacks: run a script file.
 - `python -m pytest` in a worktree needs `PYTHONPATH=.` (editable install resolves to the main checkout); prefer `python -m snntopo.cli` over the console script there.
 - `SNNTOPO_DATA_DIR` shares raw data across worktrees.
+- The `snntopo` console script doesn't put the repo root on sys.path: a spec that reuses another spec loads it with `runner.load_spec(path)`, never `from sweeps.x import`.
+- `-m data` tests aren't in the default `pytest -q`; run them before a merge (M8's `steinmetz_nogo` broke one unseen).
 - `snntopo run --out` resolves a relative path against cwd: from a worktree, pass `$SNNTOPO_RESULTS_DIR/runs/<id>`.
 - SNN training device: `producers.DEVICE` (`SNNTOPO_DEVICE`, else cuda). CUDA re-runs are bit-identical; trained CUDA vs CPU spikes differ. Tests pin CPU (`tests/conftest.py`).
 
