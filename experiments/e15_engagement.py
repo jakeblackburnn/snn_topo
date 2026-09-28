@@ -38,10 +38,22 @@ SESSIONS = tuple(str(s) for s in range(13))
 SEEDS = (0, 1, 2, 3, 4)
 EXCLUDED = ("11",)  # E13's session, already seen when E15 was first preregistered
 MINI_SESSION = "11"  # an excluded session, so an exploratory run looks at no held-out data
-N_ARMS, N_ARMS_MINI = 40, 2
-SCAN_LEVELS = (4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0, 40.0, 48.0)
+N_ARMS_MINI = 2
+SCAN_LEVELS = (4.0, 8.0, 12.0, 14.0, 16.0, 20.0, 24.0, 28.0, 32.0, 40.0, 48.0)
 
-PREREG = None  # set after the scan (CHECKPOINT 3)
+# Scan 2026-09-28 (blind: split-half nulls only): target H1 null_mean 0.06644 at 1026 x 110;
+# 12 -> 0.0581, 14 -> 0.0740, 16 -> 0.0756; nearest is 14. Criteria are the old E15's (user, CHECKPOINT 3).
+PREREG = {
+    "hypothesis": "task-engaged (active, responded) vs passive activity on the same units differs by more "
+                  "than elapsed-time drift and more than a within-topology geometry change at matched noise",
+    "prediction": "on H1, >= 7 of the 12 held-out sessions detected",
+    "sessions": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+    "seeds": [0, 1, 2, 3, 4],
+    "excluded": ["steinmetz:11"],
+    "floor": {"n_neurons": 1026, "n_trials": 110, "noise": 14.0, "n_pairs": 40},
+    "criteria": {"dim": 1, "alpha": 0.05, "null_valid_max": 4, "replicates_ge": 7, "fails_le": 3},
+    "depends_on": {"validation": "results/runs/20260927-1703-validate_instrument (E17, PASS 8/8)"},
+}
 
 
 def _bio(session, block, select, trial_range=None):
