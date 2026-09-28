@@ -8,9 +8,9 @@ from .steinmetz_2afc import CONTRAST_LEVELS, transient_profile
 class SteinmetzNoGo(Task):
     """Left/right choices for unequal contrasts, ``nogo`` for (0, 0).
 
-    ``left``, ``right``, and ``nogo`` deliberately match the conditions used for
-    Steinmetz bio activity, so task-produced and biological rows can be joined by
-    condition name without a translation layer.
+    ``left``, ``right``, and ``nogo`` deliberately match the v3 bio recipe selectors, so
+    task-produced and biological rows can be joined by condition name. ``bio_match`` stays
+    None: the v1 Steinmetz loader has no ``nogo`` condition, and v3 doesn't read bio_match.
     """
 
     name = "steinmetz_nogo"
@@ -18,7 +18,7 @@ class SteinmetzNoGo(Task):
     action_names = ("left", "right", "nogo")
     num_steps = 150
     response_steps = slice(0, 150)
-    bio_match = "steinmetz"
+    bio_match = None
 
     def sample_batch(self, batch_size, device, generator):
         levels = torch.tensor(CONTRAST_LEVELS)

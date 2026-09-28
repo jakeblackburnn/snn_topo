@@ -25,7 +25,7 @@ only where a spec declares them (D32). Workflow and module map: `README.md`,
 | spec | kind | what it is | state |
 |---|---|---|---|
 | `sweeps/validate_instrument.py` | sweep | known-answer arms A/B/C × 40 at two scales (D33) | E17: PASS 8/8 |
-| `experiments/e15_engagement.py` | experiment | engaged vs passive on fixed Steinmetz units, 13 sessions, own matched floor (D37) | see experiments.md, E18 |
+| `experiments/e15_engagement.py` | experiment | engaged vs passive on fixed Steinmetz units, 13 sessions, own matched floor (D37) | E18: REPLICATES 11/12 held-out sessions |
 | `experiments/e16_nogo.py` | experiment | no-go vs passive; population is the user's call, `PREREG = None` | `--mini` only |
 | `sweeps/bio_core.py` | sweep | Steinmetz part 0: 13 sessions × {active responded, passive, no-go} × whole + regions with ≥ 50 units, neuron-split region controls, R1 derived rows | run |
 | `sweeps/zoo_v0.py` | sweep | 27 existing SNN triples × {128, 512} × 3 seeds × checkpoints {0, 300, 1500} × {task, spontaneous} = 972 activities (D36) | smoke only; full run needs the user's OK |
