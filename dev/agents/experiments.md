@@ -787,3 +787,92 @@ cross-animal effect. It clears a same-session temporal control and the matched-n
 floor. At this noise its size (H1 about 2-4.5) matches E14's circle-vs-figure-8 (about 2.8). The
 ratio cannot tell geometry from topology at this noise, so this is **not** a claim that
 engagement changes topology. Engagement is still confounded with movement and stimulus set.
+
+## E17 · 2026-09-27 · v3 instrument validation, known-answer arms at two scales (M4) · status: done
+(E16 is reserved for the no-go spec, `experiments/e16_nogo.py`.)
+**Question:** does the v3 pipeline (runner + floor.py) reproduce the instrument's known answers
+at E12's and E14's settings? It's a sweep, not a preregistration: the acceptance is design.md's.
+**Method:** `sweeps/validate_instrument.py`, arms A/B/C × 40 (`floor.arms`) at 300×340 noise 0.25
+and 698×110 noise 16, one seed, `CMP` wasserstein, 50 resamples. Acceptance per scale: arm A
+p ≤ 0.05 in ≤ 4/40 per dim; arm C p ≤ 0.05 in ≥ 36/40 on H1; `floor` sane on H1 (C q5 > B q95);
+pooled = serial = disk halves (M3's unit test).
+**Run:** `snntopo run sweeps/validate_instrument.py --out results/runs/20260927-1703-validate_instrument`
+(SNNTOPO_WORKERS=12; first invocation at 7057b61 interrupted after 13 activities, resumed at
+f7c1351, library code identical; resume 30.6 min wall). 400 activities, 0 failed, 240 pairs.
+`snntopo verdict sweeps/validate_instrument.py`:
+
+| scale | arm | dim | n | n_sig | ratio q5 | q50 | q95 | null_mean med |
+|---|---|---|---|---|---|---|---|---|
+| 300x340 · 0.25 | A | 0 | 40 | 1 | 0.891 | 1.005 | 1.162 | 0.00236 |
+| 300x340 · 0.25 | A | 1 | 40 | 0 | 0.803 | 0.938 | 1.449 | 0.00441 |
+| 300x340 · 0.25 | B | 0 | 40 | 26 | 0.942 | 1.708 | 4.165 | 0.00237 |
+| 300x340 · 0.25 | B | 1 | 40 | 25 | 0.878 | 2.955 | 8.61 | 0.00454 |
+| 300x340 · 0.25 | C | 0 | 40 | 40 | 41.73 | 45.59 | 48.52 | 0.00324 |
+| 300x340 · 0.25 | C | 1 | 40 | 40 | 105.9 | 115.7 | 131.4 | 0.00379 |
+| 698x110 · 16 | A | 0 | 40 | 0 | 0.897 | 0.997 | 1.111 | 0.0624 |
+| 698x110 · 16 | A | 1 | 40 | 0 | 0.906 | 0.979 | 1.128 | 0.0846 |
+| 698x110 · 16 | B | 0 | 40 | 0 | 0.874 | 0.983 | 1.225 | 0.0627 |
+| 698x110 · 16 | B | 1 | 40 | 0 | 0.896 | 0.986 | 1.066 | 0.0839 |
+| 698x110 · 16 | C | 0 | 40 | 40 | 4.202 | 5.107 | 5.764 | 0.0518 |
+| 698x110 · 16 | C | 1 | 40 | 40 | 2.561 | 2.769 | 3.048 | 0.0894 |
+
+    PASS  300x340 noise 0.25: A H0 p<=0.05 in <= 4/40: 1/40
+    PASS  300x340 noise 0.25: A H1 p<=0.05 in <= 4/40: 0/40
+    PASS  300x340 noise 0.25: C H1 p<=0.05 in >= 36/40: 40/40
+    PASS  300x340 noise 0.25: floor H1 sane (C q5 > B q95): 105.917 > 8.610
+    PASS  698x110 noise 16: A H0 p<=0.05 in <= 4/40: 0/40
+    PASS  698x110 noise 16: A H1 p<=0.05 in <= 4/40: 0/40
+    PASS  698x110 noise 16: C H1 p<=0.05 in >= 36/40: 40/40
+    PASS  698x110 noise 16: floor H1 sane (C q5 > B q95): 2.561 > 1.066
+    PASS: 8/8 criteria
+
+Fourth criterion: `pytest tests/test_runner.py::test_pooled_serial_and_disk_cached_halves_are_identical` → 1 passed.
+**Result: PASS, 8/8.** Magnitudes match E12 (300×340 C H1 q50 ≈ 117 there, 115.7 here) and E14
+(698×110 C H1 ≈ 2.85, B q95 ≈ 1.02; here 2.77 and 1.07). A is calibrated at both scales.
+**Takeaway:** the v3 pipeline is a faithful re-implementation of the E12/E14 instrument. At low
+noise, geometry (B) is readily detected (25/40 on H1, q95 8.6), so there a ratio above 1 is not
+topology; at E14's noise B collapses to ~1 and only the topology arm clears the floor.
+
+## E18 · 2026-09-28 · E15 fresh on v3, own matched floor (D37) · status: done
+**Hypothesis, preregistered (`840b7f6`):** task-engaged (active, responded) vs passive activity on
+the same units differs by more than elapsed-time drift and more than a within-topology geometry
+change at matched noise. Prediction: on H1, ≥ 7 of 12 held-out sessions detected.
+**Floor scan (exploratory, blind, before the PREREG commit):** `python experiments/e15_engagement.py scan`.
+Scale 1026 × 110 (median held-out units, 2 × median primary h); target H1 null_mean 0.06644 (median
+held-out pooled split-half null, nulls only). H1 null_mean by noise: 12 → 0.0581, 14 → 0.0740,
+16 → 0.0756. Noise 14 is nearest. (14 was added to the grid after a first scan showed 12 and 16;
+only nulls had been read, and the nearest-level rule was fixed beforehand.)
+**Criteria (fixed in PREREG, the old E15's):** per session, detected iff on H1 the primary seed-median
+ratio > floor B_q95 and > the session's drift max, and primary median p ≤ 0.05. ≥ 7/12 held-out →
+REPLICATES, ≤ 3 → DOES NOT REPLICATE, else MIXED. Judged only if arm A H1 is significant in ≤ 4/40 and
+the floor is sane (C_q5 > B_q95). Session 11 excluded (E13's). Arms A/B/C × 40 at 1026 × 110, noise 14.
+**Run:** `snntopo run experiments/e15_engagement.py --out results/runs/20260928-1100-e15_engagement`
+(clean tree at 840b7f6, SNNTOPO_WORKERS=16, 29 min). 252 activities, 0 failed, 159 pairs, 630
+comparison rows. `snntopo verdict experiments/e15_engagement.py` counts 1 run, 0 not counted:
+
+| session | h | primary | p | drift max | adjacent | floor multiple | band position | detected |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 70 | 1.98 | 0.020 | 1.43 | 1.64 | 1.65 | 0.36 | yes |
+| 1 | 75 | 3.22 | 0.010 | 1.13 | 2.38 | 2.70 | 0.80 | yes |
+| 2 | 75 | 4.30 | 0.010 | 1.01 | 2.51 | 3.60 | 1.19 | yes |
+| 3 | 55 | 3.36 | 0.010 | 1.09 | 2.27 | 2.81 | 0.85 | yes |
+| 4 | 55 | 3.52 | 0.010 | 0.98 | 2.84 | 2.95 | 0.91 | yes |
+| 5 | 55 | 2.21 | 0.020 | 1.12 | 1.95 | 1.85 | 0.44 | yes |
+| 6 | 55 | 1.84 | **0.059** | 1.10 | 1.90 | 1.54 | 0.31 | no (p only) |
+| 7 | 55 | 3.77 | 0.010 | 1.08 | 3.07 | 3.15 | 1.00 | yes |
+| 8 | 55 | 3.98 | 0.010 | 1.04 | 4.25 | 3.33 | 1.07 | yes |
+| 9 | 55 | 4.42 | 0.010 | 1.01 | 4.80 | 3.70 | 1.23 | yes |
+| 10 | 55 | 4.56 | 0.010 | 1.04 | 4.49 | 3.81 | 1.28 | yes |
+| 12 | 55 | 2.84 | 0.020 | 0.99 | 3.03 | 2.37 | 0.66 | yes |
+| *11 (excluded)* | 55 | 3.07 | 0.010 | 1.01 | 3.36 | 2.57 | 0.75 | yes |
+
+Floor H1: B_q50 0.973, B_q95 1.196, C_q5 3.465, C_q50 3.780 (B null_mean 0.0673); arm A H1 0/40.
+**Result: REPLICATES, 11/12 held-out sessions detected** (criterion ≥ 7). Same sessions as the old
+E15; the primary ratios agree with its table to its 2-3 digits (same construction), but this is the
+v3 re-derivation and was judged on its own floor, not by comparison (D33).
+**Takeaway:** the engaged-vs-passive difference clears drift and the matched geometry floor in 11/12
+sessions. The floor now also places it: band position (0 = typical geometry change, 1 = circle →
+figure-8 at this noise) is 0.3-1.3, and 4 sessions (2, 8, 9, 10) sit at or above the topology
+arm's median. That's "as large as a topology change at this noise", not evidence that engagement
+changes topology: the ratio still can't tell the two apart. The movement and stimulus confounds
+remain (E16 addresses movement).
