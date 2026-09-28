@@ -58,4 +58,6 @@ def expand(mini=False):
         for n, seed, checkpoint, regime in axes:
             recipes.append(snn_recipe("steinmetz_nogo", ModelConfig("recurrent", "lif", connectivity, n).to_dict(),
                                        seed, checkpoint, regime))
+    # seed-major across v0 and these families (stable), as in zoo_v0, for --budget blocks
+    recipes.sort(key=lambda r: r["train"]["seed"])
     return recipes, pairs

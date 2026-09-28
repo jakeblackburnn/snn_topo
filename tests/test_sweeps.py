@@ -32,3 +32,13 @@ def test_smokes_are_200_update_grids_and_zoo_v1_contains_only_passing_additions(
     assert len(recipes) == 972 + 4 * 2 * (2 * 3 * 3 * 2) == 1260 and not pairs
     rates = [r for r in recipes if r["family"] == "rate"]
     assert rates and all(r["gain"] == 2.0 for r in rates)
+
+
+def test_zoo_v1_runs_seed_major_so_budget_blocks_are_balanced():
+    from snntopo import runner
+    activities, _ = runner.expand(spec("zoo_v1.py"), False)
+    group_seeds = {}
+    for recipe in activities.values():  # the runner's phase-1 order
+        group_seeds.setdefault(runner.group_key(recipe), recipe["train"]["seed"])
+    seeds = list(group_seeds.values())
+    assert len(seeds) == 210 and seeds == sorted(seeds) and seeds.count(0) == 70

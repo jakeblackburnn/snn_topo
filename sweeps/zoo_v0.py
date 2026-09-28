@@ -29,7 +29,8 @@ def expand(mini=False):
         # Six distinct existing triples, each trained/evaluated once for exactly 200 updates.
         triples = valid_triples()[:6]
         return ([recipe(t, 128, 0, 200, "task", n_updates=200, n_eval=64) for t in triples], [])
+    # seed-major, so a --budget block that stops early leaves every config at the same seeds
     recipes = [recipe(t, n, seed, checkpoint, regime)
-               for t in valid_triples() for n in SIZES for seed in SEEDS
+               for seed in SEEDS for t in valid_triples() for n in SIZES
                for checkpoint in CHECKPOINTS for regime in REGIMES]
     return recipes, []

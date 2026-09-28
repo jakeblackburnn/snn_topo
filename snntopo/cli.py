@@ -166,7 +166,7 @@ def parse_shard(text: str) -> tuple[int, int]:
 
 def cmd_run(args):
     runner.run(args.spec, out=args.out, shard=args.shard, mini=args.mini, dry_run=args.dry_run,
-               retry_failed=args.retry_failed, argv=args.argv)
+               retry_failed=args.retry_failed, budget_min=args.budget, argv=args.argv)
 
 
 def cmd_status(args):
@@ -267,6 +267,8 @@ def main(argv=None):
     ru.add_argument("--mini", action="store_true", help="expand(mini=True); labels the run exploratory")
     ru.add_argument("--dry-run", action="store_true", help="print counts and a cost estimate; produce nothing")
     ru.add_argument("--retry-failed", action="store_true", help="produce failed activities again")
+    ru.add_argument("--budget", type=float, metavar="MIN",
+                    help="start no new group after MIN minutes and skip phase 2; rerun to continue")
     ru.set_defaults(fn=cmd_run)
 
     st = sub.add_parser("status", help="counts, failures and missing work of a run dir")

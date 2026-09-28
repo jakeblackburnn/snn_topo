@@ -67,7 +67,8 @@ def test_uninterrupted_run_rows_and_status(baseline):
         >= {(6, 0), (4, 0), (4, 1)}
     inv = runner.read_invocations(baseline)
     assert len(inv) == 1 and inv[0]["status"] == "done" and inv[0]["exploratory"]
-    assert inv[0]["summary"] == {"produced": 9, "failed": 1, "pairs": 4, "waiting": 0, "blocked": 1}
+    assert inv[0]["summary"] == {"produced": 9, "failed": 1, "pairs": 4, "waiting": 0, "blocked": 1,
+                                  "stopped_by_budget": False}
     text = "\n".join(runner.status(baseline))
     assert f"activities.jsonl                 {N_ACTIVITIES}" in text
     assert "failed activities (1)" in text
@@ -160,6 +161,20 @@ def test_dry_run_prints_counts_and_cost_and_writes_nothing(tmp_path, capsys):
     assert "pairs: 0 done, 0 ready, 5 waiting on activities" in out
     assert "cost         ~" in out
     assert list(tmp_path.iterdir()) == []
+
+
+def test_budget_stops_after_a_group_and_a_rerun_finishes_the_same_rows(baseline, tmp_path, capsys):
+    run = tmp_path / "run"
+    _run(tmp_path / "results", out=run, budget_min=0, dry_run=True)
+    assert "budget       0 min starts ~1 of" in capsys.readouterr().out
+    _run(tmp_path / "results", out=run, budget_min=0)  # 0: exactly one group, then stop
+    inv = runner.read_invocations(run)[-1]
+    assert inv["status"] == "budget" and inv["summary"]["stopped_by_budget"]
+    assert inv["summary"]["groups_left"] > 0 and not runner.read_rows(run)[0]["comparisons"]
+    assert _lines(run / "activities.jsonl") == 1
+    _run(tmp_path / "results", out=run)
+    assert runner.read_invocations(run)[-1]["status"] == "done"
+    assert _rowset(run) == _rowset(baseline)
 
 
 def test_new_run_dirs_never_collide(tmp_path, monkeypatch):

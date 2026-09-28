@@ -26,6 +26,10 @@ produced again from its recipe and must reproduce its recorded content_hash. Pai
 side not yet produced wait for a later run; pairs that can never run (a failed side, an
 unusable condition, h too large) are reported as blocked.
 
+`--budget MIN` (a block of a long sweep): phase 1 starts no new group once MIN minutes have
+passed since the run began, and phase 2 is skipped; the invocation ends with status "budget"
+and the next invocation resumes as above. So a block overruns by at most one group.
+
 A run dir holds one spec at one (topo_id, cmp_id) and one --mini setting; resuming with
 a different one is refused. Each shard writes its own jsonl files and its own
 run[.sIofN].json (a list of invocations), and holds an flock on .lock[.sIofN] while it
@@ -335,6 +339,28 @@ def _cost(p: dict, persisted: set[str]) -> tuple[float, str]:
     return total, detail
 
 
+def budget_line(p: dict, budget_min: float) -> str:
+    """How many of the to-do groups, in run order, start within the budget by the cost model."""
+    groups: OrderedDict[str, list[str]] = OrderedDict()
+    for aid in p["todo"]:
+        groups.setdefault(group_key(p["activities"][aid]), []).append(aid)
+    elapsed, fit = 0.0, []
+    for aids in groups.values():
+        if fit and elapsed >= budget_min * 60:
+            break
+        fit.append(aids)
+        base = _base(p["activities"][aids[0]])
+        if producers.training_key(base) is not None:
+            elapsed += COST_TRAIN_BASE + COST_TRAIN_PER_UPDATE * int(base.get("train", {}).get("n_updates", 3000))
+        for aid in aids:
+            elapsed += (COST_PRODUCE.get(_base(p["activities"][aid]).get("kind"), 1.0)
+                        + COST_MEASURE * p["cmp"]["n_resamples"] / 50)
+    seeds = sorted({_base(p["activities"][aids[0]]).get("train", {}).get("seed") for aids in fit} - {None})
+    return (f"budget       {budget_min:g} min starts ~{len(fit)} of {len(groups)} groups "
+            f"({sum(map(len, fit))} activities, ~{elapsed / 60:.0f} min by the cost model)"
+            + (f", train seeds {seeds}" if seeds else ""))
+
+
 def format_plan(p: dict, persisted: set[str], retry_failed: bool) -> list[str]:
     state = p["state"]
     mine = p["mine"]
@@ -376,7 +402,7 @@ def format_plan(p: dict, persisted: set[str], retry_failed: bool) -> list[str]:
 # --- run -----------------------------------------------------------------------------
 
 def run(spec_path, out=None, shard: tuple[int, int] | None = None, mini: bool = False, dry_run: bool = False,
-        retry_failed: bool = False, argv: list[str] | None = None) -> Path | None:
+        retry_failed: bool = False, budget_min: float | None = None, argv: list[str] | None = None) -> Path | None:
     spec_path = Path(spec_path).resolve()
     if shard is not None and out is None:
         raise SystemExit("--shard needs --out: all shards of one run share its dir")
@@ -401,6 +427,8 @@ def run(spec_path, out=None, shard: tuple[int, int] | None = None, mini: bool = 
         print(f"topo_id {p['topo_key']} | cmp_id {p['cmp_key']} | persist {persist}")
         for line in format_plan(p, persisted, retry_failed):
             print(line)
+        if budget_min is not None:
+            print(budget_line(p, budget_min))
         if refusal:
             print(f"note: a real run would be refused: {refusal}")
         return None
@@ -427,7 +455,8 @@ def run(spec_path, out=None, shard: tuple[int, int] | None = None, mini: bool = 
     json_path = run_json_path(run_dir, shard)
     record = {"spec": str(spec_path), **git, **prereg, "argv": argv if argv is not None else sys.argv,
               "host": socket.gethostname(), "shard": list(shard) if shard else None, "mini": mini,
-              "exploratory": exploratory, "retry_failed": retry_failed, "topo_id": topo_key, "cmp_id": cmp_key,
+              "exploratory": exploratory, "retry_failed": retry_failed, "budget_min": budget_min,
+              "topo_id": topo_key, "cmp_id": cmp_key,
               "persist": persist, "start": _now(), "end": None, "status": "running"}
     invocations = json.loads(json_path.read_text())["invocations"] if json_path.exists() else []
     invocations.append(record)
@@ -439,8 +468,10 @@ def run(spec_path, out=None, shard: tuple[int, int] | None = None, mini: bool = 
     stats.DISK_CACHE = True
     writer = dataset.RunWriter(run_dir, shard=shard)
     try:
-        summary = _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log)
-        record.update(end=_now(), status="done" if not summary["waiting"] else "incomplete", summary=summary)
+        summary = _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log, budget_min)
+        status = ("budget" if summary["stopped_by_budget"] else "done" if not summary["waiting"]
+                  else "incomplete")
+        record.update(end=_now(), status=status, summary=summary)
     except BaseException as e:
         record.update(end=_now(), status="failed", error=f"{type(e).__name__}: {e}")
         raise
@@ -456,7 +487,8 @@ def shard_label(shard) -> str:
     return "all" if shard is None else f"{shard[0]}/{shard[1]}"
 
 
-def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log) -> dict:
+def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log, budget_min=None) -> dict:
+    t_start = time.time()
     topo, cmp = module.TOPO, module.CMP
     derive = getattr(module, "derive", None)
     p = plan(module, mini, run_dir, shard, retry_failed)
@@ -485,7 +517,13 @@ def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log
     n_done = n_failed = 0
     log.info(f"phase 1: {len(p['todo'])} of {len(p['mine'])} activities in this shard to produce "
              f"({len(groups)} groups)")
-    for aids in groups.values():
+    groups_left = 0
+    for i, aids in enumerate(groups.values()):
+        if budget_min is not None and i > 0 and time.time() - t_start >= budget_min * 60:
+            groups_left = len(groups) - i
+            log.info(f"budget: {budget_min:g} min reached after {i} of {len(groups)} groups; "
+                     f"{groups_left} left, skipping phase 2 (rerun to continue)")
+            break
         t0 = time.time()
         for recipe, activity, row in producers.produce([activities[a] for a in aids],
                                                        persist_weights=bool(persist.get("weights", False))):
@@ -506,6 +544,10 @@ def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log
             n_failed += row["status"] == "failed"
             log.info(f"activity {aid} {row['label']} {row['status']} ({time.time() - t0:.1f} s)"
                      + (f": {row['meta'].get('error')}" if row["status"] == "failed" else ""))
+
+    if groups_left:
+        return {"produced": n_done, "failed": n_failed, "pairs": 0, "waiting": 0, "blocked": 0,
+                "stopped_by_budget": True, "groups_left": groups_left}
 
     # phase 2: pairs whose two sides exist in this run dir (any shard's rows)
     rows, _, _ = read_rows(run_dir)  # other shards may have produced sides meanwhile; own rows are flushed
@@ -550,7 +592,7 @@ def _run_phases(module, mini, run_dir, shard, retry_failed, persist, writer, log
     log.info(f"done: {n_done} activities produced, {n_failed} failed, {n_pairs} pairs compared, "
              f"{len(waiting)} waiting (rerun to pick them up), {len(blocked)} blocked")
     return {"produced": n_done, "failed": n_failed, "pairs": n_pairs, "waiting": len(waiting),
-            "blocked": len(blocked)}
+            "blocked": len(blocked), "stopped_by_budget": False}
 
 
 def _sides(pair, activities, state, cache, remember):
