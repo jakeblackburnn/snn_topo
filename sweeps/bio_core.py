@@ -10,12 +10,12 @@ from collections import Counter
 
 import numpy as np
 
+from snntopo import floor
 from snntopo.contracts import TopoConfig
 from snntopo.data import steinmetz
 
 
-TOPO = TopoConfig(n_pca=10, smooth_win=5, maxdim=1, min_trials=5, n_resamples=50,
-                  metrics=("wasserstein", "bottleneck"))
+TOPO = TopoConfig(n_pca=10, smooth_win=5, maxdim=1, min_trials=5)
 CMP = dict(metrics=("wasserstein", "bottleneck"), n_resamples=50)
 PERSIST = dict(spikes="none", weights=False)
 
@@ -85,3 +85,8 @@ def expand(mini: bool = False) -> tuple[list[dict], list[dict]]:
                     "label": f"steinmetz:{session}:{block}:{select}:{area}:neuron-split",
                 })
     return recipes, pairs
+
+
+def derive(activity_id: str, activity) -> list[dict]:
+    """R1 robust counts per condition x dim. R2 (H1 presence) is R1's dim-1 count > 0."""
+    return floor.robust_count_rows(activity_id, activity, TOPO, CMP)

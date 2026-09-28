@@ -1,6 +1,12 @@
 """Zoo v0 plus only the M8 configurations that passed their 200-update smoke gates."""
+from pathlib import Path
+
 from snntopo.contracts import ModelConfig, TopoConfig
-from sweeps.zoo_v0 import CHECKPOINTS, REGIMES, SEEDS, SIZES, expand as expand_v0
+from snntopo.runner import load_spec
+
+# by path, not `from sweeps.zoo_v0`: the `snntopo` console script doesn't put the repo root on sys.path
+_v0 = load_spec(Path(__file__).with_name("zoo_v0.py"))
+CHECKPOINTS, REGIMES, SEEDS, SIZES, expand_v0 = _v0.CHECKPOINTS, _v0.REGIMES, _v0.SEEDS, _v0.SIZES, _v0.expand
 
 TOPO = TopoConfig()
 CMP = dict(metrics=("wasserstein",), n_resamples=50)
