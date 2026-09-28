@@ -151,6 +151,7 @@ def test_split_halves_serial_fallback_is_bitwise_identical_to_pool(monkeypatch, 
             raise OSError("AF_UNIX sockets are blocked")
 
     monkeypatch.setattr(stats, "ProcessPoolExecutor", UnavailablePool)
+    monkeypatch.setattr(stats, "_SERIAL_WARNED", False)  # the fallback logs once per process
     stats._CACHE.clear()
     with caplog.at_level("WARNING", logger="snntopo"):
         serial = stats._split_halves(request, topo, seed=3)

@@ -1,9 +1,11 @@
 # snntopo
 
-snntopo builds a topology atlas of biological and spiking-neural-network population
-activity. It measures persistence signatures across datasets, model configurations,
-and tasks, then records statistically tested distances in portable atlas artifacts.
-The project specification is in `dev/agents/spec.md`.
+snntopo accumulates a dataset of topological data analysis (TDA) results over spiking
+neural networks and brain recordings. The unit of record is an *activity* (neurons × trials
+× time bins), identified by the resolved recipe that produces it. Every activity gets
+persistence signatures, split-half nulls and descriptors; comparisons exist only where a
+spec declares them. Design: `docs/architecture.md`. The agent's reading of the project:
+`dev/agents/spec.md`.
 
 ## Install
 
@@ -11,47 +13,60 @@ The project specification is in `dev/agents/spec.md`.
 pip install -e .[test]
 ```
 
-By default, biological data is cached under `data/raw/` and command outputs under
-`results/` in this checkout. Set `SNNTOPO_DATA_DIR` or `SNNTOPO_RESULTS_DIR` to
-share those locations across worktrees.
+Biological data is cached under `data/raw/` and results under `results/`. Set
+`SNNTOPO_DATA_DIR` / `SNNTOPO_RESULTS_DIR` to share them across worktrees, and
+`SNNTOPO_WORKERS` to cap the ripser process pool.
 
-## CLI
+## Quickstart
 
 ```sh
-python -m snntopo.cli bio --dataset steinmetz --out results/bio
-python -m snntopo.cli bio --dataset allen --compare-dataset steinmetz --compare-dataset ibl --out results/bio-allen
-python -m snntopo.cli baseline --out results/baseline
-python -m snntopo.cli snn --task steinmetz_2afc --out results/snn-mini
-python -m snntopo.cli control --task steinmetz_2afc --kind untrained --n 5 --out results/control
-python -m snntopo.cli search --task T --budget-hours H --out DIR
-python -m snntopo.cli report --run results/bio --run results/search-T --out results/report
-python -m snntopo.cli rescore --run results/search-T
+snntopo run sweeps/validate_instrument.py --mini --dry-run   # counts and a cost estimate
+snntopo run sweeps/validate_instrument.py --mini             # a small real run -> results/runs/<id>/
+snntopo status results/runs/<id>                             # done / missing / failed per record type
+snntopo verdict sweeps/validate_instrument.py                # read the runs through the spec's verdict()
 ```
 
-`search` is the full atlas-population command; use `snn` only for a small single
-configuration smoke run. The build does not launch a full search.
+```python
+from snntopo import dataset, runner
+spec = runner.load_spec("sweeps/validate_instrument.py")
+tables = dataset.load(["results/runs/<id>"], dataset.topo_id(spec.TOPO),
+                      dataset.cmp_id(spec.CMP["metrics"], spec.CMP["n_resamples"]))
+tables["signatures"].head()
+```
 
-Each run directory contains `atlas.jsonl` (append-only records), `signatures/` NPZ
-files, optional training `curves/`, and flattened `entries`/`distances` CSV and
-Parquet tables. `report` combines any number of those runs into the same tables plus
-a static `report.md` and PNG figures.
+## Specs
 
-Run the default fast suite with `python -m pytest -q`; data-marked tests are skipped
-because they fetch or read biological data.
+A spec is a Python file that declares what to measure; `snntopo run <spec>` produces and
+measures whatever its run dir is still missing, so a killed run resumes where it stopped.
 
-## Extending
+- `sweeps/*.py` are exploratory: `validate_instrument` (known-answer check of the instrument),
+  `bio_core` (Steinmetz part 0 atlas), `zoo_v0`/`zoo_v1` (SNN zoo), `smoke_*` (200-update
+  gates for new model families).
+- `experiments/eNN_*.py` are preregistered: a `PREREG` literal and a `verdict(tables)` bound at
+  the first commit that sets PREREG. They run only from a clean tree (or `--mini`, which is
+  exploratory), and `snntopo verdict` counts only runs whose recorded hashes match that commit.
 
-- **Bio dataset:** implement a loader returning `BioSession`/`Activity`, then add a
-  `DatasetEntry` to `snntopo/data/__init__.py`. Its condition names form the matching
-  contract with tasks, and its reference-session signatures become atlas bio rows.
-- **Model axis value:** add the public value to the appropriate registry constant in
-  `snntopo/models/__init__.py`, make `build_model` construct it from `ModelConfig`,
-  and preserve the model forward contract: hidden and output spikes have `(T, B, N)`
-  layout.
-- **Task:** subclass `contracts.Task`, register an instance in
-  `snntopo/tasks/__init__.py`, and implement `sample_batch`. A matched task sets
-  `bio_match` to a `DATASETS` key and uses that dataset's condition names as
-  `action_names`; a generic task sets `bio_match = None`.
+A spec defines `TOPO` (a `TopoConfig`), `CMP` (`metrics`, `n_resamples`), `PERSIST`, and
+`expand(mini) -> (recipes, pairs)`; optionally `derive(activity_id, activity)` for
+per-activity derived rows, and, for experiments, `PREREG` and `verdict`.
 
-The shared field definitions in `snntopo/contracts.py` are the compatibility boundary
-for all three extension points.
+Scale by shards: run `snntopo run <spec> --out <dir> --shard i/N` in N shells.
+
+## Results layout
+
+```
+results/runs/<YYYYMMDD-HHMM>-<spec>/run.json            provenance: spec blob, code_rev, clean, prereg/verdict hashes
+results/runs/<id>/{activities,signatures,nulls,comparisons,derived}[.sIofN].jsonl
+results/store/{diagrams,halves,spikes,weights}/<hash>   write-once blobs, shared by runs
+```
+
+Rows are append-only. A correction is a `derived` row, never an edit.
+
+## Legacy (v1)
+
+The eight v1 subcommands (`bio`, `baseline`, `snn`, `control`, `synthetic`, `search`,
+`report`, `rescore`) and their atlas run dirs still work, but the v3 dataset doesn't read them.
+
+## Tests
+
+`python -m pytest -q` runs the fast suite. `-m data` adds the tests that read the Steinmetz data.

@@ -63,7 +63,17 @@ shared with other jobs (load ~16), n_resamples=50: split_half_null over 3 condit
 ~13 s, compare over 2 conditions ~10 s per bio reference once the reference is cached
 (~22 s the first time) -- ~43 s per SNN entry with 3 references. n_resamples=100 doubled
 all of it. Callers must run under an `if __name__ == "__main__":` guard (the pool uses
-forkserver, which re-imports the main module)."""
+forkserver, which re-imports the main module). SNNTOPO_WORKERS (read per call) caps the
+pool; shards of one run split the cores between them.
+
+Disk layer: with DISK_CACHE on, split halves missing from the in-memory cache are looked
+up in results/store/halves/ before being computed, and computed ones are written there
+(write-once, tmp + os.replace). The disk key is stricter than the in-memory one: it adds
+code identity (topo_id, cmp_id carry PIPELINE_VERSION, STATS_VERSION) and uses the
+activity's content_hash, so an entry stays valid across processes and commits. Entries are
+float64 npz, which round-trips bit-identically, so a disk hit returns exactly what
+computing would. It is off by default so v1 paths and tests never write into the store;
+snntopo.runner turns it on for `snntopo run`."""
 import hashlib
 import json
 import multiprocessing
@@ -81,6 +91,7 @@ from ..contracts import Activity, DistanceResult, TopoConfig
 from ..logging_utils import get_logger
 from .pipeline import build_trajectories, persistence, unit_diameter
 
+STATS_VERSION = 1  # part of dataset.cmp_id; bump by hand whenever distance/null numerics change
 METRICS = ("wasserstein", "bottleneck")  # every metric diagram_distance supports; which of
 # these actually get computed per call is TopoConfig.metrics (default: wasserstein only)
 
@@ -109,6 +120,8 @@ def _residual_construction() -> str:
 # 32 entries covers 3 bio references x 3 conditions with room for recent SNN activities.
 _CACHE: dict[tuple, dict] = {}
 _CACHE_SIZE = 32
+DISK_CACHE = False  # see the module docstring; snntopo.runner sets it for the duration of a run
+_SERIAL_WARNED = False  # the serial fallback is logged once per process, not per call
 
 
 def diagram_distance(d1: np.ndarray, d2: np.ndarray, metric: str) -> float:
@@ -136,10 +149,41 @@ def _half_pair(points1: np.ndarray, points2: np.ndarray, maxdim: int,
     return dgms1, dgms2, within
 
 
+def _disk_key(content: str, mask: np.ndarray, h: int, topo: TopoConfig, seed: int) -> str:
+    # dataset imports this module (STATS_VERSION), so it can only be imported at call time
+    from .. import dataset
+    return dataset.short_hash({"content_hash": content, "mask": hashlib.sha256(mask.tobytes()).hexdigest(),
+                               "h": h, "n_resamples": topo.n_resamples, "seed": seed,
+                               "topo_id": dataset.topo_id(topo),
+                               "cmp_id": dataset.cmp_id(topo.metrics, topo.n_resamples)})
+
+
+def _disk_get(key: str, topo: TopoConfig) -> dict | None:
+    from .. import dataset
+    if not dataset.store_has("halves", key, "npz"):
+        return None
+    z = dataset.store_get_npz("halves", key)
+    dims = range(topo.maxdim + 1)
+    return {"pairs": [([z[f"r{r}_a_H{d}"] for d in dims], [z[f"r{r}_b_H{d}"] for d in dims])
+                      for r in range(topo.n_resamples)],
+            "within": {m: z[f"within_{m}"] for m in topo.metrics}}
+
+
+def _disk_put(key: str, entry: dict) -> None:
+    from .. import dataset
+    arrays = {f"within_{m}": w for m, w in entry["within"].items()}
+    for r, (dgms1, dgms2) in enumerate(entry["pairs"]):
+        for d, (d1, d2) in enumerate(zip(dgms1, dgms2)):
+            arrays[f"r{r}_a_H{d}"], arrays[f"r{r}_b_H{d}"] = d1, d2
+    dataset.store_put_npz("halves", arrays, key=key)
+
+
 def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, seed: int) -> list[dict]:
     """(activity, condition, trials per half) -> {"pairs": [(dgms_half1, dgms_half2)] per
     resample, "within": metric -> (n_resamples, maxdim+1) array of d(half1, half2)}.
-    Uncached requests are computed together in one process pool."""
+    Lookup is memory -> disk (if DISK_CACHE) -> compute; uncached requests are computed
+    together in one process pool."""
+    global _SERIAL_WARNED
     fingerprints = {}
     keys = []
     for activity, cond, h in requests:
@@ -149,9 +193,22 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
                      topo.n_pca, topo.smooth_win, topo.maxdim, topo.n_resamples, topo.metrics, seed))
 
     todo = {}
+    disk_keys = {}
+    contents = {}
     for key, request in zip(keys, requests):
-        if key not in _CACHE:
-            todo[key] = request
+        if key in _CACHE or key in todo:
+            continue
+        if DISK_CACHE:
+            from ..producers import content_hash  # producers imports dataset, which imports this module
+            activity, cond, h = request
+            if id(activity) not in contents:
+                contents[id(activity)] = content_hash(activity)
+            disk_keys[key] = _disk_key(contents[id(activity)], activity.conditions[cond], h, topo, seed)
+            entry = _disk_get(disk_keys[key], topo)
+            if entry is not None:
+                _CACHE[key] = entry
+                continue
+        todo[key] = request
     halves1, halves2 = [], []
     # The pool below takes every core; multithreaded BLAS here would only oversubscribe
     # them (7-10x slower PCA when other jobs share the machine).
@@ -167,22 +224,34 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
             halves1 += clouds[0::2]
             halves2 += clouds[1::2]
     if todo:
+        workers = int(os.environ.get("SNNTOPO_WORKERS") or os.cpu_count())
+        ctx = multiprocessing.get_context("forkserver")
+        # Workers need only this module. The forkserver preloads __main__ by path, which
+        # misses it under `python -m` and pytest; then every new pool's workers import it
+        # (and torch, via contracts) again, ~1.3 s per call. Takes effect when the
+        # forkserver starts, so repeating it is harmless.
+        ctx.set_forkserver_preload(["__main__", __name__])
         try:
-            with ProcessPoolExecutor(max_workers=min(os.cpu_count(), len(halves1)),
-                                     mp_context=multiprocessing.get_context("forkserver")) as pool:
+            with ProcessPoolExecutor(max_workers=min(workers, len(halves1)), mp_context=ctx) as pool:
                 results = list(pool.map(_half_pair, halves1, halves2, repeat(topo.maxdim), repeat(topo.metrics),
                                          chunksize=4))
         except OSError as e:
             # Some agent sandboxes forbid the AF_UNIX socket forkserver needs. Keep the
             # requests and their order unchanged so this slower path computes precisely
             # the same diagrams and distances as pool.map, rather than changing a run.
-            get_logger().warning("forkserver process pool unavailable (%s); computing topology serially", e)
+            if not _SERIAL_WARNED:
+                get_logger().warning("!!! forkserver process pool unavailable (%s); computing topology serially "
+                                     "at ~1/16 the throughput. Real runs need the sandbox off. Later calls in "
+                                     "this process fall back without logging.", e)
+                _SERIAL_WARNED = True
             results = [_half_pair(points1, points2, topo.maxdim, topo.metrics)
                        for points1, points2 in zip(halves1, halves2)]
         for i, key in enumerate(todo):
             chunk = results[i * topo.n_resamples:(i + 1) * topo.n_resamples]
             _CACHE[key] = {"pairs": [(r[0], r[1]) for r in chunk],
                            "within": {m: np.array([r[2][m] for r in chunk]) for m in topo.metrics}}
+            if DISK_CACHE:
+                _disk_put(disk_keys[key], _CACHE[key])
 
     out = []
     for key in keys:
@@ -195,11 +264,13 @@ def _split_halves(requests: list[tuple[Activity, str, int]], topo: TopoConfig, s
 
 def _result(target: str, cond: str, dim: int, metric: str, distance: float, null: np.ndarray,
             p_value: float, distance_residual: float | None = None,
-            construction: str = "raw") -> DistanceResult:
+            construction: str = "raw", h: int | None = None, seed: int | None = None,
+            null_mean_a: float | None = None, null_mean_b: float | None = None) -> DistanceResult:
     return DistanceResult(target=target, condition=cond, dim=dim, metric=metric, distance=distance,
                           null_mean=float(null.mean()), null_q95=float(np.quantile(null, 0.95)),
                           p_value=p_value, n_resamples=len(null), distance_residual=distance_residual,
-                          construction=construction)
+                          construction=construction, h=h, seed=seed,
+                          null_mean_a=null_mean_a, null_mean_b=null_mean_b)
 
 
 def _usable(activity: Activity, cond: str, topo: TopoConfig) -> bool:
@@ -213,14 +284,17 @@ def _raw_diameter(activity: Activity, cond: str, topo: TopoConfig) -> float:
 
 
 def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: TopoConfig,
-            seed: int = 0) -> list[DistanceResult]:
+            seed: int = 0, h: int | None = None) -> list[DistanceResult]:
     """Distance between a's and b's signatures for each condition x dim x metric, each
     with a resampling p-value and null summary. One result per (condition, dim,
     metric); conditions missing on either side are omitted. distance is the mean
     half-vs-half cross-source distance; see the module docstring for the null."""
     conds = [c for c in conditions if _usable(a, c, topo) and _usable(b, c, topo)]
-    h = {c: int(min(a.conditions[c].sum(), b.conditions[c].sum())) // 2 for c in conds}
-    halves = _split_halves([(a, c, h[c]) for c in conds] + [(b, c, h[c]) for c in conds], topo, seed)
+    hs = {c: (int(min(a.conditions[c].sum(), b.conditions[c].sum())) // 2 if h is None else h) for c in conds}
+    for c, hc in hs.items():
+        if hc < 1 or 2 * hc > int(a.conditions[c].sum()) or 2 * hc > int(b.conditions[c].sum()):
+            raise ValueError(f"h={hc} needs 2h trials in both sides of condition {c!r}")
+    halves = _split_halves([(a, c, hs[c]) for c in conds] + [(b, c, hs[c]) for c in conds], topo, seed)
     results = []
     for cond, ha, hb in zip(conds, halves[:len(conds)], halves[len(conds):]):
         delta = (abs(_raw_diameter(a, cond, topo) - _raw_diameter(b, cond, topo))
@@ -244,21 +318,29 @@ def compare(a: Activity, b: Activity, target: str, conditions: list[str], topo: 
                     distance_residual = (distance / null_mean - (intercept + slope * delta)) * null_mean
                     construction = _residual_construction()
                 results.append(_result(target, cond, d, m, distance, null, p_value,
-                                       distance_residual, construction))
+                                       distance_residual, construction, hs[cond], seed,
+                                       float(ha["within"][m][:, d].mean()),
+                                       float(hb["within"][m][:, d].mean())))
     return results
 
 
-def split_half_null(a: Activity, conditions: list[str], topo: TopoConfig, seed: int = 0) -> list[DistanceResult]:
+def split_half_null(a: Activity, conditions: list[str], topo: TopoConfig, seed: int = 0,
+                    h: int | None = None) -> list[DistanceResult]:
     """Within-source null baseline: distance between random trial halves of `a`, per
     condition x dim x metric, reported with target="self" and its resampling
     distribution (null_mean/null_q95). distance is the null mean; p_value is NaN (a
     baseline, not a test; see the module docstring)."""
     conds = [c for c in conditions if _usable(a, c, topo)]
     results = []
-    halves = _split_halves([(a, c, int(a.conditions[c].sum()) // 2) for c in conds], topo, seed)
+    hs = {c: (int(a.conditions[c].sum()) // 2 if h is None else h) for c in conds}
+    for c, hc in hs.items():
+        if hc < 1 or 2 * hc > int(a.conditions[c].sum()):
+            raise ValueError(f"h={hc} needs 2h trials in condition {c!r}")
+    halves = _split_halves([(a, c, hs[c]) for c in conds], topo, seed)
     for cond, ha in zip(conds, halves):
         for d in range(topo.maxdim + 1):
             for m in topo.metrics:
                 null = ha["within"][m][:, d]
-                results.append(_result("self", cond, d, m, float(null.mean()), null, float("nan")))
+                results.append(_result("self", cond, d, m, float(null.mean()), null, float("nan"),
+                                       h=hs[cond], seed=seed, null_mean_a=float(null.mean())))
     return results

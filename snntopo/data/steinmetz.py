@@ -19,6 +19,8 @@ pooled with parent sessions in the bio-vs-bio yardstick (pseudo-replication).
 """
 from pathlib import Path
 from functools import cache
+import os
+import tempfile
 
 import numpy as np
 import requests
@@ -41,12 +43,26 @@ def _download(part: int) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     osf_id, filename = PARTS[part]
     url = f"https://osf.io/{osf_id}/download?filename={filename}"
-    with requests.get(url, stream=True, timeout=120) as response:
-        response.raise_for_status()
-        with path.open("wb") as out:
-            for chunk in response.iter_content(1 << 20):
-                if chunk:
-                    out.write(chunk)
+    # Never expose a partly transferred archive at the cache path.  Several shards can
+    # discover a missing part together; each writes a private sibling temporary file and
+    # the last successful replace wins, with a complete archive in either case.
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as out:
+            with requests.get(url, stream=True, timeout=120) as response:
+                response.raise_for_status()
+                for chunk in response.iter_content(1 << 20):
+                    if chunk:
+                        out.write(chunk)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(tmp_name, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except FileNotFoundError:
+            pass
+        raise
     return path
 
 
@@ -89,6 +105,39 @@ def _split_session_id(session_id: str) -> tuple[str, str | None]:
     if separator and not suffix:
         raise KeyError(f"Steinmetz composite session id has an empty suffix: {session_id!r}")
     return base, suffix or None
+
+
+def trial_arrays(session_id: str, block: str = "active") -> dict[str, np.ndarray]:
+    """Trial-aligned Steinmetz metadata for recipe selectors.
+
+    This intentionally leaves :func:`load` untouched.  Active trials expose response,
+    contrasts, feedback and timing fields; passive trials expose their passive contrast
+    and any trial-aligned passive fields in the source archive.  Arrays retain the full
+    trial axis, so consumers make boolean masks rather than slicing activities.
+    """
+    base_id, suffix = _split_session_id(session_id)
+    if suffix is not None and suffix != "passive":
+        raise KeyError(f"trial arrays require a base session or /passive, got {session_id!r}")
+    if block not in ("active", "passive"):
+        raise ValueError("block must be 'active' or 'passive'")
+    if suffix == "passive" and block != "passive":
+        raise ValueError("a /passive session requires block='passive'")
+    dat = _session_data(base_id)
+    suffix_text = "_passive" if block == "passive" else ""
+    n_trials = np.asarray(dat["spks" + suffix_text]).shape[1]
+    names = ("contrast_left", "contrast_right", "response", "feedback_time", "feedback_type",
+             "reaction_time", "response_time", "stim_onset", "gocue", "active_trials")
+    out = {}
+    for name in names:
+        key = name + suffix_text
+        if key not in dat:
+            key = name
+        if key in dat:
+            value = np.asarray(dat[key])
+            if value.ndim and value.shape[0] == n_trials:
+                out[name] = value
+    out["block"] = np.full(n_trials, block)
+    return out
 
 
 def load(session_id: str) -> BioSession:
