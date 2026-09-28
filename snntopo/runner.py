@@ -582,7 +582,9 @@ def prereg_hashes(source: str) -> dict:
     """-> {"prereg_hash", "verdict_hash"} of a spec's source text; each None when absent
     (prereg_hash also when PREREG is None). PREREG must be a literal: its constants are what
     bind. verdict_hash covers verdict()'s source and every module-level def or assignment it
-    reaches by name, so a helper it calls can't move a criterion either."""
+    reaches by name, so a helper defined in the spec can't move a criterion either. Imported
+    code (e.g. floor.py) is not bound (design.md): a change to its numerics bumps
+    PIPELINE_VERSION/STATS_VERSION, which changes topo_id/cmp_id."""
     tree = ast.parse(source)
     defs = {}  # module-level name -> its statement (the last one wins, as at import)
     for node in tree.body:
@@ -626,6 +628,8 @@ def binding(spec_path) -> dict | None:
     rel = spec_path.relative_to(Path(top).resolve()).as_posix()
     for commit in (_git(["log", "--reverse", "--format=%H", "--", rel], top) or "").split():
         source = _git(["show", f"{commit}:{rel}"], top)
+        if source is None:
+            continue
         try:
             hashes = prereg_hashes(source)
         except SyntaxError:
