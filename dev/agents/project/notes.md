@@ -18,9 +18,14 @@
 - nodeterm: `send`/`settings` refused ("Agent messaging refused.") even with messaging on; follow-ups = a new node in the group. Codex nodes read "AGENT STATUS UNCONFIRMED" while working: watch panes via `tmux -L node-terminal capture-pane -p -t nt-<node-id>`.
 - Agent briefs must say APPEND to `dev/agents/journal.md`; a codex worker once rewrote it.
 
-## Zoo launch (not yet run; needs the user's OK)
+## Zoo launch (in blocks; each 1-2 h block needs the user's OK)
 - GPU measurement (M7, 200 updates, `sweeps/measure_gpu.py`): N = 2 concurrent trainers. 4 maximizes raw throughput but at n_hidden 256-1024 cuts per-trainer speed sharply for a modest total gain (1024: 3.3 / 6.1 / 8.9 updates/s total at 1 / 2 / 4). Peak 286 MiB per trainer at 1024.
-- So: `snntopo run sweeps/zoo_v0.py --out <dir> --shard i/2` for i in 0, 1, with `SNNTOPO_WORKERS=8` each. zoo_v0 = 972 activities (27 triples x {128, 512} x 3 seeds x {0, 300, 1500} x {task, spontaneous}); zoo_v1 = v0 + 8 smoke-passing configs = 1260, a superset of v0 (same recipe ids). A run dir holds one spec, so launching v1 alone covers v0; running both recomputes v0. Self-nulls only, no pairs. Cost-model estimate: v0 ~7 h, v1 ~9 h serial.
+- Launch zoo_v1 only: it is a superset of v0 (same recipe ids) and a run dir holds one spec. 1260 activities = 210 training groups (one training, 3 checkpoints x 2 regimes). Self-nulls only, no pairs. Expand order is seed-major, so a block that stops early leaves every config at the same seeds.
+- Run dir: `results/runs/20260928-1502-zoo_v1`. It binds the spec path, so always launch from the main checkout (not a worktree). One block = both shards, same budget, same dir; rerun the same lines for the next block:
+  `D=$PWD/results/runs/20260928-1502-zoo_v1; for i in 0 1; do SNNTOPO_WORKERS=8 snntopo run sweeps/zoo_v1.py --out $D --shard $i/2 --budget 65 > $D/logs/block-$(date +%H%M).s$i.out 2>&1 & done; wait`
+  `--budget MIN` starts no new group after MIN minutes (overrun <= one group, ~1.5 min) and records status `budget`; `snntopo status $D` shows what is left.
+- Calibration (20-min block, 2026-09-28 15:02): 15 groups per shard in 20.4/20.7 min = 82 s/group per shard wall (train ~55 s median), vs the cost model's ~158 s serial. All 30 groups were v0 existing triples at seed 0, n 128 and 512 alike (izhikevich trains slowest, ~80 s). 0 failed, 31/180 degenerate. The v1 families (tau_spread, Dale, rate at batch 256, no-go) are not timed yet.
+- So the rest (90 groups per shard) is ~2 h wall: two `--budget 65` blocks. The dry-run budget line uses the uncalibrated cost model and undercounts a block ~2x for the zoo (60 min -> "~23 groups"; measured ~44).
 
 ## Science
 - Never compare a `distance/null_mean` ratio to a bar measured at a different null_mean. Match noise by scanning `split_half_null` on `circle(seed=500)`; matching H0 needs higher noise than H1.
