@@ -35,3 +35,10 @@
 - Steinmetz passive `left`/`right` = stimulus side; use `all` for active-vs-passive. Active `all` = responded trials only (`snntopo/data/steinmetz.py:103-118`).
 - `_CACHE_SIZE = 32` in stats is undersized for 20 references (needs ~60).
 - Verify agent-reported numbers by computing them; prose-reasoned numbers have been wrong.
+
+## Zoo vs bio comparability (found 2026-09-29, not fixed)
+- `zoo_v1` and `bio_core` are not comparable as run. `cmp_id` hashes metrics + n_resamples (`snntopo/dataset.py:81`) and `dataset.load` needs one `cmp_id`, so the two can't be loaded together: zoo `3fed78af4c11ac97` (wasserstein only), bio_core `539728d0ec6e8f09` (wasserstein + bottleneck). `topo_id` matches (`70aaac6c2b35a7ff`).
+- The zoo has no `derive()`, so no R1 robust-count rows (bio's headline measure). `TOPO`/`CMP`/`derive` are copied per spec (`sweeps/bio_core.py:19,90`, `sweeps/zoo_v0.py:6`), so they can drift.
+- Scale differs: `null_mean` depends on unit and trial count. Bio sessions have varied unit counts; the zoo has 128/512 units and 340 eval trials. Ratios are comparable only at matched null_mean (spec.md Validity).
+- Proposed fix (user wants comparability by construction, not patched rows): one shared measurement file (`TOPO`, `CMP`, `h` rule, `derive`) loaded by path by both specs, a test that both resolve to the same `topo_id`/`cmp_id`, then a zoo rerun (~3 h in blocks, needs the user's OK; keep the old dir). Open: subsample both sides to common (units x trials) scales, or keep native scales with null_mean as a covariate. Settle the full measurement list first so the zoo reruns once.
+- Zoo splits: 3 seeds per config, self-nulls only, no pairs. The training seed is the unit for any test, not the activity.
