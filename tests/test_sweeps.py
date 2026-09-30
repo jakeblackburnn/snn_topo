@@ -42,3 +42,37 @@ def test_zoo_v1_runs_seed_major_so_budget_blocks_are_balanced():
         group_seeds.setdefault(runner.group_key(recipe), recipe["train"]["seed"])
     seeds = list(group_seeds.values())
     assert len(seeds) == 210 and seeds == sorted(seeds) and seeds.count(0) == 70
+
+
+def test_grid_specs_share_one_measurement_and_subsample_every_activity():
+    from snntopo import dataset, grid
+    bio, zoo = spec("bio_grid.py"), spec("zoo_grid.py")
+    for module in (bio, zoo):
+        assert module.derive is grid.derive
+    assert dataset.topo_id(bio.TOPO) == dataset.topo_id(zoo.TOPO)
+    assert (dataset.cmp_id(bio.CMP["metrics"], bio.CMP["n_resamples"])
+            == dataset.cmp_id(zoo.CMP["metrics"], zoo.CMP["n_resamples"]))
+    recipes, pairs = zoo.expand(False)
+    assert len(recipes) == 630 * len(grid.CELLS) and not pairs
+    assert {r["eval"]["regime"] for r in recipes} == {"task"}
+    assert {(r["subsample"]["units"], r["subsample"]["trials"]) for r in recipes} == set(grid.CELLS)
+    mini, _ = zoo.expand(True)
+    assert len(mini) == 3 * len(grid.CELLS) and {r["eval"]["n_eval"] for r in mini} == {340}
+
+
+def test_bio_grid_takes_only_cells_a_population_can_supply(monkeypatch):
+    import numpy as np
+    from snntopo.data import steinmetz
+    monkeypatch.setattr(steinmetz, "list_sessions", lambda: ["0"])
+    # whole = 140 units, VISp 80, CA1 60
+    monkeypatch.setattr(steinmetz, "_session_data", lambda session: {
+        "brain_area": np.array(["VISp"] * 80 + ["CA1"] * 60)})
+    # responded 100, no-go 60, passive 120
+    monkeypatch.setattr(steinmetz, "trial_arrays", lambda session, block: {
+        "block": np.array([block] * 120), "response": np.array([1] * 100 + [0] * 60)})
+    recipes, _ = spec("bio_grid.py").expand()
+    cells = {(r["trials"]["select"], r["units"]["area"], r["subsample"]["units"]) for r in recipes}
+    # (50, 56) for every population and selection; (128, 100) only for the 140-unit whole
+    # population with >= 100 trials (responded, passive)
+    assert cells == ({(s, a, 50) for s in ("responded", "all", "nogo") for a in (None, "VISp", "CA1")}
+                     | {("responded", None, 128), ("all", None, 128)})
