@@ -130,3 +130,23 @@ None blocking.
    since committing and the done-when checks need them.
 2. The `WINDOW` comment may be wrong (`reading.md`, finding 3). The builder reports what the
    code does and flags the comment; it doesn't settle it.
+
+## Build notes (builder, 2026-10-09)
+
+Built on `learn-docs`, `7260184..e97caef`. Assumptions and gaps:
+- The `06-literature.md` box is ticked with a caveat: Gardner 2022 was read through the
+  fetcher's summary of the Europe PMC full text, not directly. Section and figure names and
+  quoted phrases are as that summary returned them; the point count of their cloud is
+  unconfirmed and the docs say so.
+- `08-goals.md` has six options. The seventh seed (a different instrument beside TDA) is a
+  short "Not developed here" paragraph, since the outline allows 4-6.
+- Compute costs in 08 are quoted from the repo; coding and analysis hours are not estimated
+  anywhere in the repo, so 08 doesn't estimate them.
+- Numbers that aren't experiment results (session and trial counts, download sizes) are
+  quoted from `project/context/research.md` and the brainstorm with their source. The
+  zoo-vs-bio noise figures from the 09-30 journal are described in words only, since they
+  aren't in `experiments.md`.
+- 01's hand-worked numbers (hexagon, figure-8, nudged point, toy distances) are the
+  builder's own arithmetic on toy points and are labelled as such.
+- Terms first needed before their planned document are defined where first used
+  (`glossary.md` labels follow the docs, not `documents.md`'s lists).
