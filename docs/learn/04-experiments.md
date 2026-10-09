@@ -234,7 +234,7 @@ E16 is meant to take out the movement confound: compare *no-go* trials (the mous
 task but holds still) with passive trials. Its spec exists and has only been run in
 exploratory mini mode (`experiments/e16_nogo.py:1-3, 40`). It is blocked on a choice that
 was left to you: which trials make up the no-go population. The data constrain it awkwardly.
-Passive blocks contain no zero-contrast trials, so the clean "held still, no stimulus"
+Passive blocks contain no trials without a stimulus, so the clean "held still, no stimulus"
 trials (31 to 71 per session) have no passive counterpart, and the "held still despite a
 visible stimulus" trials (9 to 84 per session) might be lapses of attention rather than
 engaged withholding (`e16_nogo.py:11-22`). Four options are written out in
@@ -283,8 +283,8 @@ Besides the experiments, two large sweeps have been run and stored as rows
 - **`bio_core`**: all 13 Steinmetz sessions × three trial populations (active responded,
   passive, no-go) × the whole session and each region with at least 50 units, with
   signatures, nulls and robust counts.
-- **`zoo_v1`**: 1260 SNN activities across model families, sizes, training seeds,
-  checkpoints and regimes. It finished on 2026-09-28 with 1260 of 1260 done and 0 failed
+- **`zoo_v1`**: 1260 SNN activities across model families, sizes, repeated trainings,
+  stages of training and input conditions. It finished on 2026-09-28 with 1260 of 1260 done and 0 failed
   (`dev/agents/project/notes.md`, "Zoo launch"). `spec.md` still lists it as "dry-run
   only"; that line is out of date. **Nobody has analysed it.**
 

@@ -5,7 +5,7 @@ introduces it (where the full explanation and an example are). Alphabetical.
 
 | term | meaning | introduced in |
 |---|---|---|
-| active vs passive block | The two parts of a Steinmetz session. In the active block the mouse does the task; in the passive block that follows, the same stimuli are shown and nothing is asked of it. | 03 |
+| active vs passive block | The two parts of a Steinmetz session. In the active block the mouse does the task; in the passive block that follows, the same stimuli are shown and nothing is asked of it. | 02 |
 | activity | An array of spike counts with shape (neurons, trials, time bins), plus named subsets of trials. The one input the pipeline accepts, from a brain or a model. | 02 |
 | activity id | A hash of the recipe that produced an activity. The same recipe always gives the same id. | 02 |
 | arm | One set of synthetic comparisons with a known answer, used for calibration. A: same shape, same placement. B: same shape, different placement. C: circle vs figure-8. | 03 |
@@ -27,7 +27,7 @@ introduces it (where the full explanation and an example are). Alphabetical.
 | filtration | A sequence of nested shapes, each containing the last, obtained by growing the scale. | 01 |
 | floor | The largest ratio that a change of geometry alone produces at a given noise level (arm B's 95th percentile). A real result has to clear it. | 03 |
 | geometry vs topology | Topology: how many pieces and holes, unchanged by stretching. Geometry: sizes, distances and proportions, which stretching changes. A persistence diagram contains both. | 01 |
-| go / no-go | A task trial where the right answer is to act (go) or to hold still (no-go). In Steinmetz, no-go is correct when no stimulus is shown. | 05 |
+| go / no-go | A task trial where the right answer is to act (go) or to hold still (no-go). In Steinmetz, no-go is correct when no stimulus is shown. | 04 |
 | `h` | The number of trials in each half of a split-half. Both sides of a comparison always use the same `h`. | 03 |
 | homology (`H0`, `H1`) | The machinery that counts holes by dimension. `H0` counts pieces, `H1` counts loops, `H2` counts enclosed cavities. | 01 |
 | leaky integrate-and-fire (LIF) neuron | The simplest spiking neuron model: a voltage that sums its input, leaks toward zero, and emits a spike and resets when it crosses a threshold. | 05 |

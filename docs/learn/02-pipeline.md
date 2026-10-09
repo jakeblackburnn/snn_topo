@@ -85,7 +85,8 @@ The example is the session the project has used most: session 11 of the Steinmet
 recordings (document 05 describes the experiment). The facts used below:
 
 - 698 units (E13).
-- 340 trials in the task block, 110 in the passive block that follows it
+- 340 trials in the *active block*, where the mouse performs a task, and 110 in the
+  *passive block* that follows, where stimuli are shown and nothing is asked of it
   (`snntopo/data/steinmetz.py:9-12`).
 - Of the 340 task trials, 276 are ones where the mouse responded (E13). The loader defines
   the task block's `all` condition as exactly those: trials with a left or right response
@@ -261,7 +262,7 @@ The project is built so that every number can be traced to exactly what produced
 
 A **recipe** is a small dictionary that names one activity completely, with every number
 filled in: which dataset, which session, which block, which trials, which units; or which
-network, which training seed, which checkpoint (`docs/architecture.md`, opening section).
+network, how it was trained and when it was saved (`docs/architecture.md`, opening section).
 The recipe is turned into text in a fixed way and hashed, and that hash is the **activity
 id** (`snntopo/dataset.py:68-70`). The same recipe always produces the same id, so the same
 activity always lands on the same rows.
@@ -285,7 +286,7 @@ Two more ids guard against mixing things that shouldn't be mixed:
   smoothing window, the maximum homology dimension, the minimum trial count, and a version
   number that is bumped by hand whenever the pipeline's arithmetic changes
   (`snntopo/dataset.py:73-78`).
-- `cmp_id` is the same idea for comparisons: which distances, how many resamples, and a
+- `cmp_id` is the same idea for comparisons: which distances, how many random splits (document 03), and a
   version number (`dataset.py:81-84`).
 
 The loader refuses to combine rows with different ids (`docs/architecture.md`, "Rows"). The

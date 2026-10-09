@@ -55,7 +55,7 @@ Fix a scale `t`. Build a shape out of the points like this:
   (and likewise solid tetrahedra for four points, and so on).
 
 A shape built from points, edges, filled triangles and their higher-dimensional cousins is a
-**simplicial complex**. The specific recipe above, where a triangle is filled the moment
+**simplicial complex**. The specific rule above, where a triangle is filled the moment
 its three edges exist, is the **Vietoris-Rips complex** (Rips for short). Its appeal is that
 it needs nothing but the table of pairwise distances.
 
@@ -190,7 +190,7 @@ before measuring any distance (`snntopo/topology/stats.py:127-130`).
 The word "persistent" is the whole idea. A single choice of `t` gives one snapshot, and you
 can't tell a real hole from an accident of that particular `t`. A long bar says the feature
 is there across a wide range of scales. A short bar says it existed only briefly, which is
-what sampling noise produces: jitter the points and tiny loops appear and vanish near the
+what noise in the data produces: jitter the points and tiny loops appear and vanish near the
 diagonal.
 
 ## 7. A second shape: the figure-8
@@ -210,8 +210,8 @@ loop.) At `t` = √3 each ring fills in exactly as before. So:
 One ring gives one `H1` bar. A figure-8 gives two. That difference in the diagram is a
 difference in topology, and it is the "known answer" this project uses to check itself: its
 synthetic test shapes are a circle and a figure-8 made of two unit circles meeting at the
-origin (`snntopo/generators.py:62-84`), and one of its calibration arms compares exactly
-this pair (`snntopo/floor.py:89-109`, arm C). You'll meet the arms in document 03.
+origin (`snntopo/generators.py:62-84`), and one of its calibration checks compares exactly
+this pair (`snntopo/floor.py:89-109`). Document 03 covers it.
 
 ## 8. Comparing two diagrams
 
@@ -266,7 +266,7 @@ moment, so the `H1` feature is born at 1.054 instead of 1. At `t` = 1.732 the ed
 | `H1` (birth, death) | (1, 1.732) | (1.054, 1.732) |
 
 The point moved 0.1. The diagram moved 0.054, well inside the promised 0.2. Small noise in,
-small change out. Without stability, a diagram computed from noisy spike data would mean
+small change out. Without stability, a diagram computed from noisy recordings would mean
 nothing.
 
 Stability cuts both ways, though: it promises the diagram won't change *much*, and it also
