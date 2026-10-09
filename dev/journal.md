@@ -12,3 +12,8 @@ I want you to address these concerns with a 2-day intensive learning plan and do
 for me to read through and with links to the right articles and papers.
 
 this session, create a context packet for the document packet, not creating the doc packet itself, but planning it out
+
+## Results · 2026-10-09 15:38 (agent)
+1. Context packet for the 2-day learning plan: done, `dev/agents/project/learning/` (`index.md`, `documents.md`, `reading.md`). It plans ten docs under `docs/learn/`: day 1 TDA basics, the pipeline, noise and floor, E1-E18; day 2 brains and SNNs, three guided papers (Curto 2017, Gardner 2022, Maheswaranathan 2019), what the project really tests, goal options.
+2. Not done, by design: the documents themselves. Next: `/project-builder learning`.
+3. Moved to `main`; `grid-measure` kept as is (parked, unmerged).

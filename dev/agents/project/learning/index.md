@@ -18,8 +18,8 @@ brain regions and trial structure are explained from zero.
 
 ## Scope
 
-**In:** ten markdown files (nine numbered documents and a glossary) under `docs/learn/` (`documents.md` lists them), written from the
-repo and from the papers in `reading.md`.
+**In:** ten markdown files (nine numbered documents and a glossary) under `docs/learn/`
+(`documents.md` lists them), written from the repo and from the papers in `reading.md`.
 
 **Out:**
 - Any reframe decision: new goals, new experiments, code changes, edits to `dev/main.md`.
@@ -126,11 +126,7 @@ ASCII diagrams, tables only for things that are tables.
 
 None blocking.
 
-1. This packet is uncommitted on `grid-measure`; `/devlog` would commit it there, and
-   `learn-docs` branches from `main`. The builder can read it from the main checkout's working
-   tree or with `git show grid-measure:dev/agents/project/learning/<file>`. Cleaner: commit the
-   `dev/` docs to `main` first. Jake's call at `/devlog`.
-2. "No runs" is read here as "no project code"; `git`, `grep` and `wc` are assumed allowed,
+1. "No runs" is read here as "no project code"; `git`, `grep` and `wc` are assumed allowed,
    since committing and the done-when checks need them.
-3. The `WINDOW` comment may be wrong (`reading.md`, finding 3). The builder reports what the
+2. The `WINDOW` comment may be wrong (`reading.md`, finding 3). The builder reports what the
    code does and flags the comment; it doesn't settle it.
