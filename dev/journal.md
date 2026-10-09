@@ -1,8 +1,14 @@
-# SNN topo Sept 28 2026
+# SNN Topo Journal
 
-last session we set up and ran stuff up to the model zoo sweeps. before running these, I'd like to segregate
-them into more bite-sized experiments, and/or ones that can be budgeted with time.
-todays goal is to set up a way to run the zoo in blocks of roughly 1-2 hour runs each.
+## Oct 9 2026
 
-## Results · 2026-09-28 18:48 (agent)
-1. Run the zoo in 1-2 h blocks: done. `snntopo run --budget MIN` plus a seed-major zoo order (`fe4e8cc`). zoo_v1 finished in 4 blocks (20/65/36/19 min, ~3 h wall): `results/runs/20260928-1502-zoo_v1`, 1260/1260, 0 failed. Launch recipe in `dev/agents/project/notes.md` "Zoo launch".
+SNN Topo has been a good interesting experiment thingy, but I still dont really understand it, and
+I want to kick off a re-frame of the project, starting with extensive research.
+I also want to clarify the goals of the project and how to attack those goals by doing some brainstorming,
+and ultimately I wanna learn exactly how these experiments really work, and what types of things its
+really testing. and I want to read some of the relevant research literature as well.
+
+I want you to address these concerns with a 2-day intensive learning plan and document packet
+for me to read through and with links to the right articles and papers.
+
+this session, create a context packet for the document packet, not creating the doc packet itself, but planning it out
