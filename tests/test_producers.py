@@ -175,3 +175,27 @@ def test_bio_control_promotes_its_source_session_columns():
     assert {field: control_row[field] for field in ("dataset", "session", "subject")} == {
         field: source_row[field] for field in ("dataset", "session", "subject")}
     assert control_row["independence_group"] == "steinmetz:11"
+
+
+def test_subsample_draws_units_and_all_trials_deterministically():
+    rng = np.random.default_rng(0)
+    spikes = rng.poisson(1.0, (20, 30, 8)).astype(np.float32)
+    all_ = np.ones(30, dtype=bool)
+    all_[:5] = False  # trials outside `all` must never be drawn
+    left = np.zeros(30, dtype=bool)
+    left[::2] = True
+    activity = Activity(spikes, {"all": all_, "left": left & all_}, slice(0, 8), 1.0)
+    spec = {"units": 7, "trials": 12, "seed": 3}
+    a, b = producers.subsample(activity, spec), producers.subsample(activity, spec)
+    assert a.spikes.shape == (7, 30, 8) and np.array_equal(a.spikes, b.spikes)
+    assert a.conditions["all"].sum() == 12 and not a.conditions["all"][:5].any()
+    assert np.array_equal(a.conditions["all"], b.conditions["all"])
+    assert np.array_equal(a.conditions["left"], left & a.conditions["all"])
+    with pytest.raises(ValueError, match="cannot subsample"):
+        producers.subsample(activity, {"units": 7, "trials": 26, "seed": 0})
+
+
+def test_subsample_recipe_key_applies_after_production():
+    recipe, activity, row = _one({**SYNTHETIC, "subsample": {"units": 10, "trials": 8, "seed": 0}})
+    assert row["status"] == "ok" and row["n_units"] == 10
+    assert activity.conditions["all"].sum() == 8

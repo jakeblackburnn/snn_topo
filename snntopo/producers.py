@@ -105,6 +105,21 @@ def _subset(activity: Activity, mask: np.ndarray, unit_indices: np.ndarray | Non
     return Activity(spikes, conditions, activity.window, activity.bin_size_s)
 
 
+def subsample(activity: Activity, spec: dict) -> Activity:
+    """`units` neurons and `trials` of the `all` trials, one seeded draw: puts bio and SNN
+    activities at the same (units x trials) scale, since the split-half null depends on both."""
+    rng = np.random.default_rng(spec["seed"])
+    n_units, n_trials = int(spec["units"]), int(spec["trials"])
+    pool = np.flatnonzero(activity.conditions["all"])
+    if n_units > activity.spikes.shape[0] or n_trials > len(pool):
+        raise ValueError(f"cannot subsample {n_units} units x {n_trials} trials "
+                         f"from {activity.spikes.shape[0]} x {len(pool)}")
+    units = np.sort(rng.choice(activity.spikes.shape[0], n_units, replace=False))
+    mask = np.zeros(activity.spikes.shape[1], dtype=bool)
+    mask[rng.choice(pool, n_trials, replace=False)] = True
+    return _subset(activity, mask, units)
+
+
 def bio_activity(recipe: dict) -> tuple[Activity, dict]:
     if recipe.get("dataset") != "steinmetz":
         raise NotImplementedError(f"bio dataset {recipe.get('dataset')!r} is not implemented")
@@ -357,6 +372,8 @@ def produce(recipes: list[dict], persist_weights: bool = False) -> Iterator[tupl
             if isinstance(state, Exception):
                 raise state
             activity, meta, accuracy = _produce_one(recipe, state)
+            if recipe.get("subsample") is not None:
+                activity = subsample(activity, recipe["subsample"])
             if state and persist_weights:
                 checkpoint = 0 if recipe.get("kind") == "control" and recipe.get("surrogate") == "untrained" else int(source.get("checkpoint", 0))
                 meta["weights"] = state[0].get("weight_keys", {}).get(checkpoint)
