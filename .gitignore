@@ -5,3 +5,4 @@ __pycache__/
 snntopo.egg-info/
 results/
 /data/
+.nodeterm
