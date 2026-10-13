@@ -26,3 +26,10 @@ own versions.
 3. Poster materials in `docs/poster/`: start with `core-summary.md`; also `results.md`, `references.md`, `datasets.md`, `model-zoo.md`, `pipeline.md`.
 4. Everything after the `grid-measure` merge is on branch `poster-results`, not `main`. Say the word to merge.
 5. Next: check the † citations in `references.md`, polish the three figures, write the poster text.
+
+## Results · 2026-10-13 18:53 (agent)
+1. `poster-results` is merged into `main`; your doc `docs/snn_topo.md` is here and untouched.
+2. Response to the doc is saved in `dev/agents/project/2026-10-13-doc-response.md`: 23 errors by line, a proposed structure, content notes. The big ones: the doc describes a brain-vs-model distance and a significance test that the results don't use, and "150 trials" should be 150 time bins.
+3. References: 9 chosen for the poster, one per claim, 8 checked against the source (Gao 2017 still unread). All 9 old † entries were right. "39 sessions in 10 mice" confirmed. Record in `dev/workshop/poster-references.md`.
+4. Next: confirm the change list at the bottom of that record so I can rewrite `docs/poster/references.md`; then workshop the Models and Results sections.
+

@@ -51,3 +51,9 @@
 - Steinmetz window: `WINDOW = slice(50, 200)` is 0 to 1.5 s from stimulus onset (`stim_onset` = 0.5 s in the archive, checked on session 11). The comment at `snntopo/data/steinmetz.py:32` ("0.5--2.0 s after the stimulus") is wrong and unfixed.
 - In `snn_vs_bio` tables bio `select == "all"` is the passive block and `"responded"` is the engaged one. Pooling them hides the engaged/passive gap (robust loops 8/39 vs 1/39 at 128x100).
 - Wiring names are random, small_world, scale_free, modular_hub; "modular" alone is an architecture.
+
+## Poster writing (2026-10-13)
+- `docs/snn_topo.md` is Jake's poster doc. Never edit it; suggested wording goes in chat or agent files. The agent's vetting of it is `dev/agents/project/2026-10-13-doc-response.md`.
+- `pull.rebase=true` here: a pull refuses over any uncommitted file. With Jake's `dev/journal.md` dirty, `git checkout main` also fails when the branches differ in it; merge in a throwaway `git worktree` instead.
+- Reading papers: nature.com redirects WebFetch to a login; bioRxiv rate-limits (HTTP 429). Europe PMC full text works with curl: `https://www.ebi.ac.uk/europepmc/webservices/rest/<PMCID>/fullTextXML`. WebFetch returns a small model's summary, so it does not count as reading a paper.
+- Reference checks record the page each entry was checked against: `dev/workshop/poster-references.md`.

@@ -50,3 +50,34 @@
 - A workshop file exists with the first settled items on references.
 **Open:**
 1. Path of the doc once pulled (Jake names it).
+
+## Close · 2026-10-13 18:53 · 1c6713e..8bdfa83
+- **changed:** `poster-results` merged into `main` (`--no-ff`, branch kept); checkout moved to `main`. Jake pulled his poster doc `docs/snn_topo.md` (`dbe86d0`).
+- **changed:** `dev/agents/project/2026-10-13-doc-response.md` (new): the vetting of the doc (23 errors, a structure, content notes), given in chat and saved so it survives the session.
+- **changed:** `dev/workshop/poster-references.md` (new): all 7 problems settled, status open because the change list was never confirmed. Nothing in `docs/` was edited.
+- **changed:** `dev/agents/project/notes.md`: "Poster writing" section.
+- **why:** Jake writes poster content tomorrow; he needs the doc's errors named against our results and a reference list he can trust.
+- **verified:** `pytest -q` → 196 passed; `pytest -q -m data` → 13 passed, on the tree that was merged. `git diff main poster-results` empty after the merge. `git status --short docs/snn_topo.md` empty. References: 8 of the 9 poster references and all 9 old † entries checked against a source page (listed in the workshop record); Gardner 2022 read from the Europe PMC full text.
+- **not verified:** Gao et al. 2017 beyond title, authors and DOI (bioRxiv 429); the Eshraghian DOI; the ~20 references outside the poster set; the doc's "0 or 1 spikes per 10 ms bin".
+- `13352d9` Merge poster-results: zoo/bio overview scripts, snn_vs_bio figures, docs/poster materials
+- `dbe86d0` Add snn topo poster material (Jake)
+- `b92d65c` gitignore: .nodeterm
+- `422e50a` notes: Oct 13 part 2, collate poster materials, doc incoming
+- `8bdfa83` journal: poster-results merged to main, doc response task framed
+
+### Next
+1. Jake confirms the change list in `dev/workshop/poster-references.md` ("Changes applied"); then apply it to `docs/poster/references.md`, `datasets.md:43-44` and `docs/learn/06-literature.md`, and close the workshop.
+2. Read Gao et al. 2017 and confirm it defines participation ratio.
+3. Workshop the next content resource: Jake's doc has empty Models and Results sections; `docs/poster/model-zoo.md` and `core-summary.md` hold the material.
+4. Draw the Rips thickening and torus figures; polish `snn_vs_bio/main.png`, `bio_overview/e18_engagement.png`, a one-row cut of `zoo_overview/families_ckpt1500.png`.
+5. Still open from before: `poster-results`, `grid-measure`, `zoo-blocks` branch cleanup, `stash@{0}`, E16 population.
+### Traps
+- `main` is 3 commits ahead of `origin/main` and never pushed by the agent; Jake pushes.
+- The `/devlog` gather script reported the journal as "unchanged since last commit" because it was committed mid-session (`8bdfa83`) to unblock Jake's pull. The Close was appended, not rewritten.
+- The poster's brain-vs-model comparison is not a diagram distance and has no significance test; Jake's doc currently says otherwise (`docs/snn_topo.md:97-108`).
+- Gardner's method is not ours: 1,200 single time points up to H2, against a 150-point trial-averaged path up to H1.
+- The traps in the Start section above (noise confound, no-go n, session as replicate, stale `spec.md`) all still hold.
+### Pointers
+- `dev/agents/project/2026-10-13-doc-response.md` (errors by line), `dev/workshop/poster-references.md` (the nine references, sources, pending change list).
+- `docs/poster/core-summary.md:87-103` (what goes on the poster), `docs/poster/results.md` (numbers and caveats).
+
