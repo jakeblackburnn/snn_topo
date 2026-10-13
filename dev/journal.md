@@ -26,3 +26,7 @@ Logged late: the Oct 9 part 2 session was never closed.
 1. Document packet: done, `docs/learn/` on branch `learn-docs` (ten files, ~21.6k words). Start at `docs/learn/00-start-here.md`.
 2. Caveat: the Gardner 2022 guide in `06-literature.md` was written from a summary of the full text, not the paper itself.
 3. Next: you read it (2 days, 4 h each), then `/brainstorm` from `docs/learn/08-goals.md`. `learn-docs` isn't merged to `main`; say the word.
+
+## Results · 2026-10-13 12:47 (agent), session 2
+1. `learn-docs` merged into `main` (`2842f98`) and deleted. `docs/learn/` is on `main`.
+2. Next: your reading from `docs/learn/00-start-here.md`, then `/brainstorm` from `docs/learn/08-goals.md`.
