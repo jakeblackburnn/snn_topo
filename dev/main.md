@@ -1,14 +1,14 @@
 # SNN Topo
-
 exploratory research project discovering the topology of SNNs and comparing to that of brains
 
 general framing: set up flexible experimental workspace for gathering all sorts of topolgical
-data analysis results from all sorts of SNNs.
+data analysis results from all sorts of SNNs. extract topological signatures of available animal brain data for comparison.
 
-extract topological signatures of available animal brain data for comparison.
+## Motivation
+Upcoming poster session, need deliverable results asap.
 
 ## deliverables
-
-huge set of topolgical data on variety of SNNs
+huge set of topolgical data on variety of SNNs, with detailed and expressive figures.
 concrete tda results for brain topology and comparison metrics
-poster (a doc should compile poster content) covering key results about SNN topology relative to brains
+poster (a doc should compile poster content) covering key results about SNN topology relative to brains,
+and detail the key figures.
