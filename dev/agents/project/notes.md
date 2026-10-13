@@ -32,7 +32,7 @@
 - Never compare a `distance/null_mean` ratio to a bar measured at a different null_mean. Match noise by scanning `split_half_null` on `circle(seed=500)`; matching H0 needs higher noise than H1.
 - Generators with different `seed` differ in embedding too; null pairs share `mixing_seed` (`snntopo/generators.py:46`).
 - `compare` tests "same signature" and signatures include geometry: significant ≠ different topology.
-- Steinmetz passive `left`/`right` = stimulus side; use `all` for active-vs-passive. Active `all` = responded trials only (`snntopo/data/steinmetz.py:103-118`).
+- Steinmetz passive `left`/`right` = stimulus side; use `all` for active-vs-passive. Active `all` = responded trials only (`snntopo/data/steinmetz.py:143-171`).
 - `_CACHE_SIZE = 32` in stats is undersized for 20 references (needs ~60).
 - Verify agent-reported numbers by computing them; prose-reasoned numbers have been wrong.
 
