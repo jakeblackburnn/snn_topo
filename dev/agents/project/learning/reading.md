@@ -13,6 +13,13 @@ can't. Nothing here is listed from memory alone.
 | Gardner et al., *Toroidal topology of population activity in grid cells*, Nature 2022 | https://www.nature.com/articles/s41586-021-04268-7 | Crossref; licence CC BY 4.0 | 60 | the reference TDA result on population recordings, and the Gardner torus named in the brainstorms as a known-answer dataset |
 | Maheswaranathan et al., *Universality and individuality in neural dynamics across large populations of recurrent networks* (2019) | https://arxiv.org/abs/1907.08549 | fetched | 40 | thousands of trained RNNs: geometry depends on architecture, the topological structure of the dynamics doesn't |
 
+Added by the builder, 2026-10-09:
+- Gardner full text, open-access copy on Europe PMC (PMC8810387):
+  https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8810387/fullTextXML (opened; read
+  through the fetcher's summary, not directly). The human page
+  `europepmc.org/article/PMC/PMC8810387` returned 403 to the fetcher and is not linked in the docs.
+- Curto and Maheswaranathan were read in full from `arxiv.org/pdf/<id>` (pages 1-16 and 1-10).
+
 ## Optional, by block
 
 **Persistent homology**
@@ -79,6 +86,16 @@ can't. Nothing here is listed from memory alone.
    session). The contrast drawn in `documents.md` (many time points on a manifold vs one
    averaged trajectory) is the packet author's recollection. The builder confirms it from the
    paper before writing it into 06 or 07, or leaves it out.
+   **Builder, 2026-10-09:** partly confirmed from the Europe PMC full text: a point is "the
+   population state at one time point", six principal components, four long bars, 1,000
+   shuffles. The number of points in their cloud was not confirmed; 06 and 07 say so.
+7. **Maheswaranathan's "topology" is not persistent homology** (builder, 2026-10-09): it is
+   the graph of fixed points and transitions between them (their §2.3, Fig. 1e). 06 warns
+   about the word.
+8. **Stale line numbers in this packet** (builder, 2026-10-09): `documents.md` cites
+   `snntopo/data/steinmetz.py:103-118` for how trials become conditions; that code is now at
+   `steinmetz.py:143-171`. It also cites `dev/agents/journal.md:19`, which a new session
+   overwrote; the text is at `git show 1a0862b:dev/agents/journal.md`, lines 18-19.
 
 ## Stale sources
 

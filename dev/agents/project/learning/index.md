@@ -40,28 +40,28 @@ brain regions and trial structure are explained from zero.
 
 ## Done when
 
-- [ ] `ls docs/learn/` shows exactly: `00-start-here.md`, `01-tda-basics.md`, `02-pipeline.md`,
+- [x] `ls docs/learn/` shows exactly: `00-start-here.md`, `01-tda-basics.md`, `02-pipeline.md`,
       `03-noise-and-floor.md`, `04-experiments.md`, `05-brains-and-snns.md`, `06-literature.md`,
       `07-what-it-tests.md`, `08-goals.md`, `glossary.md`.
-- [ ] `wc -w docs/learn/0*.md` is within each document's word budget in `documents.md` (±15%).
-- [ ] `00-start-here.md` holds the two-day schedule in timed blocks; the blocks of each day sum
+- [x] `wc -w docs/learn/0*.md` is within each document's word budget in `documents.md` (±15%).
+- [x] `00-start-here.md` holds the two-day schedule in timed blocks; the blocks of each day sum
       to 240 minutes.
-- [ ] Every term in `glossary.md` is defined in plain words in the document that first uses it,
+- [x] Every term in `glossary.md` is defined in plain words in the document that first uses it,
       and each of documents 01-05 contains one worked example taken from this repo (a named
       session, run dir, generator or E-number).
-- [ ] Every claim about this project carries a `path:line`, a D-number or an E-number.
+- [x] Every claim about this project carries a `path:line`, a D-number or an E-number.
       `grep -c 'E[0-9]\|D[0-9]\|\.py:' docs/learn/0[2-5]*.md` is nonzero for each file, and a
       spot check of 10 citations resolves on `main`.
-- [ ] Every number about a result is quoted from `dev/agents/experiments.md` with its E-number.
+- [x] Every number about a result is quoted from `dev/agents/experiments.md` with its E-number.
       None is computed, rounded differently, or recalled.
-- [ ] Every URL in `docs/learn/` appears in `reading.md` or was opened by the builder and added
+- [x] Every URL in `docs/learn/` appears in `reading.md` or was opened by the builder and added
       to it with the date: `grep -oh 'https\?://[^) >]*' docs/learn/*.md | sort -u` against
       `reading.md`.
-- [ ] `06-literature.md` gives, for each of the three core papers, what to read, what to skip
+- [x] `06-literature.md` gives, for each of the three core papers, what to read, what to skip
       and three questions to answer while reading, written from the paper's own text.
-- [ ] `08-goals.md` lists 4-6 candidate goals, each with the question it answers, what exists
+- [x] `08-goals.md` lists 4-6 candidate goals, each with the question it answers, what exists
       toward it, the cost and a done-when. It contains no recommendation and no ranking.
-- [ ] `git diff --stat main learn-docs` touches only `docs/learn/` and the builder's own
+- [x] `git diff --stat main learn-docs` touches only `docs/learn/` and the builder's own
       `dev/agents/` files. `git status` on `grid-measure` is unchanged by the build.
 
 ## Roadmap
@@ -70,13 +70,13 @@ One commit per milestone on `learn-docs`. Each check is a read-only command.
 
 | # | milestone | check |
 |---|---|---|
-| M0 | `learn-docs` branched from `main`; `glossary.md` started with the terms listed in `documents.md` | `git branch --show-current` |
-| M1 | `01-tda-basics.md`, `02-pipeline.md` | word counts; the worked 6-point example is complete by hand; every pipeline step cites `path:line` |
-| M2 | `03-noise-and-floor.md`, `04-experiments.md` | every E1-E18 entry appears once in 04 with its recorded verdict; numbers match `experiments.md` |
-| M3 | `05-brains-and-snns.md`, `07-what-it-tests.md` | 07 has no claim that 02-05 don't support (each line points back to a section) |
-| M4 | `06-literature.md` | the three papers were opened this session; guidance quotes real section or figure names |
-| M5 | `08-goals.md` | 4-6 options, no recommendation; each option cites its source in the repo or in `reading.md` |
-| M6 | `00-start-here.md`, glossary complete, link and citation pass | every done-when box above |
+| M0 ✓ | `learn-docs` branched from `main`; `glossary.md` started with the terms listed in `documents.md` | `git branch --show-current` |
+| M1 ✓ | `01-tda-basics.md`, `02-pipeline.md` | word counts; the worked 6-point example is complete by hand; every pipeline step cites `path:line` |
+| M2 ✓ | `03-noise-and-floor.md`, `04-experiments.md` | every E1-E18 entry appears once in 04 with its recorded verdict; numbers match `experiments.md` |
+| M3 ✓ | `05-brains-and-snns.md`, `07-what-it-tests.md` | 07 has no claim that 02-05 don't support (each line points back to a section) |
+| M4 ✓ | `06-literature.md` | the three papers were opened this session; guidance quotes real section or figure names |
+| M5 ✓ | `08-goals.md` | 4-6 options, no recommendation; each option cites its source in the repo or in `reading.md` |
+| M6 ✓ | `00-start-here.md`, glossary complete, link and citation pass | every done-when box above |
 
 ## Build process
 
@@ -130,3 +130,23 @@ None blocking.
    since committing and the done-when checks need them.
 2. The `WINDOW` comment may be wrong (`reading.md`, finding 3). The builder reports what the
    code does and flags the comment; it doesn't settle it.
+
+## Build notes (builder, 2026-10-09)
+
+Built on `learn-docs`, `7260184..e97caef`. Assumptions and gaps:
+- The `06-literature.md` box is ticked with a caveat: Gardner 2022 was read through the
+  fetcher's summary of the Europe PMC full text, not directly. Section and figure names and
+  quoted phrases are as that summary returned them; the point count of their cloud is
+  unconfirmed and the docs say so.
+- `08-goals.md` has six options. The seventh seed (a different instrument beside TDA) is a
+  short "Not developed here" paragraph, since the outline allows 4-6.
+- Compute costs in 08 are quoted from the repo; coding and analysis hours are not estimated
+  anywhere in the repo, so 08 doesn't estimate them.
+- Numbers that aren't experiment results (session and trial counts, download sizes) are
+  quoted from `project/context/research.md` and the brainstorm with their source. The
+  zoo-vs-bio noise figures from the 09-30 journal are described in words only, since they
+  aren't in `experiments.md`.
+- 01's hand-worked numbers (hexagon, figure-8, nudged point, toy distances) are the
+  builder's own arithmetic on toy points and are labelled as such.
+- Terms first needed before their planned document are defined where first used
+  (`glossary.md` labels follow the docs, not `documents.md`'s lists).
