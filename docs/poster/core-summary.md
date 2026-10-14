@@ -48,7 +48,7 @@ Doing the task makes brain activity simpler and more repeatable. A network train
 the task is the extreme of that: it does the task and nothing else.
 
 **4. Inside the zoo, the neuron model matters and the wiring does not.**
-- Loops come from adaptive and Izhikevich neurons in modular networks: 12 of 24 and 8 of 23
+- Loops come from Izhikevich and adaptive neurons in modular networks: 12 of 24 and 8 of 23
   have a robust loop at matched size; every other family has at most 2.
 - Rearranging the same connections (random, small-world, scale-free, hub-modular) changes
   less than rerunning with a new seed.
