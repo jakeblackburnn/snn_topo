@@ -29,3 +29,7 @@ Next: decide whether 7b stays separate (draft ~970 of 900 words), then write pan
 ### 2026-10-14 14:55 (agent)
 Workshopped the cuts: the poster is 14 panels at about 800 words for a bio audience, with no-go and zoo cut to a line each, a new two-panel `results` figure and a summary `table`; merged to `main`.
 Next: write panels from `draft.md`; OK the `results.md:136` rounding fix and decide on the 12 rate networks in "spiking models".
+
+### 2026-10-14 15:35 (agent)
+Wrote `docs/poster/narrative.md`: the poster's four-move story, which figure carries each move, and a proposed 3-column layout.
+Next: write panels; at layout, rebuild `rips`, `pipeline`, `trajectories` one column wide if they sit in one column.

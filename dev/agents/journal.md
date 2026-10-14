@@ -57,3 +57,17 @@
 ### Pointers
 - `dev/workshop/poster-cuts.md` (decisions, follow-ups); `docs/poster/plan.md` panel table; `docs/poster/figures/{results,table}.png`.
 - `scripts/poster_figures.py` `fig_results`, `fig_table`, `trial_sweep`.
+
+## Close · 2026-10-14 15:35 · 413488d..5f71fd0
+- **changed:** `docs/poster/narrative.md` (new): the four-move backbone (setup → they differ → not topology → engagement, then limits/meaning/next), a table of which figure carries each move, and a proposed 3-column layout. `dev/agents/project/notes.md`: pointer to it.
+- **why:** one page Jake can lay out from on Thursday without rereading the workshop record.
+- **verified:** not applicable (prose; numbers copied from `results.md` via the earlier summary).
+- `5f71fd0` Poster narrative: backbone, how figures and table carry it, layout outline
+
+### Next
+1. Jake writes panels from `docs/poster/draft.md` in the `plan.md` writing order; the agent vets each against `docs/poster/results.md`.
+2. On Jake's OK: `results.md:136` 0.69 → 0.68; decide on the 12 rate networks inside "spiking models".
+3. Thursday layout: rebuild `rips`, `pipeline`, `trajectories` one column wide if they sit in one column (`narrative.md` "Open for layout").
+4. Remaining items 4-7 of the 14:55 Close above.
+### Pointers
+- `docs/poster/narrative.md`, `docs/poster/plan.md`, `dev/workshop/poster-cuts.md`.
