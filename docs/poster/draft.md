@@ -5,26 +5,25 @@ not the poster text: Jake writes that, and copies from here what he wants.
 
 - Same section order as `docs/snn_topo.md`. Each section has the long form, then the
   poster-length **panel** in a quote block with its word budget (A0 landscape, three columns,
-  about 800 words of body text in all). A caption under a panel's text is not counted in
-  its budget; panels 3 and 8 are captions only.
+  with the budgets summing to 900 words of body text; what is cut is decided at layout on
+  Thursday). A caption under a panel's text is not counted in its budget; panels 3 and 8 are
+  captions only.
+- The question, the results order and the last two panels follow
+  `dev/workshop/poster-content.md`.
 - Sections marked *(agent-written)* had no text in Jake's doc. The others are his text,
   corrected; the corrections are listed at the end against the doc response.
 - Every number has its source line in an HTML comment beside it. `results.md` and
   `core-summary.md` are the ones in `docs/poster/`.
 
 ## Research Question
-Does the shape of population activity tell brains from spiking models, and is what separates
-them topological?
-
-Does topological data analysis offer any new insight into neural codes?
+Do spiking models mirror the topological signature of real brains?
 
 > **Panel 1 · Question and one-line answer · 60 words**
-> **Does the shape of population activity tell brains from spiking models, and is what
-> separates them topological?**
-> Yes, then no. Persistent homology separates mouse brain recordings from task-trained spiking
-> networks almost perfectly, but the signal is noise and dimension, not holes. Engaging in the
-> task moves the brain toward the models. A richer task moves the models toward the brain.
-<!-- core-summary.md:88-89, :39, :58 -->
+> **Do spiking models mirror the topological signature of real brains?**
+> No. Mouse brain recordings and task-trained spiking networks separate almost perfectly on
+> their persistence, and the gap is noise and dimension, not holes. Engaging in the task moves
+> the brain toward the models.
+<!-- core-summary.md:88-89, :39 -->
 
 ### Topology and Topological Data Analysis
 
@@ -262,17 +261,18 @@ engaged brain is below the passive brain on persistence, dimension and noise in 
 sessions. The models sit further along the same direction.
 <!-- results.md:21-23, :98-99; core-summary.md:45 -->
 
-**4. Inside the zoo, the neuron model matters and the wiring does not.** At matched size a
+**4. The task moves the models.** Networks trained with a no-go action land on the engaged
+brain: total cluster persistence 10.2 (8.9 to 13.3, 8 trainings) against 9.7, dimension 2.6
+against 3.1. No two-choice network exceeds 9.7. They are also noisier than the engaged brain
+(0.157 against 0.113), so this may be the noise effect again.
+<!-- results.md:84-86, :100-101 -->
+
+**5. Inside the zoo, the neuron model matters and the wiring does not.** At matched size a
 robust loop appears in 12 of 24 modular Izhikevich networks and 8 of 23 modular adaptive ones,
 and in at most 2 of any other group. Rearranging the same connections changes less than
 rerunning with a new seed. Added biology does not move the models toward the brain:
 excitatory/inhibitory split 3.3, mixed time constants 3.9, plain 4.5, against the brain's 9.7.
 <!-- results.md:84, :97, :57-58, :102-103 -->
-
-**5. The task does move them.** Networks trained with a no-go action land on the engaged
-brain: total cluster persistence 10.2 (8.9 to 13.3, 8 trainings) against 9.7, dimension 2.6
-against 3.1. No two-choice network exceeds 9.7.
-<!-- results.md:84-85, :100-101 -->
 
 > **Panel 7 · Main result · 80 words**
 > Total cluster persistence: passive brain 16.5, engaged brain 9.7, models 4.4. A random
@@ -305,7 +305,14 @@ against 3.1. No two-choice network exceeds 9.7.
 > used to design the test.
 <!-- results.md:21-25, :27-28, :98-99 -->
 
-> **Panel 10 · Inside the zoo · 70 words**
+> **Panel 10 · The task moves the models · 60 words**
+> Networks trained with a third action, no-go, sit with the engaged brain: persistence 10.2 (8.9 to 13.3) against 9.7, dimension 2.6 against 3.1. No two-choice network
+> exceeds 9.7. They are also noisier (0.157 against 0.113), so this may be the noise effect
+> again. Eight trainings; their average includes a trial type the
+> others never see. A lead, not a finding.
+<!-- results.md:84-86, :100-101, :109-110 -->
+
+> **Panel 11 · Inside the zoo · 70 words**
 > Loops come from the neuron model. At matched size a robust loop appears in 12 of 24 modular
 > Izhikevich networks and 8 of 23 modular adaptive ones, and in at most 2 elsewhere.
 > Rearranging the same connections changes less than a new seed. Added biology does not close
@@ -316,45 +323,44 @@ against 3.1. No two-choice network exceeds 9.7.
 > configurations. Marker shape is the wiring.
 <!-- results.md:84, :97, :57-58, :102-103, :68-69 -->
 
-> **Panel 11 · The task moves the models · 50 words**
-> Networks trained with a third action, no-go, sit with the engaged brain: total cluster
-> persistence 10.2 (8.9 to 13.3) against 9.7, dimension 2.6 against 3.1. No two-choice network
-> exceeds 9.7. Eight trainings from two configurations; their average includes a trial
-> type the others never see. A lead, not a finding.
-<!-- results.md:84-85, :100-101, :109-110 -->
-
 ### Limits *(agent-written)*
 
 > **Panel 12 · Limits · 90 words**
-> Brain against model is descriptive: no significance test, and the two kinds of noise have
-> different sources. One dataset and one task: 13 sessions from 4 mice, and populations within
-> a session are not independent. Persistence is measured on a trial-averaged path and includes
-> geometry, so a different signature is not a different topology. A noisier path has more
-> persistence, and nothing here separates the two. Zoo results rest on 3 seeds and a grouping
+> A noisier path has more persistence, and nothing here separates the two. Brain against model
+> is descriptive: no significance test, and the two kinds of noise have different sources. One
+> dataset and one task: 13 sessions from 4 mice, and populations within a session are not
+> independent. Persistence is measured on a trial-averaged path and includes geometry, so a
+> different signature is not a different topology. Zoo results rest on 3 seeds and a grouping
 > chosen after looking. We measure clusters and loops only, never enclosed spaces.
 <!-- core-summary.md:75-85 -->
 
+### What it means *(agent-written)*
+
+> **Panel 13 · What it means · 60 words**
+> Models do not mirror the brain, and the difference is noise and dimension, not holes. A brain population's path uses more dimensions and repeats less than a
+> task-trained network's, and it tightens when the animal engages. Changing wiring or adding
+> biological detail does not close the gap; a slightly richer task may. What the models lack
+> looks like task demands.
+<!-- core-summary.md:63-72 -->
+
+### Next *(agent-written)*
+
+> **Panel 14 · Next · 40 words**
+> Add noise to the models until their split-half noise matches the brain's: does the
+> persistence gap close? Train on richer tasks, with more seeds. Measure single-trial clouds
+> as well as the averaged path.
+
 ### References
 
-> **Panel 13 · References and credits**
+> **Panel 15 · References and credits**
 > The nine in `references.md:12-20`, the tools line ("Computed with ripser.py and GUDHI") and
 > the mug-and-donut credit with its licence name. Gao 2017 (reference 9) is still unread: do
 > not print it until it is.
 
-## Proposed additions (not in `plan.md`; for the workshop)
-
-> **Proposed panel · What it means · 60 words**
-> Shape does tell brains from models, through noise and dimension rather than a distinctive
-> hole. A brain population's path uses more dimensions and repeats less than a
-> task-trained network's, and it tightens when the animal engages. Changing wiring or adding
-> biological detail does not close the gap; a slightly richer task does. What the models lack
-> looks like task demands.
-<!-- core-summary.md:63-72 -->
-
-> **Proposed panel · Next · 40 words**
-> Add noise to the models until their split-half noise matches the brain's: does the
-> persistence gap close? Train on richer tasks, with more seeds. Measure single-trial clouds
-> as well as the averaged path.
+## Open after the workshop
+- Whether the no-go result (panel 10) stays on the poster at all.
+- "Is what separates them topological": no result settles it yet. Next session.
+- What is cut if the text does not fit: decided Thursday at layout.
 
 ## Corrections made, against the doc response
 Item numbers are those of `dev/agents/project/2026-10-13-doc-response.md`.
