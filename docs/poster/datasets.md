@@ -40,8 +40,8 @@ asked of the mouse. Same neurons, same probes, same day. This is what makes
   per session), and something was shown but the mouse did not respond (9 to 84).
 - Regions within a session share trials and neurons with the whole session: they are not
   independent samples. The session is the replicate (n = 13).
-- The full dataset is 39 sessions from 10 mice; we use the first 13. (Full-dataset figure is
-  from the paper, not checked this session.)
+- The full dataset is 39 sessions from 10 mice; we use the first 13. (Confirmed against the
+  paper, PMC6913580.)
 
 Source: `snntopo/data/steinmetz.py`, `docs/learn/05-brains-and-snns.md`. The window timing
 was checked against the archive's `stim_onset` field (0.5 s, session 11); the code comment at

@@ -7,10 +7,7 @@ questions to hold while reading, and where it touches this repo. Answer the ques
 sentence each; document 07 uses them.
 
 How these were prepared: Curto and Maheswaranathan were read in full from their arXiv PDFs.
-Gardner's publisher page would not open for the tool that fetched it, so it was read
-through an automated summary of the open-access copy on Europe PMC (PMC8810387). Section
-names and quoted phrases below are as that summary returned them. Anything it could not
-confirm is marked.
+Gardner was read from the full text of the open-access copy on Europe PMC (PMC8810387).
 
 ## 1. Curto, *What can topology tell us about the neural code?* (2017)
 
@@ -68,11 +65,10 @@ Methods on surgery, recording and spike sorting. Do read the Methods passage on
 preprocessing and dimensionality reduction, slowly, with document 02 open beside it.
 
 **Questions.**
-1. What is one point in their cloud? The summary gives "the population state at one time
-   point", from 66 to 189 grid cells per module, reduced to six principal components after
-   "temporally downsampling and z-scoring". Go through document 02's steps one at a time:
-   which do they share, and which one is missing? (How many points their cloud has was not
-   confirmed; look for it.)
+1. What is one point in their cloud? The population state at one 10 ms time point, from 66
+   to 189 grid cells per module, smoothed, z-scored and reduced to six principal components.
+   The cloud is 1,200 such points, picked from the 15,000 most active. Go through document
+   02's steps one at a time: which do they share, and which one is missing?
 2. What does a torus look like as a barcode? They require "four bars of substantial length":
    one in dimension 0, two in dimension 1, one in dimension 2. Which of those four could
    snntopo see with its current settings (`snntopo/contracts.py:118`)?
