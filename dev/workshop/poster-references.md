@@ -1,5 +1,5 @@
 # Workshop: poster references
-2026-10-13 · status: open
+2026-10-13 · status: closed
 **Material:** `docs/poster/references.md` (agent-written list, 9 entries marked † as written from memory); `docs/snn_topo.md` (Jake's poster doc, never edited by the agent; it has two `**cite**` markers at `:9` and `:57` and five figure placeholders).
 
 ## Problems
@@ -77,13 +77,13 @@ Chosen (Jake): `references.md` gets a checked section (the nine, the software, t
 - Drawing them is not part of this workshop (follow-up).
 
 ## Changes applied
-None. Every thread is settled, but Jake closed the session before confirming the change list, so the status stays open. Proposed, to apply on his confirmation:
-- `docs/poster/references.md` (rewrite): a checked section with the nine in numbered short form and the page each was checked against (thread 1); the tools line and full ripser.py and GUDHI entries (thread 2); year, venue and DOI on the old † entries, † marks dropped, Eshraghian marked "DOI not confirmed" (thread 5); IBL and Allen under "not on the poster" (thread 7); the remaining ~20 entries under "unchecked" (thread 3); the old minimum set at `:84-86` replaced by the nine; the mug-and-donut credit (thread 4); Gao flagged "text not read".
-- `docs/poster/datasets.md:43-44`: replace "not checked this session" with the confirmed "39 sessions in 10 mice" (PMC6913580).
-- `docs/learn/06-literature.md:9-13`, `:71-75`: Gardner was read from the full text; drop the automated-summary caveat and fill in the point count (1,200 single time points).
+Confirmed by Jake and applied 2026-10-13 (session 3):
+- `docs/poster/references.md` rewritten: the nine in a numbered table with the page each was checked against; the tools line and the ripser.py and GUDHI entries; year, venue and DOI on the old † entries, † marks dropped, Eshraghian marked "DOI not confirmed"; IBL and Allen under "used earlier, in no poster number"; the remaining entries under "unchecked"; the mug-and-donut credit; Gao flagged "text not read" (its title in the table is from memory).
+- `docs/poster/datasets.md:43-44`: "39 sessions in 10 mice" marked confirmed (PMC6913580).
+- `docs/learn/06-literature.md`: Gardner read from the full text; the summary caveat is gone and question 1 carries the point count (1,200 single time points).
 - `docs/snn_topo.md` is Jake's and is not edited. Suggested to him: `:9` cite Curto 2017; `:57` cite Jun et al. 2017; `:27` credit "Keenan Crane and Henry Segerman, CC BY-SA 3.0".
 
 ## Follow-ups (not applied)
 - Read Gao et al. 2017 (bioRxiv 10.1101/214262; HTTP 429 twice on 2026-10-13) and confirm it defines participation ratio and makes the task-complexity claim, before the poster leans on it.
-- Draw the Rips thickening figure from one of our own point clouds, and the torus with its two loops.
+- Draw the Rips thickening figure from one of our own point clouds, and the torus with its two loops: taken up in `dev/workshop/poster-figures.md`.
 - Confirm the Eshraghian 2023 DOI.
