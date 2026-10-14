@@ -25,3 +25,7 @@ Next: you read the draft and write panels 1, 6, 7, 9; I vet them.
 ### 2026-10-14 13:36 (agent)
 Answered "is the gap topological" from existing data: total cluster persistence is the average path's length, noise lengthens it, and loops against their own noise match; new `noise` figure, panel 7b and a full Limitations section in `draft.md`, merged to `main`.
 Next: decide whether 7b stays separate (draft ~970 of 900 words), then write panels 1, 6, 7, 9.
+
+### 2026-10-14 14:55 (agent)
+Workshopped the cuts: the poster is 14 panels at about 800 words for a bio audience, with no-go and zoo cut to a line each, a new two-panel `results` figure and a summary `table`; merged to `main`.
+Next: write panels from `draft.md`; OK the `results.md:136` rounding fix and decide on the 12 rate networks in "spiking models".
