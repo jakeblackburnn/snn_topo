@@ -1,40 +1,41 @@
-# Poster plan (2026-10-13, revised after the content workshop)
+# Poster plan (2026-10-13, revised after the content and cuts workshops)
 
 What goes on the poster, where each piece comes from, and what is left. Figures are in
 `docs/poster/figures/` as PDF (vector) and 300 dpi PNG, rebuilt by
-`PYTHONPATH=. python scripts/poster_figures.py`. Sizes assume A0 landscape in three columns
-(`COLUMN_IN` in that script); the size and the layout tool are still Jake's to pick.
+`PYTHONPATH=. python scripts/poster_figures.py`. The poster is 48 x 36 in landscape, three
+columns (`COLUMN_IN` = 14.5 in that script), for a medical and biology poster session.
 
 ## Panels
-Order, question and the two closing panels were settled in `dev/workshop/poster-content.md`.
-`draft.md` is the agent's test draft: every panel has text there, within the budget shown.
-"Words" is body text; a caption under it is extra. Budgets sum to 900; what is cut is decided
-at layout on Thursday.
+Order, cuts, figures and the table were settled in `dev/workshop/poster-cuts.md` (the spine:
+question, how, differ, why, engagement, meaning). `draft.md` is the agent's test draft: every
+panel has text there, within the budget shown. "Words" is body text; a caption under it is
+extra, except for panels 3 and 9, which are captions only. Budgets sum to 780, plus the table
+note: about 800.
 
-| # | panel | text source | figure | words | status | day |
-|---|---|---|---|---|---|---|
-| 1 | Question and one-line answer: "Do spiking models mirror the topological signature of real brains?" | `core-summary.md:88-89` | none | 60 | test draft in `draft.md`; Jake writes | Wed |
-| 2 | Topology in 60 words | Jake's `docs/snn_topo.md:7-53`, corrected in `draft.md` | `rips`, `torus`, the mug-and-donut image (credit in `references.md`) | 60 | figures built; test draft; Jake cuts his own text | Wed |
-| 3 | Pipeline | `pipeline.md:44-45` (one line), `:8-16` (steps) | `pipeline` | 50 (caption) | figure built; test caption | Wed |
-| 4 | Data | `datasets.md` | none | 70 | test draft; Jake writes | Wed |
-| 5 | Models | `model-zoo.md` | none | 80 | test draft; Jake writes (his doc section is empty) | Wed |
-| 6 | How we compare | `draft.md` "Comparing Models vs Brains"; replaces `docs/snn_topo.md:97-108` | none | 70 | test draft; Jake writes | Wed |
-| 7 | Main result | `core-summary.md:20-37`, `results.md` section 5 | `main` | 80 | figure built; test draft | Wed |
-| 7b | Is the difference topological? (added 2026-10-14) | `results.md` section 6 | `noise` | 70 | figure built; test draft; pushes the total to about 970 words | Wed |
-| 8 | What the paths look like | `core-summary.md:47-48` | `trajectories` | 40 (caption) | figure built; test caption; optional | Thu |
-| 9 | Engagement | `core-summary.md:39-48`, `results.md` section 2 | `engagement` | 70 | figure built; test draft | Wed |
-| 10 | The task moves the models | `core-summary.md:58-61`, noise from `results.md:86` | `nogo` | 60 | figure built; test draft; **whether it stays is open** | Wed |
-| 11 | Inside the zoo | `core-summary.md:50-56`, `results.md` section 4 | `zoo` | 70 | figure built; test draft | Wed |
-| 12 | Limits (noise caveat first) | `draft.md` "Limitations" (long form, 13 items), `core-summary.md:74-85` | none | 90 | test draft revised 2026-10-14; Jake writes | Wed |
-| 13 | What it means | `core-summary.md:63-72` | none | 60 | new; test draft; Jake writes | Wed |
-| 14 | Next | `draft.md` panel 14 | none | 40 | new; test draft; Jake writes | Wed |
-| 15 | References and credits | `references.md` (the nine, tools line, figure credit) | none | list | list ready; Gao 2017 unread (agent, before print) | Wed |
+| # | panel | text source | figure | words | status |
+|---|---|---|---|---|---|
+| 1 | Question and one-line answer | `draft.md` panel 1 | none | 60 | test draft; Jake writes |
+| 2 | Topology in 60 words | Jake's `docs/snn_topo.md:7-53`, corrected in `draft.md` | `rips`, the mug-and-donut image (credit in `references.md`) | 60 | figures built; Jake cuts his own text |
+| 3 | Pipeline | `pipeline.md:44-45`, `:8-16` | `pipeline` | 50 (caption) | figure built; test caption |
+| 4 | Data | `datasets.md` | none | 70 | test draft; Jake writes |
+| 5 | Models | `model-zoo.md` | none | 50 | test draft; Jake writes |
+| 6 | How we compare | `draft.md` panel 6 | none | 35 | test draft; Jake writes |
+| 7 | Brains and models differ | `results.md` section 5 | `results` (left), `table` (top half) | 80 | figures built; test draft |
+| 8 | Not holes: noise and smoothness | `results.md` section 6 | `results` (right), `table` (bottom half) | 80 | figures built; test draft |
+| 9 | What the paths look like | figure | `trajectories` (3 groups) | 40 (caption) | figure built; test caption |
+| 10 | Engagement | `results.md` section 2 | `engagement` | 70 | figure built; test draft |
+| 11 | Limits | `draft.md` "Limitations" (long form, 12 items) | none | 75 | test draft; Jake writes |
+| 12 | What it means | `core-summary.md:63-72` | none | 60 | test draft; Jake writes |
+| 13 | Next (with the no-go lead) | `draft.md` panel 13 | none | 50 | test draft; Jake writes |
+| 14 | References and credits | `references.md` | none | list | Gao 2017 unread (agent, before print) |
+
+Cut (`poster-cuts.md` thread 2): no-go (old panel 10; a line in Next) and the zoo (old panel
+11; a sentence in panel 7). Built but not on the poster: `main`, `noise`, `nogo`, `zoo`, `torus`.
 
 ## Days
 - **Wed, content.** Jake writes, in the order below; the agent vets each panel against
   `results.md` and reads Gao 2017.
-- **Thu, design.** Pick the size and tool, set `COLUMN_IN`, rebuild, lay out. Decide what is
-  cut if the text does not fit, and whether panel 8 stays.
+- **Thu, design.** Pick the layout tool and lay out. Size, `COLUMN_IN` and cuts are settled.
 - **Fri, finish.** Proofread numbers against `results.md` one last time; print.
 
 ## Wednesday writing order
@@ -42,38 +43,37 @@ Read `draft.md` top to bottom once first. Then:
 1. Panel 1, the question and its answer: everything else hangs off it.
 2. Panel 6, how we compare: the section your doc had wrong, and the one a reader needs to
    trust the results.
-3. Panels 7 and 9, the two results that carry the answer.
-4. Decide whether no-go (panel 10) stays; then panels 10 and 11.
-5. Panels 12 and 13, limits and what it means, while the results are fresh.
-6. Panels 2, 4 and 5, the background: mostly cutting text you already have.
-7. Captions (3, 8) and panel 14.
+3. Panels 7, 8 and 10, the results that carry the answer.
+4. Panels 11 and 12, limits and what it means, while the results are fresh.
+5. Panels 2, 4 and 5, the background: mostly cutting text you already have.
+6. Captions (3, 9) and panel 13.
 
 ## Open
-- Whether the no-go result stays on the poster.
 - "Is what separates them topological": answered as far as existing data allow
-  (`results.md` section 6, panel 7b, figure `noise`): total cluster persistence is path
-  length, noise lengthens the path, loops against their own noise are alike. Models at the
-  brain's noise need a run (panel 14). Whether 7b goes on the poster, or folds into 7, is
-  Jake's call.
-- Poster size and layout tool.
+  (`results.md` section 6, panel 8): no difference detected; models at the brain's noise need
+  a run (panel 13).
+- Layout tool.
 
 ## Figures: what each shows and what to say beside it
-- `main`: passive brain, engaged brain, spiking models at 128 neurons x 100 trials on four
-  measures. Three fall in the same order; robust loops do not. Descriptive, no test; the first
-  three may be one fact (more noise alone raises persistence).
+On the poster:
+- `results`: left, path length (total cluster persistence) by group at 128 neurons x 100
+  trials; right, the brain's path shortening as more trials are averaged, the time-shuffled
+  ceiling, and the models at 100 trials only. Descriptive; no model was rerun.
+- `table`: the summary at 128 x 100, two halves. What separates them (path length, dimensions
+  used, trial-to-trial noise, with how often engaged exceeds model) and topology against its own
+  noise (clusters and loops that survive resampling, longest loop over its noise). Printed by
+  `poster_figures.py table` for checking against `results.md`. Robust loops are commoner in the
+  models; "spiking models" includes 12 rate networks.
+- `trajectories`: one example per group (passive, engaged, model), the one nearest its group's
+  median; three of the ten axes. A picture, not evidence.
 - `engagement`: the one preregistered test. "Changes the signature", not "changes the
   topology": the ratio cannot tell geometry from topology.
-- `zoo`: longest loop per trained network at native size, 128 neurons, the 27 plain
-  configurations. Grouping chosen after looking; 3 seeds per wiring.
-- `nogo`: 8 trainings from 2 configurations; a lead.
-- `noise`: cluster persistence against path length; the brain at more trials against the
-  models and a no-signal ceiling; longest loop over its own noise. Descriptive; no model was
-  rerun, so the models appear at 100 trials only.
-- `trajectories`: one example per group, the one nearest its group's median; three of the ten
-  axes. A picture, not evidence.
 - `pipeline`: real data at each step (engaged brain, session 0).
 - `rips`: made-up points on a noisy circle, an illustration of the method.
-- `torus`: a drawing. We never measure the enclosed space (H2).
+
+Built, not on the poster: `main` and `noise` (the longer forms of `results`, used by
+`results.md`), `nogo` (8 trainings from 2 configurations), `zoo` (longest loop per network at
+128 neurons), `torus` (a drawing; we never measure the enclosed space).
 
 ## Looking at any population
     PYTHONPATH=. python scripts/poster_figures.py trajectory results/runs/20261013-1300-bio_grid <activity_id>

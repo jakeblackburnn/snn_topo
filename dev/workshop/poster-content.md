@@ -57,3 +57,4 @@ Confirmed by Jake ("apply all"), 2026-10-13:
 - Thread 7: what is cut if the text does not fit, Thursday. Budgets sum to 900 words; the draft is at 861.
 - `core-summary.md:6-8` and `:88-89` still carry the older question and one-line answer.
 - Gao 2017 (reference 9) is unread; it backs "dimension separates brain from model".
+- 2026-10-14: threads 6 (numbers table), 7 (cuts) and 10 (no-go) were reopened and settled in `dev/workshop/poster-cuts.md`.
