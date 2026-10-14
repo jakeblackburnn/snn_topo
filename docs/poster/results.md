@@ -111,3 +111,41 @@ contains a third trial type the two-choice networks never see.
 
     python scripts/snn_vs_bio.py --bio results/runs/20261013-1300-bio_grid \
         --zoo results/runs/20261013-1300-zoo_grid --out results/analysis/snn_vs_bio
+
+## 6. What separates brains from models is path smoothness, not topology (secondary analysis)
+Checks on the section 5 populations, plus brain activity rebuilt from the recordings at other
+trial counts. No SNN was run or trained. Numbers at 128 units; the 50 x 56 cell agrees.
+- **Total H0 persistence is path length.** On a Rips filtration the H0 bars are the edges of
+  the minimum spanning tree, so total H0 persistence is at most the trajectory's length in
+  units of its own diameter (L). It is 99.3% of L in the engaged brain, 98.5% in the passive
+  brain and 95.5% in the models (medians; at most 100% up to rounding). L alone fits log total
+  persistence with R² 0.96 across all populations and leaves 0.06 of the 0.79 log gap between
+  engaged brain and models (8%; 5% at 50 x 56). Medians of L: passive 16.7, engaged 9.9,
+  models 4.6.
+- **Pure noise sets a ceiling.** The same brain trials with each trial's time bins shuffled
+  (rates and noise kept, stimulus-locked signal removed) give total persistence 26 at every
+  trial count from 25 to 200. A straight path gives exactly 1. The passive brain (16.5)
+  sits nearer the noise end than the models (4.4).
+- **Averaging more trials shortens the engaged brain's path.** Engaged populations, same 128
+  neurons, mean of 5 trial draws: 15.4 at 25 trials, 12.0 at 50, 9.4 at 100 (all 39); the 12
+  with at least 200 trials go from 15.4 to 9.2 at 100 and 7.4 at 200. Participation ratio
+  falls too, 4.8 at 25 to 3.2 at 100: noise also adds dimensions. Passive populations barely
+  move, 20.4 to 17.3 from 25 to 100 trials. The grid's own draw at 100 trials reproduces its
+  stored persistence for all 78 populations.
+- **Loops measured against their own noise are alike.** Longest H1 bar over the H1 split-half
+  null mean, medians: engaged brain 0.69, models 0.76, passive brain 1.18 (50 x 56: 0.69,
+  0.61, 0.84). Robust cluster counts agree (10 against 8); robust loops are commoner in the
+  models (24 of 189 against 1 of 39), almost all in two modular families (section 5).
+- Split-half noise and participation ratio together fit with R² 0.93 and leave 0.02 of the
+  log gap; participation ratio alone leaves 0.24.
+- Tables: `results/analysis/topo_or_noise/{activities,fits,sweep}.csv`. Figure:
+  `docs/poster/figures/noise.png`.
+**Caveat:** descriptive, no test. "Not topological" means no difference was detected at this
+noise, not that none exists. Models were not re-measured at other trial counts: at 200 trials
+the engaged brain (7.4) is still above the models at 100 (4.4), so whether the gap closes at
+matched noise is open, and what is left could be geometry (a longer, higher-dimensional
+signal path). The split-half noise is itself an H0 diagram distance, so its fit to total H0
+persistence is partly built in; the path-length and trial-count results do not have that
+problem. Brain n counts populations, which share sessions.
+
+    PYTHONPATH=. python scripts/topo_or_noise.py && PYTHONPATH=. python scripts/poster_figures.py noise

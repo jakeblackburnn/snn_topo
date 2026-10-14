@@ -20,11 +20,12 @@ at layout on Thursday.
 | 5 | Models | `model-zoo.md` | none | 80 | test draft; Jake writes (his doc section is empty) | Wed |
 | 6 | How we compare | `draft.md` "Comparing Models vs Brains"; replaces `docs/snn_topo.md:97-108` | none | 70 | test draft; Jake writes | Wed |
 | 7 | Main result | `core-summary.md:20-37`, `results.md` section 5 | `main` | 80 | figure built; test draft | Wed |
+| 7b | Is the difference topological? (added 2026-10-14) | `results.md` section 6 | `noise` | 70 | figure built; test draft; pushes the total to about 970 words | Wed |
 | 8 | What the paths look like | `core-summary.md:47-48` | `trajectories` | 40 (caption) | figure built; test caption; optional | Thu |
 | 9 | Engagement | `core-summary.md:39-48`, `results.md` section 2 | `engagement` | 70 | figure built; test draft | Wed |
 | 10 | The task moves the models | `core-summary.md:58-61`, noise from `results.md:86` | `nogo` | 60 | figure built; test draft; **whether it stays is open** | Wed |
 | 11 | Inside the zoo | `core-summary.md:50-56`, `results.md` section 4 | `zoo` | 70 | figure built; test draft | Wed |
-| 12 | Limits (noise caveat first) | `core-summary.md:74-85` | none | 90 | test draft; Jake writes | Wed |
+| 12 | Limits (noise caveat first) | `draft.md` "Limitations" (long form, 13 items), `core-summary.md:74-85` | none | 90 | test draft revised 2026-10-14; Jake writes | Wed |
 | 13 | What it means | `core-summary.md:63-72` | none | 60 | new; test draft; Jake writes | Wed |
 | 14 | Next | `draft.md` panel 14 | none | 40 | new; test draft; Jake writes | Wed |
 | 15 | References and credits | `references.md` (the nine, tools line, figure credit) | none | list | list ready; Gao 2017 unread (agent, before print) | Wed |
@@ -49,9 +50,11 @@ Read `draft.md` top to bottom once first. Then:
 
 ## Open
 - Whether the no-go result stays on the poster.
-- "Is what separates them topological": nothing settles it yet. Two checks use the existing
-  table (`results/analysis/snn_vs_bio/activities.csv`), one needs a run; see
-  `dev/workshop/poster-content.md` thread 9.
+- "Is what separates them topological": answered as far as existing data allow
+  (`results.md` section 6, panel 7b, figure `noise`): total cluster persistence is path
+  length, noise lengthens the path, loops against their own noise are alike. Models at the
+  brain's noise need a run (panel 14). Whether 7b goes on the poster, or folds into 7, is
+  Jake's call.
 - Poster size and layout tool.
 
 ## Figures: what each shows and what to say beside it
@@ -63,6 +66,9 @@ Read `draft.md` top to bottom once first. Then:
 - `zoo`: longest loop per trained network at native size, 128 neurons, the 27 plain
   configurations. Grouping chosen after looking; 3 seeds per wiring.
 - `nogo`: 8 trainings from 2 configurations; a lead.
+- `noise`: cluster persistence against path length; the brain at more trials against the
+  models and a no-signal ceiling; longest loop over its own noise. Descriptive; no model was
+  rerun, so the models appear at 100 trials only.
 - `trajectories`: one example per group, the one nearest its group's median; three of the ten
   axes. A picture, not evidence.
 - `pipeline`: real data at each step (engaged brain, session 0).

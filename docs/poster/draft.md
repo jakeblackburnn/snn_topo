@@ -14,6 +14,9 @@ not the poster text: Jake writes that, and copies from here what he wants.
   corrected; the corrections are listed at the end against the doc response.
 - Every number has its source line in an HTML comment beside it. `results.md` and
   `core-summary.md` are the ones in `docs/poster/`.
+- 2026-10-14: after the topology-or-noise analysis (`results.md` section 6), panel 1, the
+  first measure, result 2, panels 7, 12, 13 and 14 changed, panel 7b is new, and a long-form
+  Limitations section precedes panel 12.
 
 ## Research Question
 Do spiking models mirror the topological signature of real brains?
@@ -21,9 +24,10 @@ Do spiking models mirror the topological signature of real brains?
 > **Panel 1 · Question and one-line answer · 60 words**
 > **Do spiking models mirror the topological signature of real brains?**
 > No. Mouse brain recordings and task-trained spiking networks separate almost perfectly on
-> their persistence, and the gap is noise and dimension, not holes. Engaging in the task moves
-> the brain toward the models.
-<!-- core-summary.md:88-89, :39 -->
+> their persistence, but what separates them is how smooth the average activity path is, not
+> its holes: a noisier path is a longer one. Engaging in the task moves the brain toward the
+> models.
+<!-- core-summary.md:88-89, :39; results.md:115-148 -->
 
 ### Topology and Topological Data Analysis
 
@@ -203,8 +207,9 @@ model, is first cut to the same size: 128 neurons x 100 trials (a second cut, 50
 in direction). Each population is then summarised by four numbers:
 <!-- results.md:76-79 -->
 
-1. **Total cluster persistence**: the summed length of its H0 bars. How spread out and broken
-   up the path is.
+1. **Total cluster persistence**: the summed length of its H0 bars. On a path of points this is
+   almost exactly the path's length in units of its own width: 1 for a straight path, about
+   26 for pure noise (result 2).
 2. **Participation ratio**: the effective number of PCA dimensions the path uses. It contains
    no topology.
 3. **Split-half noise**: split the trials into two random halves, build a signature from each,
@@ -212,7 +217,7 @@ in direction). Each population is then summarised by four numbers:
    trial sampling alone.
 4. **Robust features**: the bars longer than twice the 95th percentile of that noise. The
    features that survive resampling.
-<!-- results.md:7-13, pipeline.md:27-31 -->
+<!-- results.md:7-13, :118-128, pipeline.md:27-31 -->
 
 Groups are compared by ranking: how often a random population from one group exceeds a random
 population from the other. No distance between a brain signature and a model signature is
@@ -233,7 +238,7 @@ and there is no matched control, so that comparison is descriptive.
 
 > **Panel 6 · How we compare · 70 words**
 > Every population is cut to 128 neurons x 100 trials, then summarised by four numbers: total
-> cluster persistence (spread), participation ratio (dimensions used), split-half noise (the
+> cluster persistence (path length), participation ratio (dimensions used), split-half noise (the
 > distance between signatures built from two random halves of the trials) and robust features
 > (bars longer than twice that noise). Groups are compared by ranking populations on each
 > number. Brain against model is descriptive, with no significance test. Only engaged against
@@ -247,12 +252,21 @@ passive brain, 9.7 for the engaged brain and 4.4 for the two-choice models (medi
 persistence points the same way, less cleanly (0.29 against 0.13, 77%).
 <!-- results.md:83-84, :87, :91-94 -->
 
-**2. What separates them is noise and dimension, not holes.** The participation ratio does
+**2. What separates them is how smooth the path is, not holes.** The participation ratio does
 almost as well with no topology in it: 3.1 against 1.5, right 94.0% of the time. The engaged
 brain is about 2.5 times noisier between halves of its trials (0.113 against 0.046, right
-97.6%). Features that survive resampling do not separate the groups: 10 robust clusters
-against 8, and a robust loop in 1 of 39 engaged-brain populations against 24 of 189 models.
-<!-- results.md:85-86, :88-89, :93, :95-97; core-summary.md:29 -->
+97.6%). Total cluster persistence turns out to be the length of the average path in units of
+its own width (99.3% of it in the engaged brain, 95.5% in the models), and path length alone
+accounts for 92% of the brain-model gap on a log scale. Noise lengthens a path: the same
+trials shuffled in time give 26, and averaging more trials shortens the engaged brain's path
+from 15.4 at 25 trials to 9.4 at 100 and, in the 12 populations with enough trials, 7.4 at
+200. Its participation ratio falls with it (4.8 to 3.2), so dimension is partly noise too.
+Measured against its own noise, the longest loop is alike (0.69 engaged brain, 0.76 models),
+and robust clusters do not separate the groups (10 against 8). Robust loops are commoner in
+the models (24 of 189 against 1 of 39), almost all in two modular families. No topological
+difference is detected at this noise; whether the gap closes at matched noise is open, since
+no model was rerun.
+<!-- results.md:85-86, :88-89, :93, :95-97, :118-139; core-summary.md:29 -->
 
 **3. Engagement moves the brain toward the models.** In 11 of 12 held-out sessions the engaged
 and passive signatures of the same neurons differ by more than time drift and more than the
@@ -279,12 +293,25 @@ excitatory/inhibitory split 3.3, mixed time constants 3.9, plain 4.5, against th
 > engaged-brain population beats a random model 99% of the time. But dimension alone does
 > nearly as well (3.1 against 1.5, 94%), and the brain is about 2.5 times noisier (0.11
 > against 0.05). Features that survive resampling do not separate them: a robust loop in 1 of
-> 39 engaged-brain populations and 24 of 189 models. More noise alone raises persistence, so
-> the first three may be one fact.
+> 39 engaged-brain populations and 24 of 189 models. The first three are largely one fact
+> (panel 7b).
 >
 > Caption (`main`): Each dot is one brain population (13 sessions) or one trained network, cut
 > to 128 neurons x 100 trials. Lines are medians. Descriptive, no test.
 <!-- results.md:84-86, :89, :92-93, :106-107; core-summary.md:23, :29 -->
+
+> **Panel 7b · Is the difference topological? · 70 words**
+> Mostly not. Total cluster persistence is the length of the average path in units of its
+> width: 1 for a straight path, 26 for pure noise. Path length accounts for 92% of the
+> brain-model gap. Averaging more trials shortens the brain's path (15.4 at 25 trials, 9.4 at
+> 100, 7.4 at 200) toward the models' 4.4. Against its own noise, the longest loop is alike in
+> brain (0.69) and model (0.76).
+>
+> Caption (`noise`): Left: cluster persistence against path length, one dot per population at
+> 128 neurons x 100 trials; dashed line, equal. Middle: each line one brain population
+> averaged over more trials; models at 100 trials; dotted line, the same trials shuffled in
+> time. Right: longest loop over its split-half noise. Descriptive; no model was rerun.
+<!-- results.md:118-139, :142-148 -->
 
 > **Panel 8 · What the paths look like · 40 words**
 > Caption (`trajectories`): One example per group, the population nearest its group's median,
@@ -323,32 +350,97 @@ excitatory/inhibitory split 3.3, mixed time constants 3.9, plain 4.5, against th
 > configurations. Marker shape is the wiring.
 <!-- results.md:84, :97, :57-58, :102-103, :68-69 -->
 
-### Limits *(agent-written)*
+### Limitations *(agent-written)*
+Every limitation the project knows of, most consequential first, with what it limits and what
+would lift it. Panel 12 is the poster-length cut.
+
+**What the signature measures**
+1. *The main number is a smoothness measure.* On a trial-averaged path, total cluster
+   persistence is 95 to 99% of the path's length in units of its width, and noise lengthens
+   the path. The number that separates brains from models best is geometry, not topology.
+   Lifts it: a measure normalised to path length, or comparisons at matched noise.
+   <!-- results.md:118-134 -->
+2. *A different signature is not a different topology.* Persistence diagrams include
+   geometry: stretching or bending a path moves its bars without changing its holes. The
+   engagement test controls one same-shape change at matched noise, not every geometric one,
+   so it shows that engagement changes the signature, not the topology.
+   <!-- results.md:27-28 -->
+3. *Engagement may be mostly signal-to-noise.* The passive brain sits close to the no-signal
+   ceiling (17.3 against 26 at 100 trials) and barely moves with more trials, so much of the
+   engaged-passive difference may be a stronger stimulus-locked signal in the average rather
+   than a new shape. The engagement ratio divides by split-half noise, which limits this but
+   does not remove it. Movement and stimulus confounds are also open.
+   <!-- results.md:125-134, :27-28 -->
+4. *Only the trial-averaged path.* Averaging removes trial-to-trial structure, and many
+   reported neural loops live in single-trial activity. The pipeline settings (150 time bins,
+   5-bin smoothing, 10 PCA dimensions, unit diameter) were fixed in advance and not varied.
+   Clusters and loops only: enclosed spaces (H2) are never computed.
+5. *Robust counts are not equally sensitive.* A bar counts as robust if it exceeds twice the
+   95th percentile of that population's own noise, so the noisier brain needs a longer bar to
+   count. Fewer robust loops in the brain may partly be the threshold.
+   <!-- results.md:11-13, :86 -->
+
+**Brain against model**
+6. *Descriptive only.* No significance test; brain and model noise come from different
+   sources, and there is no matched control. Group differences are medians and rank
+   percentages.
+   <!-- results.md:106-107 -->
+7. *Not compared at matched noise.* More trials lower the brain's noise, but the models were
+   not re-measured: at 200 trials the engaged brain (7.4) is still above the models at 100
+   (4.4). Whether the gap closes, or leaves a geometric difference, needs model runs.
+   <!-- results.md:142-146 -->
+8. *One subsample per population.* Each population is cut to the matched size once. Only 91 of
+   270 brain populations reach 128 x 100, so that cell leans on the larger sessions and
+   regions; the 50 x 56 cell, which all reach, agrees in direction.
+   <!-- results.md:76-79, snntopo/grid.py:12-14 -->
+
+**Data**
+9. *One dataset, one task.* 13 Steinmetz sessions from 4 mice. Populations within a session
+   come from the same animal and day and are not independent; n counts populations. Which neurons were
+   recorded matters: two random halves of a region's neurons differ in 32 of 77 pairs.
+   <!-- results.md:31, :37-39, :108 -->
+10. *Native trial counts differ by condition* (median 190 engaged, 110 passive, 93 no-go), so
+    native-scale contrasts are confounded with trial count; only the matched cells are clean.
+    <!-- results.md:42-44 -->
+
+**Models**
+11. *A narrow zoo.* One task family, trained by reward on a copy of the mouse task;
+    3 seeds per configuration; the grouping by neuron model and architecture was chosen after
+    looking; one checkpoint. Untrained and spontaneous activity were unusable.
+    <!-- results.md:50-51, :63-65, :68-69 -->
+12. *No-go is a lead.* 2 configurations, 8 trainings, a trial average that includes a trial
+    type the two-choice networks never see, and noise nearly as high as the passive brain's.
+    <!-- results.md:86, :109-110 -->
+
+**The instrument**
+13. *Validated at two scales.* The pipeline recovers known shapes in synthetic data (8 of 8
+    criteria) at two combinations of units, trials and noise only.
+    <!-- results.md:15-18 -->
 
 > **Panel 12 · Limits · 90 words**
-> A noisier path has more persistence, and nothing here separates the two. Brain against model
-> is descriptive: no significance test, and the two kinds of noise have different sources. One
-> dataset and one task: 13 sessions from 4 mice, and populations within a session are not
-> independent. Persistence is measured on a trial-averaged path and includes geometry, so a
-> different signature is not a different topology. Zoo results rest on 3 seeds and a grouping
-> chosen after looking. We measure clusters and loops only, never enclosed spaces.
-<!-- core-summary.md:75-85 -->
+> Our main number measures how smooth the average path is, not its shape: total cluster
+> persistence is the path's length, and noise lengthens it. Brain against model is
+> descriptive, with no significance test, and the models were never measured at the brain's
+> noise. One dataset and one task: 13 sessions from 4 mice, and populations within a session
+> are not independent. A different signature is not a different topology. Zoo results rest on
+> 3 seeds and a grouping chosen after looking. Clusters and loops only, on the trial-averaged
+> path.
+<!-- core-summary.md:75-85; results.md:118-134, :142-146 -->
 
 ### What it means *(agent-written)*
 
 > **Panel 13 · What it means · 60 words**
-> Models do not mirror the brain, and the difference is noise and dimension, not holes. A brain population's path uses more dimensions and repeats less than a
-> task-trained network's, and it tightens when the animal engages. Changing wiring or adding
-> biological detail does not close the gap; a slightly richer task may. What the models lack
-> looks like task demands.
-<!-- core-summary.md:63-72 -->
+> Models do not mirror the brain, but the difference we can measure is how smooth the average
+> path is, not its holes. A brain population's path is noisier and uses more dimensions than
+> a task-trained network's, and it smooths when the animal engages. Changing wiring or adding
+> biological detail does not close the gap; a slightly richer task may.
+<!-- core-summary.md:63-72; results.md:118-139 -->
 
 ### Next *(agent-written)*
 
 > **Panel 14 · Next · 40 words**
-> Add noise to the models until their split-half noise matches the brain's: does the
-> persistence gap close? Train on richer tasks, with more seeds. Measure single-trial clouds
-> as well as the averaged path.
+> Measure the models at the brain's noise: does anything beyond path smoothness remain? Train
+> on richer tasks, with more seeds. Measure single-trial clouds as well as the averaged path.
 
 ### References
 
@@ -359,7 +451,8 @@ excitatory/inhibitory split 3.3, mixed time constants 3.9, plain 4.5, against th
 
 ## Open after the workshop
 - Whether the no-go result (panel 10) stays on the poster at all.
-- "Is what separates them topological": no result settles it yet. Next session.
+- "Is what separates them topological": answered as far as existing data allow (2026-10-14,
+  `results.md` section 6, panel 7b): no difference detected; models at matched noise need a run.
 - What is cut if the text does not fit: decided Thursday at layout.
 
 ## Corrections made, against the doc response
