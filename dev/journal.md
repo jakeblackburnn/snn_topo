@@ -21,3 +21,7 @@ Next: you read the draft and write panels 1, 6, 7, 9 first; open are whether no-
 ### 2026-10-14 13:05 (agent)
 Briefed on what to read before writing (`draft.md`, then `plan.md`, then `dev/workshop/poster-content.md`; `results.md` while writing) and merged `poster-draft` to `main`.
 Next: you read the draft and write panels 1, 6, 7, 9; I vet them.
+
+### 2026-10-14 13:36 (agent)
+Answered "is the gap topological" from existing data: total cluster persistence is the average path's length, noise lengthens it, and loops against their own noise match; new `noise` figure, panel 7b and a full Limitations section in `draft.md`, merged to `main`.
+Next: decide whether 7b stays separate (draft ~970 of 900 words), then write panels 1, 6, 7, 9.

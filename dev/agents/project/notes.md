@@ -35,6 +35,7 @@
 - Steinmetz passive `left`/`right` = stimulus side; use `all` for active-vs-passive. Active `all` = responded trials only (`snntopo/data/steinmetz.py:143-171`).
 - `_CACHE_SIZE = 32` in stats is undersized for 20 references (needs ~60).
 - Verify agent-reported numbers by computing them; prose-reasoned numbers have been wrong.
+- Total H0 persistence (Rips) is the minimum-spanning-tree length, so at most the trajectory's length in diameters (`trajectory_length / raw_diameter`); measured 95-99% of it. It is a path-smoothness number. Pure noise (trials shuffled in time) gives about 26 at any trial count; a straight path gives 1. Fitting it on split-half `null_mean` is partly circular (both come from H0 diagrams). `scripts/topo_or_noise.py`, `docs/poster/results.md` section 6.
 
 ## Zoo vs bio comparability (found 2026-09-29, not fixed)
 - `zoo_v1` and `bio_core` are not comparable as run. `cmp_id` hashes metrics + n_resamples (`snntopo/dataset.py:81`) and `dataset.load` needs one `cmp_id`, so the two can't be loaded together: zoo `3fed78af4c11ac97` (wasserstein only), bio_core `539728d0ec6e8f09` (wasserstein + bottleneck). `topo_id` matches (`70aaac6c2b35a7ff`).
@@ -62,6 +63,7 @@
 - `scripts/poster_figures.py` builds every poster figure into `docs/poster/figures/` (PDF and 300 dpi PNG) from `results/analysis/*/activities.csv`, the E18 run and the two grid runs. All sizes hang off `COLUMN_IN` (assumes A0 landscape, three columns). `docs/poster/plan.md` maps panels to figures.
 - The venv's editable install of `snntopo` points at `/home/jake/Code/main/experiments/snn_topo`, which no longer exists: `import snntopo` fails outside pytest. Run scripts with `PYTHONPATH=<repo>`. Not fixed (Jake's venv).
 - No run stores activities, point clouds or weights (`results/store/` has `diagrams` and `halves` only). `poster_figures.cloud()` rebuilds a cloud from its recipe and checks it against the stored diagram to 1e-9; a model is retrained (about a minute, reproduces exactly on the GPU). Cache: `results/analysis/poster_figures/clouds/` (gitignored).
+- `poster_figures.py <name> ...` builds only the named figures (rebuilding all rewrites every PDF). `noise` needs `PYTHONPATH=. python scripts/topo_or_noise.py` first; its brain trial sweep (~35 s, 16 cores) is cached in `results/analysis/topo_or_noise/sweep.csv`: delete it to recompute.
 - Grid runs are sharded: files are `activities.s0of2.jsonl` etc., not `activities.jsonl`. SNN labels are not unique; select by `activity_id`.
 - The two-choice group in `snn_vs_bio` (n = 189) includes rate networks (`family == "rate"`, `arch` and `neuron` empty).
 - `docs/poster/draft.md` is the agent's test draft of Jake's poster doc: each number carries its source line in an HTML comment (`<!-- results.md:84 -->`), so a number check is "does the value appear in the cited lines". `docs/poster/results.md` is the number source; `core-summary.md` is a summary of it and has been wrong once (loop counts swapped, fixed 2026-10-13).
