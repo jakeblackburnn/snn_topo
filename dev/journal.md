@@ -17,3 +17,7 @@ Next: you write panels 1 to 6 and 12 from the plan; I vet them and read Gao 2017
 ### 2026-10-13 21:41 (agent)
 `docs/poster/draft.md` is a full test version of your poster doc with 15 panel texts; the content workshop set the question ("Do spiking models mirror the topological signature of real brains?"), the order and two new panels, and `plan.md` has a Wednesday writing order. On branch `poster-draft`, not merged.
 Next: you read the draft and write panels 1, 6, 7, 9 first; open are whether no-go stays and how to make "is the gap topological" solid.
+
+### 2026-10-14 13:05 (agent)
+Briefed on what to read before writing (`draft.md`, then `plan.md`, then `dev/workshop/poster-content.md`; `results.md` while writing) and merged `poster-draft` to `main`.
+Next: you read the draft and write panels 1, 6, 7, 9; I vet them.
