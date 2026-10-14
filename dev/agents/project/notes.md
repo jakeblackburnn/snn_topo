@@ -57,3 +57,10 @@
 - `pull.rebase=true` here: a pull refuses over any uncommitted file. With Jake's `dev/journal.md` dirty, `git checkout main` also fails when the branches differ in it; merge in a throwaway `git worktree` instead.
 - Reading papers: nature.com redirects WebFetch to a login; bioRxiv rate-limits (HTTP 429). Europe PMC full text works with curl: `https://www.ebi.ac.uk/europepmc/webservices/rest/<PMCID>/fullTextXML`. WebFetch returns a small model's summary, so it does not count as reading a paper.
 - Reference checks record the page each entry was checked against: `dev/workshop/poster-references.md`.
+
+## Poster figures (2026-10-13)
+- `scripts/poster_figures.py` builds every poster figure into `docs/poster/figures/` (PDF and 300 dpi PNG) from `results/analysis/*/activities.csv`, the E18 run and the two grid runs. All sizes hang off `COLUMN_IN` (assumes A0 landscape, three columns). `docs/poster/plan.md` maps panels to figures.
+- The venv's editable install of `snntopo` points at `/home/jake/Code/main/experiments/snn_topo`, which no longer exists: `import snntopo` fails outside pytest. Run scripts with `PYTHONPATH=<repo>`. Not fixed (Jake's venv).
+- No run stores activities, point clouds or weights (`results/store/` has `diagrams` and `halves` only). `poster_figures.cloud()` rebuilds a cloud from its recipe and checks it against the stored diagram to 1e-9; a model is retrained (about a minute, reproduces exactly on the GPU). Cache: `results/analysis/poster_figures/clouds/` (gitignored).
+- Grid runs are sharded: files are `activities.s0of2.jsonl` etc., not `activities.jsonl`. SNN labels are not unique; select by `activity_id`.
+- The two-choice group in `snn_vs_bio` (n = 189) includes rate networks (`family == "rate"`, `arch` and `neuron` empty).
