@@ -9,11 +9,13 @@ from the activity's recipe and kept in results/analysis/poster_figures/clouds/. 
 takes seconds; a model cloud retrains that one network (about a minute, no weights were kept).
 A rebuilt cloud is used only if its diagram equals the stored one.
 
-Sizes assume A0 landscape in three columns: COLUMN_IN is one column's width, and fonts are
-24 pt at that size. Change COLUMN_IN if the layout changes.
+Sizes assume a 48 x 36 in landscape poster in three columns: COLUMN_IN is one column's width,
+and fonts are 24 pt at that size. Change COLUMN_IN if the layout changes. The poster uses
+results, table, trajectories, engagement, pipeline and rips; main, noise, nogo, zoo and torus
+are kept for results.md and handouts.
 
     python scripts/poster_figures.py                                   # every figure
-    python scripts/poster_figures.py noise main                        # only these
+    python scripts/poster_figures.py results table                     # only these
     python scripts/poster_figures.py trajectory <run_dir> <activity_id>  # rotatable 3D view
 """
 import sys
@@ -40,7 +42,7 @@ GRID_RUNS = {"bio": ROOT / "results" / "runs" / "20261013-1300-bio_grid", "snn":
 CLOUDS = ANALYSIS / "poster_figures" / "clouds"
 OUT = ROOT / "docs" / "poster" / "figures"
 
-COLUMN_IN = 14.0
+COLUMN_IN = 14.5
 CELL = (128, 100)  # the matched size every brain-vs-model panel is drawn at; cells are never pooled
 PASSIVE, ENGAGED, SNN, NOGO = "#4477AA", "#228833", "#EE7733", "#AA3377"
 NEURON = {"lif": "#777777", "alif": "#4477AA", "izhikevich": "#EE7733"}
@@ -69,6 +71,10 @@ def matched_groups() -> dict[str, pd.DataFrame]:
             "snn": snn[snn["task"] == "steinmetz_2afc"], "nogo": snn[snn["task"] == "steinmetz_nogo"]}
 
 
+def values(g: dict[str, pd.DataFrame], key: str, measure: str, dim: int = 0) -> np.ndarray:
+    return g[key][g[key]["dim"] == dim][measure].dropna().to_numpy(float)
+
+
 def strip(ax, columns: list[tuple[str, np.ndarray, str]], fmt: str) -> None:
     """One jittered column of dots per group, a bar and the number at its median."""
     rng = np.random.default_rng(0)  # jitter only
@@ -88,8 +94,7 @@ def fig_main() -> None:
     for ax, (measure, title, fmt) in zip(axes, [("total_persistence", "How spread out\nis the path?", ".1f"),
                                                 ("participation_ratio", "How many dimensions\ndoes it use?", ".1f"),
                                                 ("null_mean", "How much does it change\nbetween halves of the trials?", ".2f")]):
-        strip(ax, [(name, g[key][g[key]["dim"] == 0][measure].dropna().to_numpy(float), color)
-                   for name, key, color in names], fmt)
+        strip(ax, [(name, values(g, key, measure), color) for name, key, color in names], fmt)
         ax.set_title(title, fontsize=24)
         ax.set_ylim(bottom=0)
     axes[0].set_ylabel("total cluster persistence")
@@ -190,6 +195,29 @@ def fig_zoo() -> None:
     save(fig, "zoo")
 
 
+def trial_sweep(ax, a: pd.DataFrame, sweep: pd.DataFrame) -> None:
+    """Each brain population's persistence as more trials are averaged, the models at CELL's trials
+    and the no-signal ceiling. `a` and `sweep` are topo_or_noise.py's tables at CELL's units."""
+    per_pop = sweep.groupby(["group", "activity_id", "trials"])["total_persistence"].mean().reset_index()
+    for key, color in [("passive", PASSIVE), ("engaged", ENGAGED)]:
+        for _, p in per_pop[per_pop["group"] == key].groupby("activity_id"):
+            ax.plot(p["trials"], p["total_persistence"], color=color, alpha=0.25, lw=1.5)
+        # medians only where every population of the group reaches the trial count, so the set is fixed
+        g = per_pop[per_pop["group"] == key]
+        common = g.groupby("trials")["activity_id"].nunique() == g["activity_id"].nunique()
+        med = g[g["trials"].isin(common.index[common])].groupby("trials")["total_persistence"].median()
+        ax.plot(med.index, med.to_numpy(), color=color, lw=6, marker="o", ms=12)
+    snn = a[a["group"] == "snn_2c"]["total_persistence"]
+    ax.errorbar(CELL[1], snn.median(), yerr=[[snn.median() - snn.quantile(0.25)], [snn.quantile(0.75) - snn.median()]],
+                color=SNN, marker="s", ms=18, lw=4, capsize=10, zorder=5)
+    ax.text(CELL[1] + 8, snn.median(), "models", color=SNN, va="center", fontsize=22, fontweight="bold")
+    ceiling = sweep["ceiling"].median()
+    ax.axhline(ceiling, color="#777777", lw=3, ls=":")
+    ax.text(200, ceiling + 0.6, "trials shuffled in time (no signal)", ha="right", va="bottom", fontsize=20, color="#555555")
+    ax.set_xticks(sorted(sweep["trials"].unique()))
+    ax.set(xlabel="trials averaged", ylim=(0, ceiling + 4))
+
+
 def fig_noise() -> None:
     """From topo_or_noise.py's tables: cluster persistence against path length, the brain trial
     sweep against the models and a no-signal ceiling, and each loop against its own noise."""
@@ -209,26 +237,8 @@ def fig_noise() -> None:
            title="Cluster persistence is\nthe length of the path")
     ax.legend(frameon=False, loc="upper left", markerscale=1.5)
 
-    ax = axes[1]
-    per_pop = sweep.groupby(["group", "activity_id", "trials"])["total_persistence"].mean().reset_index()
-    for key, color in [("passive", PASSIVE), ("engaged", ENGAGED)]:
-        for _, p in per_pop[per_pop["group"] == key].groupby("activity_id"):
-            ax.plot(p["trials"], p["total_persistence"], color=color, alpha=0.25, lw=1.5)
-        # medians only where every population of the group reaches the trial count, so the set is fixed
-        g = per_pop[per_pop["group"] == key]
-        common = g.groupby("trials")["activity_id"].nunique() == g["activity_id"].nunique()
-        med = g[g["trials"].isin(common.index[common])].groupby("trials")["total_persistence"].median()
-        ax.plot(med.index, med.to_numpy(), color=color, lw=6, marker="o", ms=12)
-    snn = a[a["group"] == "snn_2c"]["total_persistence"]
-    ax.errorbar(100, snn.median(), yerr=[[snn.median() - snn.quantile(0.25)], [snn.quantile(0.75) - snn.median()]],
-                color=SNN, marker="s", ms=18, lw=4, capsize=10, zorder=5)
-    ax.text(108, snn.median(), "models", color=SNN, va="center", fontsize=22, fontweight="bold")
-    ceiling = sweep["ceiling"].median()
-    ax.axhline(ceiling, color="#777777", lw=3, ls=":")
-    ax.text(200, ceiling + 0.6, "trials shuffled in time (no signal)", ha="right", va="bottom", fontsize=20, color="#555555")
-    ax.set_xticks(sorted(sweep["trials"].unique()))
-    ax.set(xlabel="trials averaged", ylabel="total cluster persistence", ylim=(0, ceiling + 4),
-           title="Averaging more trials\nshortens the brain's path")
+    trial_sweep(axes[1], a, sweep)
+    axes[1].set(ylabel="total cluster persistence", title="Averaging more trials\nshortens the brain's path")
 
     ax = axes[2]
     strip(ax, [(name, a[a["group"] == key]["h1_max_over_null"].dropna().to_numpy(float), color) for name, key, color in names], ".2f")
@@ -242,6 +252,88 @@ def fig_noise() -> None:
              ha="center", fontsize=20)
     fig.tight_layout(rect=(0, 0.07, 1, 0.96))
     save(fig, "noise")
+
+
+def fig_results() -> None:
+    """The poster's results figure: path length by group, and the brain's path shortening as more
+    trials are averaged. Dimension, noise and loops are in the table."""
+    g = matched_groups()
+    a = pd.read_csv(ANALYSIS / "topo_or_noise" / "activities.csv")
+    a = a[a["cell_units"] == CELL[0]]
+    sweep = pd.read_csv(ANALYSIS / "topo_or_noise" / "sweep.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(2 * COLUMN_IN, 10.5), gridspec_kw={"width_ratios": [0.8, 1.2]})
+    ax = axes[0]
+    strip(ax, [(name, values(g, key, "total_persistence"), color) for name, key, color in
+               [("passive\nbrain", "passive", PASSIVE), ("engaged\nbrain", "engaged", ENGAGED), ("spiking\nmodels", "snn", SNN)]], ".1f")
+    ax.set(ylabel="path length (total cluster persistence)", ylim=(0, 30),
+           title=f"Brains' paths are longer\n({CELL[0]} neurons x {CELL[1]} trials)")
+    trial_sweep(axes[1], a, sweep)
+    axes[1].set(ylabel="path length (total cluster persistence)", ylim=(0, 30),
+                title="More trials, less noise,\na shorter brain path")
+    fig.suptitle("Brains' average paths are longer than models', and noise makes them longer", fontsize=30)
+    fig.text(0.5, 0.01, "Left: each dot one brain population (13 sessions) or one trained network; bars, medians. Right: each thin line one "
+             "brain population (mean of 5 trial draws),\nthick lines medians where every population has the trials; models at "
+             f"{CELL[1]} trials only, median and quartiles (no model was rerun). Descriptive, no test.", ha="center", fontsize=20)
+    fig.tight_layout(rect=(0, 0.07, 1, 0.96))
+    save(fig, "results")
+
+
+def fig_table() -> None:
+    """The poster's summary table at CELL, printed and drawn. Top half: what separates brain from
+    model, with how often a random engaged-brain population exceeds a random model (ties count
+    half). Bottom half: topology measured against each population's own noise."""
+    g = matched_groups()
+    a = pd.read_csv(ANALYSIS / "topo_or_noise" / "activities.csv")
+    a = a[a["cell_units"] == CELL[0]]
+    keys = ["passive", "engaged", "snn"]
+
+    def exceeds(measure: str) -> str:
+        e, m = values(g, "engaged", measure)[:, None], values(g, "snn", measure)[None, :]
+        return f"{100 * ((e > m).mean() + 0.5 * (e == m).mean()):.0f}%"
+
+    def loops(key: str) -> str:
+        r1 = values(g, key, "r1", dim=1)
+        return f"{int((r1 >= 1).sum())} of {len(r1)}"
+
+    loop_noise = {k: a[a["group"] == t]["h1_max_over_null"].median() for k, t in zip(keys, ["passive", "engaged", "snn_2c"])}
+    rows = [("What separates them", None, None),
+            ("path length", [f"{np.median(values(g, k, 'total_persistence')):.1f}" for k in keys], exceeds("total_persistence")),
+            ("dimensions used", [f"{np.median(values(g, k, 'participation_ratio')):.1f}" for k in keys], exceeds("participation_ratio")),
+            ("trial-to-trial noise", [f"{np.median(values(g, k, 'null_mean')):.2f}" for k in keys], exceeds("null_mean")),
+            ("Topology, against its own noise", None, None),
+            ("clusters that survive resampling", [f"{np.median(values(g, k, 'r1')):.0f}" for k in keys], ""),
+            ("populations with a loop that survives", [loops(k) for k in keys], ""),
+            ("longest loop / its own noise", [f"{loop_noise[k]:.2f}" for k in keys], "")]
+    header = ["", "passive\nbrain", "engaged\nbrain", "spiking\nmodels", "engaged\n> model"]
+    n = [len(values(g, k, "total_persistence")) for k in keys]
+    for label, cells, rank in rows:
+        print(f"{label:40s}" + ("" if cells is None else "".join(f"{c:>12s}" for c in cells) + f"{rank:>8s}"))
+
+    fig, ax = plt.subplots(figsize=(COLUMN_IN, 8.5))
+    ax.axis("off")
+    xs = [0.0, 0.53, 0.67, 0.81, 0.95]
+    y, step = 0.95, 0.083
+    for x, text, color in zip(xs, header, ["k", PASSIVE, ENGAGED, SNN, "k"]):
+        ax.text(x, y, text, ha="left" if x == 0 else "center", va="center", fontsize=22, fontweight="bold", color=color)
+    y -= 1.2 * step
+    ax.axhline(y + 0.5 * step, color="k", lw=2)
+    for label, cells, rank in rows:
+        if cells is None:
+            ax.text(0, y, label, va="center", fontsize=22, fontweight="bold", fontstyle="italic")
+        else:
+            ax.text(0.02, y, label, va="center", fontsize=22)
+            for x, c in zip(xs[1:], cells + [rank]):
+                ax.text(x, y, c, ha="center", va="center", fontsize=22)
+        y -= step
+    ax.axhline(y + 0.5 * step, color="k", lw=2)
+    ax.set(xlim=(0, 1), ylim=(y + 0.4 * step, 1))
+    fig.text(0.02, 0.01, f"Medians at {CELL[0]} neurons x {CELL[1]} trials; n = {n[0]}, {n[1]}, {n[2]}. Path length: total cluster (H0) "
+             "persistence,\n95-99% of the path's length in its own widths. Dimensions: participation ratio. Noise: distance\n"
+             "between signatures of two random halves of the trials. Survives resampling: longer than twice the\n"
+             "95th percentile of that noise. Descriptive, no test; models measured at 100 trials only; 50 x 56 agrees.",
+             ha="left", va="bottom", fontsize=17)
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.98, bottom=0.22)
+    save(fig, "table")
 
 
 def cloud(run: Path, activity_id: str) -> dict[str, np.ndarray]:
@@ -298,10 +390,10 @@ def examples() -> list[tuple[str, str, str, str]]:
     for name, key, color in [("passive brain", "passive", PASSIVE), ("engaged brain", "engaged", ENGAGED)]:
         d = g[key][(g[key]["dim"] == 0) & g[key]["area"].isna() & (g[key]["session"] == session)]
         out.append((f"{name}\n(session {int(session)})", "bio", d["activity_id"].iloc[0], color))
-    for name, key, color in [("2-choice model", "snn", SNN), ("no-go model", "nogo", NOGO)]:
-        d = g[key][(g[key]["dim"] == 0) & (g[key]["family"] == "snn")]  # a spiking example, not a rate network
-        row = d.loc[(d["total_persistence"] - d["total_persistence"].median()).abs().idxmin()]
-        out.append((f"{name}\n({row['arch']}, {row['neuron']})", "snn", row["activity_id"], color))
+    d = g["snn"][(g["snn"]["dim"] == 0) & (g["snn"]["family"] == "snn")]  # a spiking example, not a rate network
+    row = d.loc[(d["total_persistence"] - d["total_persistence"].median()).abs().idxmin()]
+    neuron = {"lif": "leaky", "alif": "adaptive", "izhikevich": "Izhikevich"}[row["neuron"]]
+    out.append((f"spiking model\n({row['arch']}, {neuron})", "snn", row["activity_id"], SNN))
     return out
 
 
@@ -309,7 +401,7 @@ def fig_trajectories() -> None:
     fig = plt.figure(figsize=(2 * COLUMN_IN, 9.5))
     for i, (name, side, activity_id, color) in enumerate(examples()):
         c = cloud(GRID_RUNS[side], activity_id)
-        ax = fig.add_subplot(1, 4, i + 1, projection="3d")
+        ax = fig.add_subplot(1, 3, i + 1, projection="3d")
         draw_path(ax, c["points"], color)
         ax.set_title(f"{name}\n3 axes hold {share_in_3(c['points']):.0f}%", fontsize=24)
     fig.suptitle("One population's average path through a trial", fontsize=30)
@@ -421,8 +513,8 @@ def main():
     if sys.argv[1:2] == ["trajectory"]:
         show_trajectory(Path(sys.argv[2]), sys.argv[3])
         return
-    figures = {"main": fig_main, "nogo": fig_nogo, "engagement": fig_engagement, "zoo": fig_zoo, "noise": fig_noise,
-               "trajectories": fig_trajectories, "pipeline": fig_pipeline, "rips": fig_rips, "torus": fig_torus}
+    figures = {"results": fig_results, "table": fig_table, "main": fig_main, "nogo": fig_nogo, "engagement": fig_engagement,
+               "zoo": fig_zoo, "noise": fig_noise, "trajectories": fig_trajectories, "pipeline": fig_pipeline, "rips": fig_rips, "torus": fig_torus}
     for name in sys.argv[1:] or figures:
         figures[name]()
     print(f"-> {OUT}")
