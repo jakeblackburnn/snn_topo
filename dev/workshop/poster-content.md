@@ -22,6 +22,7 @@ Chosen (Jake): the mirror question alone, "Do spiking models mirror the topologi
 
 ### 9. Is what separates them topological?
 Raised by Jake while settling 1: he wants this made solid with our results and taken up next session. Not settled here. What exists: a measure with no topology in it ranks brain above model 94.0% of the time against 98.7% for total cluster persistence (`results.md:92-93`); robust clusters and loops do not separate the groups (`results.md:95-97`). What is missing: anything that separates "more noise" from "different shape" (`results.md:106-107`). Starting points for next session, none run: add noise to the models until their split-half noise matches the brain's and see whether the persistence gap closes; regress persistence on noise and dimension across the populations already measured and look at what is left; compare at matched participation ratio. The first needs a run; the other two use `results/analysis/snn_vs_bio/activities.csv` as it is.
+**Outcome (2026-10-14, agent, Jake's go-ahead; no SNN run):** `scripts/topo_or_noise.py`, `results.md` section 6, figure `noise`, draft panel 7b. Total H0 persistence is the minimum-spanning-tree length, so at most the path's length in its own widths; measured, it is 95-99% of it, and path length leaves 8% of the brain-model log gap. Brain trials shuffled in time give 26 (pure-noise ceiling); more trials shorten the engaged brain's path (15.4 at 25, 9.4 at 100, 7.4 at 200) and lower its participation ratio. Longest loop over its own noise: engaged 0.69, models 0.76. Matching on participation ratio was dropped: only 9 engaged populations overlap the models' range. Read: no topological difference detected; the gap is path smoothness. Open: models at the brain's noise (needs runs).
 
 ### 2. A panel that says what it means
 Chosen (Jake): add a closing "What it means" panel, 60 words, from `core-summary.md:63-72`. Set aside: folding the takeaway into panel 1 (makes the one-line answer three lines) and no conclusion.
@@ -51,7 +52,7 @@ Confirmed by Jake ("apply all"), 2026-10-13:
 - `docs/poster/core-summary.md:51-52`: loop counts put in the right order (8, applied before the workshop).
 
 ## Follow-ups (not applied)
-- Thread 9: make "is what separates them topological" solid. Next session.
+- Thread 9: done as far as existing data allow (2026-10-14); models at matched noise need a run.
 - Thread 10: decide whether no-go stays on the poster.
 - Thread 7: what is cut if the text does not fit, Thursday. Budgets sum to 900 words; the draft is at 861.
 - `core-summary.md:6-8` and `:88-89` still carry the older question and one-line answer.
