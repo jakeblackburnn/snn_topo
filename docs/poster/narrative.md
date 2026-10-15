@@ -1,5 +1,9 @@
 # Poster narrative (2026-10-14)
 
+**Superseded in order and layout (2026-10-15):** `poster.md` follows Jake's two-part question,
+so engagement now comes first in the results, and the layout is Jake's three columns
+(`dev/workshop/poster-structure.md`). The backbone's claims below still hold.
+
 The story the poster tells, which figure carries each step, and how it maps onto the layout.
 Decisions behind it: `dev/workshop/poster-cuts.md`. Panel texts: `draft.md`. Numbers:
 `results.md`.

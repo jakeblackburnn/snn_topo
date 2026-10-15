@@ -1,5 +1,10 @@
 # Poster plan (2026-10-13, revised after the content and cuts workshops)
 
+**2026-10-15: work from `docs/poster/poster.md`.** It is the Canva copy in Jake's six-section
+structure (question and answer, Introduction, I-V, references), with captions and figure edit
+notes. The structure was settled in `dev/workshop/poster-structure.md` and replaces the panel
+order below. The panel table stays as the map from old panel numbers to sources.
+
 What goes on the poster, where each piece comes from, and what is left. Figures are in
 `docs/poster/figures/` as PDF (vector) and 300 dpi PNG, rebuilt by
 `PYTHONPATH=. python scripts/poster_figures.py`. The poster is 48 x 36 in landscape, three
@@ -49,10 +54,12 @@ Read `draft.md` top to bottom once first. Then:
 6. Captions (3, 9) and panel 13.
 
 ## Open
+- Figure edits listed in `poster.md` (drop footers and titles, `pipeline` step 3, the `results`
+  left panel; relabel "ball radius"; refit widths to about 13 / 18 / 13 in): not applied.
 - "Is what separates them topological": answered as far as existing data allow
   (`results.md` section 6, panel 8): no difference detected; models at the brain's noise need
   a run (panel 13).
-- Layout tool.
+- Layout tool: Canva, three columns (Jake, 2026-10-15).
 
 ## Figures: what each shows and what to say beside it
 On the poster:
