@@ -1,35 +1,39 @@
 # SNN Topo Journal
 
+## Oct 15 2026
 
-## Oct 13 2026 Session 3
-not sure what to do or how to proceed, but want to figure that out as well as workshop the figures.
-overall just want to speedrun making the poster
+I'm working on the graphic design of the poster, and want to align the draft content with my ideas about how to arrange things on the poster.
+Feel free to push back on this structure, but be honest with caveats and considerations.
 
-## session 4
-not sure what to do, maybe workshop some of the content ideas for the poster and make a full test version of
-snn_topo.md to see. come up with some other things to add to, focusing on prepping tomorrows writing session.
-the plan too.
+Heres what I have right now (subject to change, but also the simplest ideas I have so far):
 
-### 2026-10-13 21:12 (agent)
-Eight poster figures built in `docs/poster/figures/` and `docs/poster/plan.md` says what each panel needs and when; references are checked and split. All on branch `poster-figures`, not merged.
-Next: you write panels 1 to 6 and 12 from the plan; I vet them and read Gao 2017.
+1. a 'research question' bubble: 
+**Research Question**: Can topological data analysis (TDA) be applied to collect meaningful topological signatures of recorded brain activity?
+do those signatures offer a signal capable of differentiating real brain activity from that of spiking computational models?
 
-### 2026-10-13 21:41 (agent)
-`docs/poster/draft.md` is a full test version of your poster doc with 15 panel texts; the content workshop set the question ("Do spiking models mirror the topological signature of real brains?"), the order and two new panels, and `plan.md` has a Wednesday writing order. On branch `poster-draft`, not merged.
-Next: you read the draft and write panels 1, 6, 7, 9 first; open are whether no-go stays and how to make "is the gap topological" solid.
+2. Introduction
+Not sure how to frame this, but think mentioning curto and touching on experiments, results, and the promising nature of topology for
+studying brain activity. I also have a 'key terminology' bullet list including just topology and snns.
 
-### 2026-10-14 13:05 (agent)
-Briefed on what to read before writing (`draft.md`, then `plan.md`, then `dev/workshop/poster-content.md`; `results.md` while writing) and merged `poster-draft` to `main`.
-Next: you read the draft and write panels 1, 6, 7, 9; I vet them.
+3. I - Topological Data analysis
+the coffee cup & donut photo, explanation of topology stuff up to persistent homology applied to datasets
 
-### 2026-10-14 13:36 (agent)
-Answered "is the gap topological" from existing data: total cluster persistence is the average path's length, noise lengthens it, and loops against their own noise match; new `noise` figure, panel 7b and a full Limitations section in `draft.md`, merged to `main`.
-Next: decide whether 7b stays separate (draft ~970 of 900 words), then write panels 1, 6, 7, 9.
+4. II - TDA for brain activity
+the steinmetz dataset, neuropixels and visual discrimination explanation.
+(maybe also include SNN model types here? and how data is collected from these models in the zoo?)
+figure showing neural activity trajectories in the 3 pca dims, caption explaining the three trajectories.
 
-### 2026-10-14 14:55 (agent)
-Workshopped the cuts: the poster is 14 panels at about 800 words for a bio audience, with no-go and zoo cut to a line each, a new two-panel `results` figure and a summary `table`; merged to `main`.
-Next: write panels from `draft.md`; OK the `results.md:136` rounding fix and decide on the 12 rate networks in "spiking models".
+5. III - results
+the table, explanation and interpretation of results
 
-### 2026-10-14 15:35 (agent)
-Wrote `docs/poster/narrative.md`: the poster's four-move story, which figure carries each move, and a proposed 3-column layout.
-Next: write panels; at layout, rebuild `rips`, `pipeline`, `trajectories` one column wide if they sit in one column.
+6. IV - limitations
+you get the idea.
+
+then references.
+
+lets workshop the draft content to see if we can bring it into alignment with this structure, otherwise workshopping the flow of the poster as needed.
+I also want to decide on the set of figures if not decided already, and develop the captions for them + make note of things that can be removed from
+the figures themselves once a decent caption explains it. also any graphical changes to figures such as condensing space.
+
+Overall I want to get to a point where I can work directly from the draft and current figures to fill out the poster in canva,
+and then we can go from there, tweaking explanations and word count, fix up figures, and add references.
