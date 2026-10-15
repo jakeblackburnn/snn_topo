@@ -229,7 +229,7 @@ CC BY-SA 3.0, via Wikimedia Commons.
 - II: `datasets.md:5-28`; models `model-zoo.md`, 189 and rate count `results.md:77-78` and `snn_vs_bio/activities.csv`; pipeline `pipeline.md:10-16`, matched size `results.md:76-79`.
 - III-a: `results.md:21-28`; the figure's bands and the open dot from `engagement.png`.
 - III-b: 9.7, 4.4 `results.md:84`; 99% (98.7) `:92`; dimensions and noise `:85-86`, `:93`; wiring `:57-58`; biology `:102-103`; 12 of 13 `:98-99`.
-- III-c: 95-99% `:118-121`; 26 `:125-127`; 15.4 → 9.4 `:129-130`; loops alike `:135-138` (0.68: the median is 0.6848, `results.md:136` prints 0.69); rarer in the brain `:137-138`; no model rerun `:143-146`.
+- III-c: 95-99% `:118-121`; 26 `:125-127`; 15.4 → 9.4 `:129-130`; loops alike `:135-138`; rarer in the brain `:137-138`; no model rerun `:143-146`.
 - Table cells `:84-89`, `:135-137`; trajectory percentages from `trajectories.png`.
 - IV: `draft.md` Limitations items 1, 2, 6, 7, 9, 4.
 - V: no-go 10.2 against 9.7 `results.md:100-101`, noisier 0.157 against 0.113 `:86`.

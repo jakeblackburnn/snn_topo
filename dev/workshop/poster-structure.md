@@ -43,7 +43,7 @@ Departures from the threads, made while writing:
 
 ## Follow-ups (not applied)
 - Apply the figure edit notes in `poster.md` to `scripts/poster_figures.py` and rebuild (Jake chose notes only for this session).
-- `results.md:136` 0.69 → 0.68 (median 0.6848), on Jake's OK; `poster.md` and the table already print 0.68.
+- ~~`results.md:136` 0.69 → 0.68~~ done 2026-10-15 (median 0.6848; the 50 x 56 0.69 is correct at 0.6859).
 - The 12 rate networks inside "spiking models" (n = 189): relabel or drop (Jake).
 - Reference 9: drop it, or read it before printing.
 - `core-summary.md` alignment (carried from 2026-10-14).

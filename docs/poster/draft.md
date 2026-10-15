@@ -310,7 +310,7 @@ excitatory/inhibitory split 3.3, mixed time constants 3.9, plain 4.5, against th
 > loop is alike (0.68 brain, 0.76 models); loops that survive resampling are rarer in the brain.
 >
 > Figures: `results` right panel; `table`, bottom half.
-<!-- results.md:118-139 (0.68: the median is 0.6848; results.md:136 prints 0.69), table.png -->
+<!-- results.md:118-139, table.png -->
 
 > **Panel 9 · What the paths look like · 40 words**
 > Caption (`trajectories`): One example per group, nearest its group's median, on three of the
