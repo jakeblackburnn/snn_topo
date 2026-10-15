@@ -133,7 +133,7 @@ trial counts. No SNN was run or trained. Numbers at 128 units; the 50 x 56 cell 
   move, 20.4 to 17.3 from 25 to 100 trials. The grid's own draw at 100 trials reproduces its
   stored persistence for all 78 populations.
 - **Loops measured against their own noise are alike.** Longest H1 bar over the H1 split-half
-  null mean, medians: engaged brain 0.69, models 0.76, passive brain 1.18 (50 x 56: 0.69,
+  null mean, medians: engaged brain 0.68, models 0.76, passive brain 1.18 (50 x 56: 0.69,
   0.61, 0.84). Robust cluster counts agree (10 against 8); robust loops are commoner in the
   models (24 of 189 against 1 of 39), almost all in two modular families (section 5).
 - Split-half noise and participation ratio together fit with R² 0.93 and leave 0.02 of the
