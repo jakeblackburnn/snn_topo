@@ -37,3 +37,7 @@ the figures themselves once a decent caption explains it. also any graphical cha
 
 Overall I want to get to a point where I can work directly from the draft and current figures to fill out the poster in canva,
 and then we can go from there, tweaking explanations and word count, fix up figures, and add references.
+
+### 2026-10-15 13:22 (agent)
+Workshopped your six-section structure; `docs/poster/poster.md` is the Canva copy (about 800 words, captions, figure edit notes, column plan), merged to `main` with the `results.md:136` fix.
+Next: apply the figure edit notes and rebuild; fill Canva from `poster.md`.
