@@ -27,6 +27,19 @@ def correlations(x: np.ndarray, remove_population: bool = False) -> np.ndarray:
     return np.corrcoef(z)
 
 
+def demean_trials(x: np.ndarray, bounds: np.ndarray) -> np.ndarray:
+    """x: (neurons, samples) of concatenated trials, bounds: trial edges in samples. Each
+    neuron's mean is subtracted within every trial, so co-fluctuations between trials (drift,
+    arousal, anything slower than a trial) no longer count; within-trial structure stays.
+    Unlike projecting out principal components, which imposes its own order on the residual
+    correlations and lifts even place cells far above random (tested 2026-10-16), this leaves
+    independent neurons at random and geometric ones well below."""
+    x = np.array(x, dtype=np.float64)
+    for a, b in zip(bounds[:-1], bounds[1:]):
+        x[:, a:b] -= x[:, a:b].mean(1, keepdims=True)
+    return x
+
+
 def order_distance(c: np.ndarray) -> np.ndarray:
     """Off-diagonal entries replaced by the edge density at which that edge enters (highest
     correlation first); ties broken by position, deterministically."""

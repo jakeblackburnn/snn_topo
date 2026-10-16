@@ -898,3 +898,23 @@ remain (E16 addresses movement).
 - Accuracy, 12-task nets: every task above chance in every seed. CtxDM, DM, GoRt and Go 0.88-1.00; Romo 0.73-0.92; GoDl 0.45-0.85. DM-only nets: 0.96-0.99. Gate at 256: the same pattern.
 - Mean rate: 12-task ~2.2 Hz; DM-only ~1.0 Hz (74-92 units over the floor, so no k = 128).
 **Verdict:** the first part is supported: everything sits far below random. The second part is refuted: the 12-task net sits *above* untrained and DM-only, i.e. closer to random and to the brain. Most of the DM-only gap is the inputs (0.18 on 12-task inputs vs 0.24). Brain probes stay about twice as close to random; with the population removed, the net and brain ranges don't overlap.
+
+## E20 · 2026-10-16 · E19 robustness to slow shared signals · status: done
+**Hypothesis:** slow shared modes left by the one-dimensional population regression explain the brain-net gap. If so, removing them closes it.
+**Run:** `clique.demean_trials` validated first on synthetic data (`tests/test_clique.py`, scratch checks), then `clique_probe.py probe` and `figure` with `trial_demeaned` variants. The draws are the same as E19's: all 1840 earlier rows reproduce exactly.
+**Criterion:** refuted if, with trial means removed (with and without population regression), the 12-task and brain medians come within each other's ranges at k = 50.
+**Result:**
+- **Top-PC removal** was rejected on synthetic data: it overshoots far above random. Place cells reach 2.8-8x random; 3 known slow modes with exactly 3 PCs removed reach 3.9x.
+- **Trial means removed, k = 50:**
+  - untrained 0.03;
+  - DM-only on 12-task inputs 0.21;
+  - 12-task 0.32 [0.28-0.34];
+  - engaged 0.53 [0.32-0.62];
+  - passive 0.58 [0.23-0.81].
+- **Plus population regression:**
+  - 12-task 0.37 [0.30-0.39];
+  - engaged 0.75 [0.51-0.87];
+  - passive 0.83 [0.49-0.97].
+- k = 128 gives the same pattern.
+- Population regression overshoots on synthetic data: 1.09-1.26x random.
+**Verdict:** the hypothesis is refuted, and the gap holds. Drift removal lifts nets and brain by similar amounts, and with both removals the ranges separate (nets ≤ 0.39, sessions ≥ 0.49). With trial means removed alone, the raw ranges touch at the low end (engaged min 0.32 against a 12-task max of 0.34).

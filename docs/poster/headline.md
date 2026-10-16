@@ -42,6 +42,37 @@ At k = 128 the order is the same: untrained 0.02, 12-task 0.14, brain engaged 0.
   (0.18) come close to 12-task nets (0.24), and their ranges overlap. On their own DM inputs they
   look untrained (0.05).
 
+## Robustness: slow shared signals
+
+The objection: the brain's order could come from slow shared signals (drift, arousal) that the
+one-dimensional population regression leaves in place. Two fixes were tried on synthetic data
+first.
+
+- **Projecting out the top principal components is invalid here.** It imposes its own order on
+  the residual correlations. Place cells go from 0.10 to 2.8-8x random, and independent
+  neurons with 3 slow modes reach 3.9x random even with exactly those 3 removed.
+- **Removing each neuron's mean within every trial works.** Modes that change between trials
+  return to random (0.86 -> 1.02), independent neurons are unchanged (0.90 -> 0.88), and place
+  cells stay far below (0.10 -> 0.21). This is tested in `tests/test_clique.py`.
+
+On the real probes (k = 50, median [range]):
+
+| Source | trial means removed | trial means + population removed |
+|---|---|---|
+| untrained net | 0.03 | 0.10 |
+| DM-only net, 12-task inputs | 0.21 | 0.26 |
+| 12-task net | 0.32 [0.28-0.34] | 0.37 [0.30-0.39] |
+| brain, engaged | 0.53 [0.32-0.62] | 0.75 [0.51-0.87] |
+| brain, passive | 0.58 [0.23-0.81] | 0.83 [0.49-0.97] |
+
+Slow drift accounts for some of the brain's order, and for about as much of the trained nets'.
+The ordering is unchanged, and the brain stays about twice as close to chance. With both
+removals the ranges separate: nets at most 0.39, sessions at least 0.49. At k = 128 the
+pattern is the same: 12-task 0.19, engaged 0.55, passive 0.63, with both removals.
+
+One caveat on the population regression itself: on synthetic data it overshoots slightly
+(1.09-1.26x random where 1 is the truth). The raw and trial-demeaned columns don't use it.
+
 ## Hypothesis (written before the results)
 
 The hypothesis was that the brain and a multitask net would sit below chance, and that the
@@ -50,9 +81,9 @@ held. The second ran the other way: training moves a net toward chance, not away
 
 ## Caveats
 
-- **Population regression** removes one shared signal. Slower shared modes (arousal, drift,
-  movement) can still lower brain curves, which would make the brain look more like the nets,
-  not less.
+- **Shared signals within a trial** (movement, fast arousal) are not removed by either fix.
+  Between-trial drift is handled (see Robustness). Projecting out principal components is not
+  an option for this measure.
 - **The model** is Pugavko, Maslennikov & Nekorkin 2023's regularized AdEx net at 512 units,
   ported in `snntopo/pugavko.py`. It reaches 0.88-0.91 mean accuracy over its 12 tasks (GoDl the
   weakest, 0.45-0.85); the paper reports >95% for unregularized nets of 400-600 units.

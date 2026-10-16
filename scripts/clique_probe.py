@@ -3,7 +3,8 @@
 A probe is k neurons drawn at random from one source, and 15000 10-ms bins of their spike
 counts from trials taken in random order (a brain probe: 100 trials x 150 bins). Its
 correlation matrix goes through `snntopo.clique`, raw and after regressing out the probe's
-population signal.
+population signal, each with and without every trial's mean removed per neuron (drift and
+anything else slower than a trial).
 
 Sources: the 13 Steinmetz part-0 sessions, engaged (active block, responded trials) and
 passive; Pugavko et al. 2023's AdEx network (`snntopo.pugavko`, their regularized recipe) at
@@ -163,13 +164,14 @@ def sources():
             yield group, f"{name}-{seed}", f["counts"], f["bounds"]
 
 
-def probe_samples(counts, bounds, units, rng) -> np.ndarray:
-    """Trials in random order, concatenated and cut at N_SAMPLES bins."""
+def probe_samples(counts, bounds, units, rng) -> tuple[np.ndarray, np.ndarray]:
+    """Trials in random order, concatenated and cut at N_SAMPLES bins. -> (x, trial edges in x)."""
     order = rng.permutation(len(bounds) - 1)
     lengths = np.diff(bounds)[order]
     take = order[:np.searchsorted(np.cumsum(lengths), N_SAMPLES) + 1]
     x = np.concatenate([counts[units, bounds[t]:bounds[t + 1]] for t in take], axis=1)
-    return x[:, :N_SAMPLES].astype(np.float64)
+    edges = np.minimum(np.concatenate([[0], np.cumsum(lengths[:len(take)])]), N_SAMPLES)
+    return x[:, :N_SAMPLES].astype(np.float64), edges
 
 
 def probe_matrices():
@@ -183,11 +185,13 @@ def probe_matrices():
                 print(f"skip {group} {source} k={k}: {len(eligible)} units, {counts.shape[1]} bins", flush=True)
                 continue
             for draw in range(DRAWS):
-                x = probe_samples(counts, bounds, rng.choice(eligible, k, replace=False), rng)
-                for residual in (False, True):
-                    rows.append({"group": group, "source": source, "k": k, "draw": draw, "residual": residual,
-                                 "n_eligible": len(eligible)})
-                    mats.append(clique.correlations(x, remove_population=residual))
+                x, edges = probe_samples(counts, bounds, rng.choice(eligible, k, replace=False), rng)
+                for demeaned in (False, True):
+                    y = clique.demean_trials(x, edges) if demeaned else x
+                    for residual in (False, True):
+                        rows.append({"group": group, "source": source, "k": k, "draw": draw, "residual": residual,
+                                     "trial_demeaned": demeaned, "n_eligible": len(eligible)})
+                        mats.append(clique.correlations(y, remove_population=residual))
     return rows, mats
 
 
@@ -196,7 +200,8 @@ def probe() -> None:
     rng = np.random.default_rng(0)
     for k in KS:
         for draw in range(RANDOM_DRAWS):
-            rows.append({"group": "random", "source": "random", "k": k, "draw": draw, "residual": False, "n_eligible": k})
+            rows.append({"group": "random", "source": "random", "k": k, "draw": draw, "residual": False,
+                         "trial_demeaned": False, "n_eligible": k})
             mats.append(clique.random_matrix(k, rng))
     workers = int(os.environ.get("SNNTOPO_WORKERS", os.cpu_count()))
     order = np.argsort([-len(m) for m in mats])  # the slow k = 128 probes first
@@ -218,8 +223,9 @@ def probe() -> None:
 
 def summary(df: pd.DataFrame) -> None:
     """Medians over sources of each source's median probe: sessions and training seeds are the units."""
-    per_source = df.groupby(["group", "source", "k", "residual"])[["betti1_vs_random", "betti2_vs_random"]].median()
-    out = per_source.groupby(["group", "k", "residual"]).agg(["median", "min", "max", "count"]).round(2)
+    keys = ["group", "k", "trial_demeaned", "residual"]
+    per_source = df.groupby(keys[:1] + ["source"] + keys[1:])[["betti1_vs_random", "betti2_vs_random"]].median()
+    out = per_source.groupby(keys).agg(["median", "min", "max", "count"]).round(2)
     print(out.to_string())
 
 
@@ -235,7 +241,7 @@ def figure() -> None:
         for col, (dim, residual) in enumerate(((0, False), (1, False), (0, True), (1, True))):
             ax = axes[row, col]
             for g in groups:
-                sel = (df.group == g) & (df.k == k) & ((df.residual == residual) | (g == "random"))
+                sel = (df.group == g) & (df.k == k) & ~df.trial_demeaned & ((df.residual == residual) | (g == "random"))
                 c = curves[sel.to_numpy(), dim]
                 if not len(c):
                     continue

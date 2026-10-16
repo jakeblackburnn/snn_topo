@@ -55,3 +55,20 @@ def test_shared_drive_is_removed_by_population_regression():
     residual = clique.integrated(clique.betti_curves(clique.correlations(x, remove_population=True)))
     assert np.all(raw < band.min(0)), (raw, band.min(0))
     assert np.all(np.abs(residual - band.mean(0)) < 4 * band.std(0)), (residual, band.mean(0))
+
+
+def test_trial_demeaning_removes_slow_modes_and_keeps_geometry():
+    """Three shared modes that change only between 150-bin trials push the curves below
+    random; demeaning each trial restores random. Place cells stay far below it."""
+    band = random_band()
+    rng = np.random.default_rng(4)
+    bounds = np.arange(0, SAMPLES + 1, 150)
+    gain = rng.uniform(0.2, 1.0, (N, 3))
+    drive = np.repeat(rng.random((3, SAMPLES // 150)), 150, axis=1)
+    x = (rng.random((N, SAMPLES)) < 0.02 + 0.3 * gain @ drive).astype(float)
+    raw = clique.integrated(clique.betti_curves(clique.correlations(x)))
+    demeaned = clique.integrated(clique.betti_curves(clique.correlations(clique.demean_trials(x, bounds))))
+    geometric = clique.integrated(clique.betti_curves(clique.correlations(clique.demean_trials(place_cells(rng), bounds))))
+    assert np.all(raw < band.min(0)), (raw, band.min(0))
+    assert np.all(np.abs(demeaned - band.mean(0)) < 4 * band.std(0)), (demeaned, band.mean(0))
+    assert np.all(geometric < 0.5 * band.mean(0)), (geometric, band.mean(0))
