@@ -1,114 +1,82 @@
-# SNN TOPO
+# Topology of Brain Activity of Mice vs. Computational Models
 
-## Research Question
-Does the topological signature of activity in computational models mirror that of real biological brains?
-Does topological data analysis offer any new insight into neural codes?
+**Research Question:** Can topological data analysis (TDA) extract meaningful as;dflaksjdf
+**Answer:** Yes, the topodfgaksdf 
 
-### Topology and Topological Data Analysis
+## Introduction
 
-*Curta* **cite** explains how topological data analysis can be applied to interpret neural codes, in other words how brains represent
-experiences with spike patterns across populations of neurons.
+Topology is a branch of modern mathematics which has shown remarkable richness in its applications to data analysis. 
+Methods such as persistent homology can be leveraged to characterize and differentiate datasets based on their topological features.
+This poster shows how TDA reveals meaningful differences between recorded neuron population activity in mice and that of simulated spiking neural networks.
 
-#### Topological Invariants
-Topology and its applications to data analysis are burgeoning fields of mathematics. Its applications to science are especially
-relevant to understanding the brain where data is more and more abundant. 
-
-Topology is a field of mathematics concerned with characterizing objects by their topological properties, rather than geometric properties.
-The classic example is *the homeomorphism between a donut and a coffee cup*. The geometry differs, but both contain one topological 
-hole / loop, and are therefore *homeomorphic*, a form of topological equivalence.
-The key invariant between topologically equivalent objects is their Homology groups, or *Betti Numbers:*
-
-- $\beta_0$ - number of connected components, meaning contiguous 'pieces' of an object
-
-- $\beta_1$ - the number of topological holes / loops
-
-- $\beta_2$ - the number of 'voids', or enclosed spaces. 
-
-**Figure a Homeomorphism from coffee cup to donut: ceramic model by Keenan Crane and Henry Segerman, via wikipedia**
+## I - Topological Data Analysis
 
 
-##### Example: Torus 
-A donut, as discussed has one hole, and clearly has only one contiguous connected component, 
-therefore betti0 = 1 and betti1=1. A *Torus* is the geometric equivalent of the *surface* of a donut, without the 
-interior filled in. A torus therefore still has one connected component, but has *two* holes, the usual one in the center, but
-also the ring around the interior of the donut. Furthermore, it encloses an empty space - a void. thus betti0 = 1 betti1 = 2 and betti2=1.
+**Topology**
 
-**Figure: homology groups of a donut**
+**Picture: Topologist's Breakfast**
 
-*Note: the homology groups of a torus are relevant to the poincare conjecture, proved in 2003 by grigori perelman*
+**Persistent Homology**
 
-#### Topology Applied to Data Analysis
-Topological data analysis seeks to apply topology to characterize datasets, for instance, a high dimentional point cloud, by its 
-topological features. The classic application of TDA is persistent homology.
+**Figure: Vietoris-Rips Complex**
 
-Cech or Vitoris-Rips methods take a point cloud, and progressively 'Thicken' the points. During this process, points connect 
-and overlap to form *simplicial complexes* which can be readily analyzed in terms of their topological features, and measure how 
-topology *persists* across the varying "thickenings". The key idea being that real topological features will persist
-significantly longer than features resulting from noise, allowing for a distinct topological 'signature' of a dataset.
-This signature gives us power to identify characteristics of the underlying distribution data is sampled from, and reveal 
-differences invisible to typical statistical techniques. This is also especially useful for analyzing and discriminating 
-high dimentional, hard to visualize datasets. 
+## II - TDA Applied to Brain Activity
 
-**Figure: rips / cech complex thickenings**
-**Figure: Mobius Strip**
+**Neuropixels**
+Stienmetz et al 2019 recorded population activity in mice performing a visual discrimination task using Neuropixels probes, which can register spikes
+from hundreds of neurons across several brain regions. These mice were trained on a visual 
 
-### Topology of Brain Activity
+**Figure: Visual Discrimination Task**
 
-Applying TDA to brain activity requires a means for turning raw recordings (Neuropixels **cite**) into a meaningful and interpetable 
-point cloud, at a scale / dimension which is tractable for persistent homology. 
+**Spiking Neural Networks** (SNNs) are a form of artificial neural network intended to mirror real neurons with their all-or-none spikes.
+We collected comparable population activity data from a variety of SNNs trained on a simplified version of the Stienmetz task. The following table
+summarizes the varieties and session counts:
 
-Neuropixels recordings are taken by an electrode array, deep enough to cross multiple layers of cortex. from the raw recordings,
-secondary analysis is able to (with some accuracy) pinpoint activations of individual 'units' (neurons). 
+**Table: the different model types**
 
+**Population Trajectories**
 
+The raw data collected from the mouse brains and SNNs track when individual neurons fire, binned into 10ms intervals, over a set of trials.
+To make this raw data amenable for TDA, each recorded session was first equalized to a set of 128 neurons, over 150 time steps, and 100 random trials. Then, the following pipeline was applied to each session:
 
-#### The dataset
-The Steinmetz dataset 
+1. average over trials
+2. smooth spikes over a 50ms window
+3. reduce the neuron axes via PCA to a 10-dim 'activity space'
+4. scale the activity space to unit width
 
+This converts a (128x150x100) grid of individual spikes to a smoothed and normalized (10x150) point cloud: 10 dimensions in activity space over 150 time steps.
 
-##### The task: visual discrimination
-Rats are presented with a screen, the left or right side lights up with a striped black and white pattern, 
-the mouse is trained to turn a wheel to the left or right depending on which side the pattern appears. 
+**Figure: Trajectories**
+Left: raw spikes from a population of 128 neurons over time. Right: three population 'trajectories' shown in the reduced activity space (using 3 of the 10 dimensions). The leftmost population is a passive mouse brain, middle, a mouse engaged in the visual discrimination task, and finailly a recurrent
+SNN. Each example is selected as the median 'path length' in its group of sessions.
 
-populations of neurons recorded range from **Numbers-Numbers**, and are taken in one of two scenarios: the active scenario, where the 
-rat is made to turn the wheel, and the passive scenario, where the rat simply observes the stimulus. Spikes are separated into 
-discrete time 'bins' about 10ms each. the number of spikes coming from individual neurons on this time scale tend to be 0 or 1. 
-These experiments were repeated for a number of trials for each rat / scenario. 
+## III - Results
 
+**Cluster Persistence corresponds to trajectory length**
+and is explained by participation rate PCA stuff
 
-### Turning neuropixels into point clouds
-Due to the high variance in recordings across trials, and the need for computational tractability two things were done 
-to reduce the dimensionality of the recordings: 
+**Task engagement changes the topological signature:** in 11 of 12 held-out tests, engagement changed persistence - making trajectories
+more smooth and detectable.
 
-1. Average over 150 trials 
-Turns (neurons, time bins, trials) to (averaged neurons, time bins)
+**SNNs are Differentiable** from brains, though task engagement makes brains more model-like.
 
-2. 10-component PCA
-Turns the hundreds of neurons into a simple 10 dimentional neuron activity components characterizing the 
-activity of all neurons in a given time bin
+**loops are insignificant**
+These experients did not detect persistent topological features other than connected components, or 'clusters' in the activity space. In mouse
+populations, task engagement reliably reduced the total persistence of clusters.
 
-3. Also, we smooth activations over neighboring time bins, to avoid arbitrary divisions and make trajectory smoother 
+## IV - Limitations
 
-Then finailly we have a cloud of 150 points in a 10 dimentional, 'reduced neuron space' that is ready for TDA.
+**Smoothed Average trajectories w/ PCA** are used but not justified, avoids granular detail within an individual trial.
 
+**Neural Recordings are Imperfect** compared to noiseless models.
 
-### Computational models 
+**Descriptive only**, but with no significance test, unclear whether models truly differentiate with added noise
+Unclear whether differences are truly topological or geometric.
 
-### Comparing Models vs Brains
-beyond just observing and doing statistics on the most persistent betti numbers
-bottleneck and wasserstein distance used to quantify the difference between persistence diagrams
+**Doesnt account for the directed, time series nature of the trajectory**, and instead treats it only as a cloud of points.
 
-### Making differences statistically significant
-some distance between datasets is expected due to random noise even with the same population of neurons in the same scenario. 
-Thus, two methods were employed to put a lower bound on the distance between brains and models due to noise. 
-distances above this threshold therefore are likely to represent real topological differences, and are usable signals for discrimination.
-
-1. split half null
-
-2. noise floor
-
-
-### Results 
+**Limited amount and comparability of data**
+with 13 sessions and only 4 mice, sessions are not completely independent. Additionally, the SNN discrimination task 
 
 
 
