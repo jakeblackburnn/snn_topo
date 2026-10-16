@@ -14,11 +14,17 @@ and fonts are 24 pt at that size. Change COLUMN_IN if the layout changes. The po
 results, table, trajectories, engagement, pipeline and rips; main, noise, nogo, zoo and torus
 are kept for results.md and handouts.
 
+The clique figures (clique_method, clique_model, clique_results, clique_table) are the
+restarted poster's: they read results/analysis/clique_probe/ (`scripts/clique_probe.py`) and
+draw clique_method from made-up place cells.
+
     python scripts/poster_figures.py                                   # every figure
     python scripts/poster_figures.py results table                     # only these
     python scripts/poster_figures.py trajectory <run_dir> <activity_id>  # rotatable 3D view
 """
 import sys
+import zlib
+from itertools import combinations
 from pathlib import Path
 
 import matplotlib
@@ -31,7 +37,8 @@ import pandas as pd
 from scipy.ndimage import uniform_filter1d
 from scipy.spatial.distance import pdist, squareform
 
-from snntopo import dataset, floor, grid, producers
+from scripts import clique_probe
+from snntopo import clique, dataset, floor, grid, producers
 from snntopo.runner import load_spec
 from snntopo.topology.pipeline import build_trajectories, persistence, unit_diameter
 
@@ -48,6 +55,8 @@ PASSIVE, ENGAGED, SNN, NOGO = "#4477AA", "#228833", "#EE7733", "#AA3377"
 NEURON = {"lif": "#777777", "alif": "#4477AA", "izhikevich": "#EE7733"}
 WIRING = {"none": "o", "random": "o", "small_world": "s", "scale_free": "^", "modular_hub": "D"}
 LOOP = "#CC3311"
+CLIQUE = ANALYSIS / "clique_probe"
+UNTRAINED, RANDOM, RANDOM_EDGE = "#AA3377", "#BBBBBB", "#777777"
 
 plt.rcParams.update({"font.size": 24, "axes.titlesize": 26, "axes.labelsize": 24, "xtick.labelsize": 22,
                      "ytick.labelsize": 22, "legend.fontsize": 20, "axes.spines.top": False,
@@ -498,6 +507,208 @@ def fig_torus() -> None:
     save(fig, "torus")
 
 
+def place_cells(preferred: np.ndarray, rng: np.random.Generator, samples: int = 15000) -> np.ndarray:
+    """Spikes of neurons with von Mises tuning on a circle, driven by a random-walk angle: Giusti's
+    geometric case, as in tests/test_clique.py."""
+    angle = np.cumsum(rng.normal(0, 0.1, samples))
+    rate = 0.2 * np.exp(2 * (np.cos(angle[None] - preferred[:, None]) - 1))
+    return (rng.random((len(preferred), samples)) < rate).astype(float)
+
+
+def draw_complex(ax, pos: np.ndarray, c: np.ndarray, density: float, color: str, size: float) -> None:
+    """The order complex at one edge density: the strongest correlations as edges, every triangle filled."""
+    edge = (clique.order_distance(c) <= density) & ~np.eye(len(c), dtype=bool)
+    for i, j, k in combinations(range(len(c)), 3):
+        if edge[i, j] and edge[i, k] and edge[j, k]:
+            ax.fill(*pos[[i, j, k]].T, color=color, alpha=0.2, lw=0, zorder=1)
+    for i, j in zip(*np.nonzero(np.triu(edge))):
+        ax.plot(*pos[[i, j]].T, color=color, lw=1.5, zorder=2)
+    ax.scatter(*pos.T, color="k", s=size, zorder=3)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+
+def betti1_at(curves: np.ndarray, density: float) -> int:
+    return int(curves[0, np.argmin(np.abs(clique.DENSITY - density))])
+
+
+def fig_clique_method() -> None:
+    """Made-up neurons: 16 place cells on a circle against 16 neurons with a random correlation order,
+    then the Betti 1 curve at the probe's size, 50, against the random band."""
+    rng = np.random.default_rng(1)
+    n = 16
+    preferred = np.linspace(0, 2 * np.pi, n, endpoint=False) + rng.uniform(-0.1, 0.1, n)
+    pos = np.c_[np.cos(preferred), np.sin(preferred)]
+    rows = [("place cells on a circle", clique.correlations(place_cells(preferred, rng)), ENGAGED),
+            ("random order", clique.random_matrix(n, rng), RANDOM_EDGE)]
+    ring = clique.DENSITY[np.argmax(clique.betti_curves(rows[0][1], 1)[0] > 0)]
+    densities = [0.05, ring, 0.4]
+    fig = plt.figure(figsize=(2 * COLUMN_IN, 13))
+    grid_spec = fig.add_gridspec(2, 6, width_ratios=[1, 1, 1, 1, 0.15, 1.8], wspace=0.15, hspace=0.35)
+    for row, (name, c, color) in enumerate(rows):
+        curves = clique.betti_curves(c, 1)
+        ax = fig.add_subplot(grid_spec[row, 0])
+        ax.imshow(np.where(np.eye(n, dtype=bool), np.nan, c), cmap="Greys", interpolation="nearest")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_ylabel(name, fontsize=24)
+        if row == 0:
+            ax.set_title("1. correlations\n(dark = high)", fontsize=24)
+        for col, density in enumerate(densities):
+            ax = fig.add_subplot(grid_spec[row, col + 1])
+            draw_complex(ax, pos, c, density, color, 60)
+            loops = betti1_at(curves, density)
+            ax.set_title((f"{col + 2}. top {density:.0%} of pairs\n" if row == 0 else f"top {density:.0%}\n")
+                         + f"{loops} loop{'s' * (loops != 1)}", fontsize=24)
+    ax = fig.add_subplot(grid_spec[:, 5])
+    rng = np.random.default_rng(2)
+    band = np.array([clique.betti_curves(clique.random_matrix(50, rng), 1)[0] for _ in range(20)])
+    ax.fill_between(clique.DENSITY, band.min(0), band.max(0), color=RANDOM, alpha=0.6, lw=0)
+    ax.plot(clique.DENSITY, np.median(band, 0), color=RANDOM_EDGE, lw=3)
+    geometric = clique.betti_curves(clique.correlations(place_cells(rng.uniform(0, 2 * np.pi, 50), rng)), 1)[0]
+    ax.plot(clique.DENSITY, geometric, color=ENGAGED, lw=3)
+    peak = np.argmax(np.median(band, 0))
+    ax.text(clique.DENSITY[peak], band.max(0)[peak] + 2, "random order\n(20 draws)", ha="center", fontsize=22)
+    ax.text(clique.DENSITY[np.argmax(geometric)] + 0.03, geometric.max() + 2, "place cells", fontsize=22, color="k")
+    ax.set(xlabel="edge density (fraction of pairs joined)", ylabel="number of loops (Betti 1)", xlim=(0, 0.5), ylim=(0, None))
+    ax.set_title(f"{len(densities) + 2}. count loops at every density,\n50 neurons", fontsize=24)
+    fig.text(0.02, 0.02, "Clique topology (Giusti et al. 2015): pairs of neurons are joined in order of their correlation, strongest first.\n"
+             "Correlations set by distance on a circle join neighbours first and form one ring; a random order forms many loops that come and go.\n"
+             "The area under the Betti 1 curve, as a fraction of random's, is the measure: near 0 for geometric orders, 1 for chance.",
+             ha="left", va="bottom", fontsize=19)
+    fig.subplots_adjust(left=0.03, right=0.98, top=0.9, bottom=0.17)
+    save(fig, "clique_method")
+
+
+def spring_positions(c: np.ndarray) -> np.ndarray:
+    """2D positions from a force layout over every pair, pulled harder the higher the pair ranks, so
+    strongly correlated neurons sit close and none drifts off; for display only."""
+    import networkx as nx
+    g = nx.from_numpy_array((1 - clique.order_distance(c)) ** 8 * ~np.eye(len(c), dtype=bool))
+    pos = nx.spring_layout(g, seed=0, weight="weight")
+    return np.array([pos[i] for i in range(len(c))])
+
+
+def fig_clique_model() -> None:
+    """The first k = 50 probe of the 12-task net, seed 0, redrawn exactly as clique_probe drew it."""
+    f = np.load(CLIQUE / "spikes" / "multitask-0.npz")
+    counts, bounds = f["counts"], f["bounds"]
+    eligible = np.flatnonzero(counts.mean(1) >= clique_probe.RATE_FLOOR)
+    rng = np.random.default_rng(zlib.crc32(b"12-task SNN/multitask-0"))
+    units = rng.choice(eligible, 50, replace=False)
+    x, _ = clique_probe.probe_samples(counts, bounds, units, rng)
+    c = clique.correlations(x)
+    curves = clique.betti_curves(c, 1)
+    df = pd.read_csv(CLIQUE / "probes.csv")
+    stored = df[(df.source == "multitask-0") & (df.k == 50) & (df.draw == 0) & ~df.residual & ~df.trial_demeaned].iloc[0]
+    assert np.isclose(clique.integrated(curves)[0], stored.betti1), "the redrawn probe is not the one in probes.csv"
+    density = 0.05
+
+    fig, axes = plt.subplots(1, 2, figsize=(2 * COLUMN_IN, 12))
+    ax = axes[0]
+    pos = np.random.default_rng(0).uniform(-1, 1, (len(counts), 2))  # the net has no layout: positions are for display
+    rest = np.setdiff1d(np.arange(len(counts)), units)
+    ax.scatter(*pos[rest].T, s=40, color=RANDOM, linewidths=0)
+    ax.scatter(*pos[units].T, s=160, color=SNN, linewidths=0)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.set_title(f"1. A trained 12-task network, {len(counts)} neurons:\n50 drawn at random as a probe", fontsize=26)
+    ax = axes[1]
+    draw_complex(ax, spring_positions(c), c, density, SNN, 160)
+    loops = betti1_at(curves, density)
+    ax.set_title(f"2. Its 50 neurons joined by the top {density:.0%}\nof correlations: {loops} loop{'s' * (loops != 1)}", fontsize=26)
+    fig.text(0.02, 0.02, f"Pugavko et al. 2023's spiking network, trained on 12 tasks (seed 0). The probe is drawn from the {len(eligible)} "
+             f"neurons firing at least 1 Hz; its correlations\nare over {clique_probe.N_SAMPLES} bins of 10 ms from trials in random "
+             f"order. Positions are for display only: left at random, right pulled together by their correlation\nranks, so strongly correlated neurons sit close. "
+             f"This probe's Betti 1 area is {stored.betti1_vs_random:.2f} of random's.", ha="left", va="bottom", fontsize=19)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.88, bottom=0.14, wspace=0.05)
+    save(fig, "clique_model")
+
+
+CLIQUE_GROUPS = [("untrained\nnet", "untrained SNN", UNTRAINED), ("12-task\nnet", "12-task SNN", SNN),
+                 ("engaged\nbrain", "brain engaged", ENGAGED), ("passive\nbrain", "brain passive", PASSIVE)]
+
+
+def per_source(df: pd.DataFrame, group: str, removed: bool, k: int = 50) -> pd.Series:
+    """Each session's or seed's median probe, as clique_probe.summary takes it. removed: trial means and population signal both removed."""
+    sel = df[(df.group == group) & (df.k == k) & (df.residual == removed) & (df.trial_demeaned == removed)]
+    return sel.groupby("source")["betti1_vs_random"].median()
+
+
+def fig_clique_results() -> None:
+    df = pd.read_csv(CLIQUE / "probes.csv")
+    curves = np.load(CLIQUE / "curves.npz")["curves"][:, 0]
+    fig, axes = plt.subplots(1, 3, figsize=(2 * COLUMN_IN, 11), gridspec_kw={"width_ratios": [1.5, 1, 1]})
+    ax = axes[0]
+    rand = curves[((df.group == "random") & (df.k == 50)).to_numpy()]
+    ax.fill_between(clique.DENSITY, *np.percentile(rand, [10, 90], 0), color=RANDOM, alpha=0.6, lw=0)
+    ax.plot(clique.DENSITY, np.median(rand, 0), color=RANDOM_EDGE, lw=3)
+    ax.plot([], [], color=RANDOM_EDGE, lw=3, label="random order")
+    for name, group, color in CLIQUE_GROUPS:
+        sel = (df.group == group) & (df.k == 50) & ~df.residual & ~df.trial_demeaned
+        sources = df[sel].source.to_numpy()
+        c = curves[sel.to_numpy()]
+        c = np.array([np.median(c[sources == s], 0) for s in np.unique(sources)])  # one curve per session or seed
+        ax.fill_between(clique.DENSITY, *np.percentile(c, [10, 90], 0), color=color, alpha=0.2, lw=0)
+        ax.plot(clique.DENSITY, np.median(c, 0), color=color, lw=3, label=name.replace("\n", " "))
+    ax.legend(loc="upper right", frameon=False)
+    ax.set(xlabel="edge density", ylabel="number of loops (Betti 1)", xlim=(0, 0.5), ylim=(0, None))
+    ax.set_title("1. Loops as pairs are joined,\n50-neuron probes", fontsize=24)
+    for ax, removed, title in ((axes[1], False, "2. Raw"), (axes[2], True, "3. Trial means and\npopulation signal removed")):
+        strip(ax, [(name, per_source(df, group, removed).to_numpy(), color) for name, group, color in CLIQUE_GROUPS], ".2f")
+        ax.axhline(1, color=RANDOM_EDGE, lw=2, ls="--")
+        ax.set(ylim=(0, 1.05), ylabel="Betti 1 area / random")
+        ax.set_title(title, fontsize=24)
+        ax.tick_params(axis="x", labelsize=20)
+    axes[2].text(axes[2].get_xlim()[1], 1.0, "random", ha="right", va="bottom", fontsize=20)
+    fig.text(0.02, 0.02, "Curves: median of the sessions' or seeds' median curves, band 10th-90th percentile. Dots: one session (13 per brain group) "
+             "or training seed (5 per net),\neach the median of 10 random 50-neuron probes; bars and numbers are medians. 1 = no order "
+             "beyond chance, 0 = a perfect geometric order.\nTraining moves a net toward chance and toward the brain, about halfway; "
+             "with both removals the ranges separate.", ha="left", va="bottom", fontsize=19)
+    fig.subplots_adjust(left=0.06, right=0.98, top=0.88, bottom=0.25, wspace=0.35)
+    save(fig, "clique_results")
+
+
+def fig_clique_table() -> None:
+    """Betti 1 area / random at k = 50, median [range] over sessions or seeds; printed as markdown and drawn."""
+    df = pd.read_csv(CLIQUE / "probes.csv")
+    rows = [("untrained net, 12-task inputs", "untrained SNN", UNTRAINED), ("DM-only net, DM inputs", "DM-only SNN", RANDOM_EDGE),
+            ("DM-only net, 12-task inputs", "DM-only SNN, 12-task inputs", RANDOM_EDGE), ("12-task net", "12-task SNN", SNN),
+            ("brain, engaged", "brain engaged", ENGAGED), ("brain, passive", "brain passive", PASSIVE)]
+
+    def cell(v: pd.Series) -> str:
+        return f"{v.median():.2f} [{v.min():.2f}-{v.max():.2f}]"
+
+    table = [(name, color, str(len(per_source(df, group, False))), cell(per_source(df, group, False)), cell(per_source(df, group, True)))
+             for name, group, color in rows]
+    header = ["source", "n", "raw", "drift + population removed"]
+    print("| " + " | ".join(header) + " |\n|" + "---|" * len(header))
+    for name, _, *cells in table:
+        print("| " + " | ".join([name, *cells]) + " |")
+
+    fig, ax = plt.subplots(figsize=(COLUMN_IN, 7.5))
+    ax.axis("off")
+    xs = [0.04, 0.5, 0.67, 0.88]
+    y, step = 0.93, 0.11
+    for x, text in zip(xs, ["", "n", "raw", "drift +\npopulation\nremoved"]):
+        ax.text(x, y, text, ha="left" if x == xs[0] else "center", va="center", fontsize=22, fontweight="bold")
+    y -= 1.3 * step
+    ax.axhline(y + 0.55 * step, color="k", lw=2)
+    for name, color, *cells in table:
+        ax.scatter(0.012, y, s=200, color=color, linewidths=0, clip_on=False)
+        ax.text(xs[0], y, name, va="center", fontsize=22)
+        for x, c in zip(xs[1:], cells):
+            ax.text(x, y, c, ha="center", va="center", fontsize=22)
+        y -= step
+    ax.axhline(y + 0.5 * step, color="k", lw=2)
+    ax.set(xlim=(0, 1), ylim=(y + 0.4 * step, 1))
+    fig.text(0.02, 0.01, "Betti 1 area of 50-neuron probes as a fraction of random's: 1 = chance, 0 = perfect order. Median [range] over\n"
+             "sessions or training seeds, each the median of 10 probes. Drift removed: each neuron's mean within every trial.\n"
+             "Population removed: each neuron regressed on the probe's mean activity.", ha="left", va="bottom", fontsize=17)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.2)
+    save(fig, "clique_table")
+
+
 def show_trajectory(run: Path, activity_id: str) -> None:
     c = cloud(run, activity_id)
     fig = plt.figure(figsize=(9, 8))
@@ -514,7 +725,9 @@ def main():
         show_trajectory(Path(sys.argv[2]), sys.argv[3])
         return
     figures = {"results": fig_results, "table": fig_table, "main": fig_main, "nogo": fig_nogo, "engagement": fig_engagement,
-               "zoo": fig_zoo, "noise": fig_noise, "trajectories": fig_trajectories, "pipeline": fig_pipeline, "rips": fig_rips, "torus": fig_torus}
+               "zoo": fig_zoo, "noise": fig_noise, "trajectories": fig_trajectories, "pipeline": fig_pipeline, "rips": fig_rips, "torus": fig_torus,
+               "clique_method": fig_clique_method, "clique_model": fig_clique_model, "clique_results": fig_clique_results,
+               "clique_table": fig_clique_table}
     for name in sys.argv[1:] or figures:
         figures[name]()
     print(f"-> {OUT}")
