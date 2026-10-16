@@ -876,3 +876,25 @@ figure-8 at this noise) is 0.3-1.3, and 4 sessions (2, 8, 9, 10) sit at or above
 arm's median. That's "as large as a topology change at this noise", not evidence that engagement
 changes topology: the ratio still can't tell the two apart. The movement and stimulus confounds
 remain (E16 addresses movement).
+
+## E19 · 2026-10-16 · clique topology of random probes, brain vs Pugavko multitask AdEx nets · status: done
+**Hypothesis:** random probes of brain sessions and of a multitask spiking net both give clique-topology Betti curves below the random band, and the multitask net sits further below than the same net untrained or trained on one task (`docs/poster/headline.md`, written before the run).
+**Run:** `PYTHONPATH=. python scripts/clique_probe.py train | gate | cross | probe | figure` @ a3fe2a8 plus the `cross` stage (committed after).
+- **train:** 10 nets side by side, 512 units, 3000 epochs, 10791 s.
+- **gate:** 256 units, 2 seeds, the paper's own config, 9986 s, run concurrently.
+- **probe:** 16 cores, ~10 min.
+- Config: `snntopo/pugavko.py` defaults (their regularized recipe), RATE_FLOOR 0.01 spikes per 10 ms bin, k 50/128, 10 probes per source, 50 random matrices per k.
+**Criterion:**
+- Support needs both: brain and 12-task probes below the random band, and the 12-task median below the untrained and DM-only medians.
+- Refutation: the 12-task net sits at or above them.
+**Result:** integrated Betti 1 ÷ random mean at k = 50, median over sources [range]; the second figure is with the population signal removed.
+- Untrained: 0.04 [0.03-0.04] / 0.10.
+- DM-only on DM inputs: 0.05 [0.04-0.10] / 0.08.
+- DM-only on 12-task inputs: 0.18 [0.15-0.26] / 0.26 [0.21-0.32].
+- 12-task: 0.24 [0.21-0.29] / 0.29 [0.26-0.33].
+- Brain engaged: 0.46 [0.25-0.58] / 0.58 [0.46-0.88].
+- Brain passive: 0.47 [0.19-0.63] / 0.74 [0.41-0.88].
+- k = 128 gives the same order. Random: 0.99 at both k.
+- Accuracy, 12-task nets: every task above chance in every seed. CtxDM, DM, GoRt and Go 0.88-1.00; Romo 0.73-0.92; GoDl 0.45-0.85. DM-only nets: 0.96-0.99. Gate at 256: the same pattern.
+- Mean rate: 12-task ~2.2 Hz; DM-only ~1.0 Hz (74-92 units over the floor, so no k = 128).
+**Verdict:** the first part is supported: everything sits far below random. The second part is refuted: the 12-task net sits *above* untrained and DM-only, i.e. closer to random and to the brain. Most of the DM-only gap is the inputs (0.18 on 12-task inputs vs 0.24). Brain probes stay about twice as close to random; with the population removed, the net and brain ranges don't overlap.

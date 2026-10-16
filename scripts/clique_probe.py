@@ -7,11 +7,12 @@ population signal.
 
 Sources: the 13 Steinmetz part-0 sessions, engaged (active block, responded trials) and
 passive; Pugavko et al. 2023's AdEx network (`snntopo.pugavko`, their regularized recipe) at
-N_HIDDEN units, trained on all 12 tasks, or on DMTask1+2 only, five seeds each; and the
-12-task nets before training, on 12-task inputs. Units under RATE_FLOOR spikes per bin are
+N_HIDDEN units, trained on all 12 tasks, or on DMTask1+2 only (probed on DM inputs, and on
+12-task inputs), five seeds each; and the 12-task nets before training, on 12-task inputs. Units under RATE_FLOOR spikes per bin are
 never probed, on either side.
 
     PYTHONPATH=. python scripts/clique_probe.py train   # all 10 nets side by side, ~3 h on the GPU
+    PYTHONPATH=. python scripts/clique_probe.py cross   # the DM-only nets on 12-task inputs
     PYTHONPATH=. python scripts/clique_probe.py gate    # the paper's own config (256 units), 2 seeds
     PYTHONPATH=. python scripts/clique_probe.py probe   # ~10 min on 16 cores
     PYTHONPATH=. python scripts/clique_probe.py figure
@@ -126,6 +127,19 @@ def train() -> None:
     final_evaluation(NETS, N_HIDDEN, "main", record=True)
 
 
+def cross() -> None:
+    """The trained DM-only nets driven by all 12 tasks' inputs: whether the DM-only nets'
+    topology comes from what they learned or from the narrower inputs they were probed on."""
+    net = pugavko.AdExNet(N_HIDDEN, n_nets=len(NETS)).to(DEVICE)
+    net.load_state_dict(torch.load(OUT / "main_trained.pt"))
+    results = pugavko.evaluate(net, [pugavko.TASKS] * len(NETS), DEVICE, seed=20_000, n_trials=N_EVAL)
+    for g, (name, seed, _) in enumerate(NETS):
+        if name == "dm_only":
+            counts, bounds = binned(results[g][2])
+            np.savez_compressed(OUT / "spikes" / f"dm_only_on_12-{seed}.npz", counts=counts, bounds=bounds, task=results[g][1])
+            print(f"dm_only_on_12-{seed}: {(counts.mean(1) >= RATE_FLOOR).sum()} units above the floor", flush=True)
+
+
 def gate() -> None:
     nets = [("multitask", seed, pugavko.TASKS) for seed in range(2)]
     run_training(nets, 256, "gate")
@@ -141,7 +155,8 @@ def sources():
             spikes = activity.spikes[:, activity.conditions["all"], activity.window]
             n, trials, bins = spikes.shape
             yield group, session, spikes.reshape(n, trials * bins), np.arange(trials + 1) * bins
-    groups = {"multitask": "12-task SNN", "dm_only": "DM-only SNN", "untrained_multitask": "untrained SNN"}
+    groups = {"multitask": "12-task SNN", "dm_only": "DM-only SNN", "dm_only_on_12": "DM-only SNN, 12-task inputs",
+              "untrained_multitask": "untrained SNN"}
     for name, group in groups.items():
         for seed in SEEDS:
             f = np.load(OUT / "spikes" / f"{name}-{seed}.npz")
@@ -212,8 +227,9 @@ def figure() -> None:
     import matplotlib.pyplot as plt
     df = pd.read_csv(OUT / "probes.csv")
     curves = np.load(OUT / "curves.npz")["curves"]
-    groups = ["random", "brain passive", "brain engaged", "12-task SNN", "DM-only SNN", "untrained SNN"]
-    colors = dict(zip(groups, ["#999999", "#1f77b4", "#08306b", "#d62728", "#ff7f0e", "#2ca02c"]))
+    groups = ["random", "brain passive", "brain engaged", "12-task SNN", "DM-only SNN", "DM-only SNN, 12-task inputs",
+              "untrained SNN"]
+    colors = dict(zip(groups, ["#999999", "#1f77b4", "#08306b", "#d62728", "#ff7f0e", "#9467bd", "#2ca02c"]))
     fig, axes = plt.subplots(2, 4, figsize=(16, 7), sharex=True)
     for row, k in enumerate(KS):
         for col, (dim, residual) in enumerate(((0, False), (1, False), (0, True), (1, True))):
@@ -235,4 +251,4 @@ def figure() -> None:
 
 
 if __name__ == "__main__":
-    {"train": train, "gate": gate, "probe": probe, "figure": figure}[sys.argv[1]]()
+    {"train": train, "cross": cross, "gate": gate, "probe": probe, "figure": figure}[sys.argv[1]]()

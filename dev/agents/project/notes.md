@@ -68,3 +68,14 @@
 - The two-choice group in `snn_vs_bio` (n = 189) includes 12 rate networks (`family == "rate"`, `arch` and `neuron` empty), though figures and the table label it "spiking models".
 - `docs/poster/poster.md` (2026-10-15) is the poster copy Jake lays out from in Canva: his six sections plus Conclusions, about 800 words, captions and figure edit notes, three columns about 13 / 18 / 13 in. Structure: `dev/workshop/poster-structure.md`. The figure edit notes in it are not yet applied to `scripts/poster_figures.py`.
 - `docs/poster/draft.md` is the agent's test draft of Jake's poster doc: each number carries its source line in an HTML comment (`<!-- results.md:84 -->`), so a number check is "does the value appear in the cited lines". `docs/poster/results.md` is the number source; `core-summary.md` is a summary of it and has been wrong once (loop counts swapped, fixed 2026-10-13).
+
+## Clique probe (2026-10-16, branch `clique-topology`)
+- `docs/poster/` on this branch holds only `references.md`, `headline.md` and the `torus`, `rips` and `pipeline` figures. `poster.md`, `results.md`, `draft.md` and `scripts/poster_figures.py` figures other than those three live on main only. The notes above that cite them describe main.
+- `snntopo/pugavko.py` ports Pugavko et al. 2023 (AdEx, 12 Yang-style tasks, their regularized recipe), without norse.
+  - Speed: the step loop is overhead-bound, so G nets run side by side for about the cost of one: 10 nets × 512 units take 3.6 s/epoch, 3 h for 3000 epochs, peak 3 GB GPU.
+  - Never index `x[t]` inside an autograd time loop: each index's backward writes a full-size zero tensor, O(T²). Use `unbind`.
+  - The input projection is computed inside each checkpointed chunk; a full (T, G, B, N) tensor is 4 GB.
+  - Training has no resume.
+- REINFORCE on our own tasks (`training.py`) never learned DMS, 2-back, or a 4-task mix at 2048 units (0.45-0.50 flat). Supervised surrogate-gradient training with the published recipe learned 12 tasks within 250 epochs.
+- `clique.betti_curves` with H2 takes ~8 s per probe at k = 128 and <0.5 s at k = 50.
+- The cloned paper code (`cgtasknet`, `multy_task`) was in the session scratchpad: github.com/Pugavkom/{cgtasknet,multy_task}. The regularized settings come from `multy_task/server/mean_fr_filter_bigger_tau_a_less/mean_fr_filtertau_a_less.ipynb`.
