@@ -25,3 +25,6 @@ Conclusion
 so I know I want this structure for the poster,
 so we want to develop a headline for this, and quite frankly start a new branch and destroy all the previous docs for the poster
 Then start a coding session
+
+### 2026-10-16 09:55 (agent)
+Clique topology of random 50/128-neuron probes: trained multitask AdEx nets (Pugavko 2023 port) sit between untrained nets and mouse brain (Betti 1 vs random 0.04 / 0.24 / 0.46). The gap survives drift removal (E19, E20); see docs/e2e.md and docs/poster/headline.md on branch clique-topology.

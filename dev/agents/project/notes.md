@@ -79,3 +79,5 @@
 - REINFORCE on our own tasks (`training.py`) never learned DMS, 2-back, or a 4-task mix at 2048 units (0.45-0.50 flat). Supervised surrogate-gradient training with the published recipe learned 12 tasks within 250 epochs.
 - `clique.betti_curves` with H2 takes ~8 s per probe at k = 128 and <0.5 s at k = 50.
 - The cloned paper code (`cgtasknet`, `multy_task`) was in the session scratchpad: github.com/Pugavkom/{cgtasknet,multy_task}. The regularized settings come from `multy_task/server/mean_fr_filter_bigger_tau_a_less/mean_fr_filtertau_a_less.ipynb`.
+- Projecting out top principal components before clique topology overshoots far above random, even for place cells (2.8-8x); use `clique.demean_trials` (per-trial mean removal) for slow drift. Population regression overshoots slightly (1.09-1.26x on synthetic data).
+- In this shell, `pkill -f <pattern>` matches the calling Bash command's own command line and kills it; use `pgrep` and kill by PID.
