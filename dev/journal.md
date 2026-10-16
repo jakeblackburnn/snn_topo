@@ -17,3 +17,6 @@ one figure showing a synthetic clique complex, so we can describe the clique top
 a figure from the stienmetz paper (I already have), and a figure showing the clique complex
 imposed on the multitasking model maybe?
 key results summarized in a table, and one more figure
+
+### 2026-10-16 10:25 (agent)
+Poster figures for the clique result: method (synthetic place cells vs random), model probe, results (curves + per-session dots) and table, in docs/poster/figures/clique_*. Built by `scripts/poster_figures.py clique_*`.
