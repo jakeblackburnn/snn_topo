@@ -32,3 +32,7 @@ just that we can tell them apart, and the relative order of them is important.
 references: cut down to a smaller set, just the essentials.
 also, I want you to include figure captions in your doc
 
+
+## Results · 2026-10-18 18:10 (agent)
+1. Agent's fleshed-out version of the poster content: done. See `docs/poster/draft.md` (5537f5d, branch `poster-clique-draft`).
+2. Workshop on your notes: done. The record is `dev/workshop/poster-clique.md` (closed). The word budget is still open: 986 body words against ~800 (thread 7).
