@@ -5,7 +5,27 @@ named beside each); **unchecked** entries were copied from `docs/learn/06-litera
 `dev/agents/project/learning/reading.md` and are not on the poster. An entry is checked when
 it is promoted to the poster. The record of the checking is `dev/workshop/poster-references.md`.
 
-## On the poster (9, one per claim)
+## Clique-topology draft (2026-10-18)
+
+`docs/poster/draft.md` cites four: Steinmetz [1] from the table below, plus these three
+[2-4], checked on 2026-10-18. Jun and Curto were cut in the workshop
+(`dev/workshop/poster-clique.md`, thread 5). The old poster's other entries (Gardner, Bauer, Fasy,
+Bellec, Izhikevich, Gao) back claims from the PCA-trajectory direction and aren't cited.
+
+| # | claim it backs | reference | checked against |
+|---|---|---|---|
+| 2 | the method; geometry in hippocampal correlations | Giusti, Pastalkova, Curto & Itskov, *Clique topology reveals intrinsic geometric structure in neural correlations*, PNAS 112(44), 13455-13460 (2015). doi:10.1073/pnas.1506407112 | arxiv.org/abs/1502.06172 (journal ref.) |
+| 3 | the model | Pugavko, Maslennikov & Nekorkin, *Multitask computation through dynamics in recurrent spiking neural networks*, Sci. Rep. 13, 3997 (2023). doi:10.1038/s41598-023-31110-z | PMC10006454, full text |
+| 4 | multitask networks as precedent | Yang, Joglekar, Song, Newsome & Wang, *Task representations in neural networks trained to perform many cognitive tasks*, Nat. Neurosci. 22(2), 297-306 (2019). doi:10.1038/s41593-018-0310-2 | par.nsf.gov/biblio/10099428 |
+
+- Giusti: the abstract reports geometric structure in rat hippocampus during spatial
+  exploration, and similar results during wheel running and REM sleep.
+- Pugavko: AdEx neurons; 6 task types × 2 stimulus channels = 12 tasks; their main analyses use
+  N = 256 (regularized loss) and N = 600 (MSE). Our 512 is between the two. They cite Yang
+  2019 but don't call it a precedent; the draft says only "following".
+- Yang: 20 tasks, a single recurrent (non-spiking) network.
+
+## On the earlier poster (9, one per claim)
 
 | # | claim it backs | reference | checked against |
 |---|---|---|---|
@@ -76,8 +96,6 @@ The Steinmetz data is used in the Neuromatch Academy preprocessed form, part 0
 ### Topology of neural activity
 - Chaudhuri et al., *The intrinsic attractor manifold and population dynamics of a canonical
   cognitive circuit across waking and sleep*, Nat. Neurosci. 2019. <https://www.nature.com/articles/s41593-019-0460-x>
-- Giusti et al., *Clique topology reveals intrinsic geometric structure in neural correlations* (2015).
-  <https://arxiv.org/abs/1502.06172>
 - Kang, Xu & Morozov, *Evaluating state space discovery by persistent cohomology in the spatial
   representation system*, Front. Comput. Neurosci. 2021.
   <https://www.frontiersin.org/journals/computational-neuroscience/articles/10.3389/fncom.2021.616748/full>
