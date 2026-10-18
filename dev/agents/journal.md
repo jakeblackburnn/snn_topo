@@ -83,7 +83,7 @@
 - `5537f5d` Poster draft for the clique result, revised in workshop; references cut to four
 - `33ac093` notes: poster content notes for the clique draft
 - `c87f1fd` Update snn_topo.md · `0adc64c` Update poster content (Jake's)
-- 5 files, +~250 −~110 (draft, references, Jake's journal, snn_topo.md, plus the workshop record)
+- 4 files, +258 −106 (excluding the agent journal and the workshop record)
 - ⚠ uncommitted: `docs/poster/.DS_Store` (ignore)
 
 ### Next
