@@ -1,83 +1,55 @@
 # Topology of Brain Activity of Mice vs. Computational Models
+Using Mathematical Tools to Compare Population Activity in Mice and Spiking Neural Networks
+Jake Blackburn
 
-**Research Question:** Can topological data analysis (TDA) extract meaningful as;dflaksjdf
-**Answer:** Yes, the topodfgaksdf 
+**Research Question:** Can topological data analysis (TDA) extract meaningful measures from recorded brain activity? Can those measures discriminate real brain activity from that of comparable computational models?
+**Answer**: Yes, topological features can differentiate models from real brains, and can have meaningful interpretations. 
 
 ## Introduction
+Brains encode information in population activity: the joint firing of many neurons. 
+The ability of scientists to observe this activity is limited, so the use of advanced data analytics 
+and computational models are essential for making the most of what we can observe. 
 
-Topology is a branch of modern mathematics which has shown remarkable richness in its applications to data analysis. 
-Methods such as persistent homology can be leveraged to characterize and differentiate datasets based on their topological features.
-This poster shows how TDA reveals meaningful differences between recorded neuron population activity in mice and that of simulated spiking neural networks.
+The experiments outlined in this poster seek to scrutinize the comparability between brain activity recorded in living animals and in Spiking Neural Networks (SNNs), a class of biologically plausible neural networks, using Topological Data Analysis (TDA). 
+
+Topology is a modern branch of mathematics which has shown remarkable richness in its applications to science. Curto (2017) [3] argued that the topology of brain activity can reveal how neural networks represent and process information. These experiments show that
+brain activity recorded in mice exhibits different topology than SNNs in a comparable setting, 
+highlighting the limitations of such models, and the utility of TDA for neuroscience.
 
 ## I - Topological Data Analysis
 
+**Topology** describes a shape in terms of features that survive deformation without cutting or gluing, such as its pieces and its holes.  
 
-**Topology**
+**Picture: Topologists Breakfast:** A coffee mug is topologically equivalent to a donut: both have one ‘hole’. Therefore, one can be continuously deformed into the other, without cutting or gluing. Ceramic model by Keenan Crane and Henry Segerman, 2015, CC BY-SA 3.0, via Wikimedia Commons.
 
-**Picture: Topologist's Breakfast**
+**Clique Topology** ... explain the method we use in broad strokes and its bio interpretation 
+and present the figure
 
-**Persistent Homology**
+## II - Experiments
 
-**Figure: Vietoris-Rips Complex**
+(a - dataset)
+Neuropixels: Steinmetz et al. (2019) [1] recorded mice with Neuropixels probes, which pick up on spikes from hundreds of neurons across several brain regions at once. The mice were trained to perform a visual discrimination task, and their brain activity was recorded in both passive and task-engaged scenarios. We use the recorded activities of 13 sessions from their dataset, ranging from 584 to 1769 neurons each, with spikes counted in 10 ms bins over 1.5s, as a representative sample of population activities in mouse brains at rest and during task execution.
 
-## II - TDA Applied to Brain Activity
+(b - model)
+... note the paper and motivation for using large multitasking model with precedent
 
-**Neuropixels**
-Stienmetz et al 2019 recorded population activity in mice performing a visual discrimination task using Neuropixels probes, which can register spikes
-from hundreds of neurons across several brain regions. These mice were trained on a visual 
+(c - pipeline) 
 
-**Figure: Visual Discrimination Task**
-
-**Spiking Neural Networks** (SNNs) are a form of artificial neural network intended to mirror real neurons with their all-or-none spikes.
-We collected comparable population activity data from a variety of SNNs trained on a simplified version of the Stienmetz task. The following table
-summarizes the varieties and session counts:
-
-**Table: the different model types**
-
-**Population Trajectories**
-
-The raw data collected from the mouse brains and SNNs track when individual neurons fire, binned into 10ms intervals, over a set of trials.
-To make this raw data amenable for TDA, each recorded session was first equalized to a set of 128 neurons, over 150 time steps, and 100 random trials. Then, the following pipeline was applied to each session:
-
-1. average over trials
-2. smooth spikes over a 50ms window
-3. reduce the neuron axes via PCA to a 10-dim 'activity space'
-4. scale the activity space to unit width
-
-This converts a (128x150x100) grid of individual spikes to a smoothed and normalized (10x150) point cloud: 10 dimensions in activity space over 150 time steps.
-
-**Figure: Trajectories**
-Left: raw spikes from a population of 128 neurons over time. Right: three population 'trajectories' shown in the reduced activity space (using 3 of the 10 dimensions). The leftmost population is a passive mouse brain, middle, a mouse engaged in the visual discrimination task, and finailly a recurrent
-SNN. Each example is selected as the median 'path length' in its group of sessions.
+... what is done to data to yield curves / results, also summarize different scenarios for results figures
 
 ## III - Results
+... summarize differences in structure / randomness, returning to the bio interpretation
 
-**Cluster Persistence corresponds to trajectory length**
-and is explained by participation rate PCA stuff
-
-**Task engagement changes the topological signature:** in 11 of 12 held-out tests, engagement changed persistence - making trajectories
-more smooth and detectable.
-
-**SNNs are Differentiable** from brains, though task engagement makes brains more model-like.
-
-**loops are insignificant**
-These experients did not detect persistent topological features other than connected components, or 'clusters' in the activity space. In mouse
-populations, task engagement reliably reduced the total persistence of clusters.
 
 ## IV - Limitations
-
-**Smoothed Average trajectories w/ PCA** are used but not justified, avoids granular detail within an individual trial.
-
-**Neural Recordings are Imperfect** compared to noiseless models.
-
-**Descriptive only**, but with no significance test, unclear whether models truly differentiate with added noise
-Unclear whether differences are truly topological or geometric.
-
-**Doesnt account for the directed, time series nature of the trajectory**, and instead treats it only as a cloud of points.
-
-**Limited amount and comparability of data**
-with 13 sessions and only 4 mice, sessions are not completely independent. Additionally, the SNN discrimination task 
+...
 
 
+## Conclusion
+... point about limitations of observing real brain activity, necessity of comparable models, utility of Topology
+for establishing comparability between models and brains and as markers for activity stats, 
+for instance for differentiating disease states vs healthy brains and other applications to medicine.
 
+### References 
 
+### Footnote - Credits and Code
