@@ -4,26 +4,16 @@
 
 reworking figures
 
-1. Topologists Breakfasts - this is good
-2. clique topology - too big! show only one clique progression and the curve, how to do layout???
+## part 3
+workshop
+change figure 2: rename the 'place cells' label, isntead - the caption refers to it as the curve from the ring
+dont refer directly to Giusti results
 
-3. the task - this needs to be credited to steinmetz, its directly from their paper. 
+figure 3 needs to be credited to the stienmetz paper somehow
 
-4. clique model - too wide! maybe just the second figure is relevant, showing a random population netted together. 
+figure 4 probing the model: remove the in-place caption.
 
-5. clique curves - good
+figure 5 results: instead of referring to loops, say Betti-1. also remove the in place caption.
 
-## Part 2 - applying figure changes and figuring out results
-run figure scripts to apply changes.
-should results be separated from git? should we remove raw steinmetz, and replace with an install script or something
-to avoid pushing the whole thing to github?
-
-## Results · 2026-10-19 10:55 (agent)
-1. Topologists Breakfast: no change, as you said.
-2. Clique topology (Fig 2): done in code (`9edd37f`). It's one column now: the place-cell progression over the curve. It still needs a render on your PC (agent journal Next 1).
-3. The task (Fig 3): done (`9edd37f`). It's re-cut from the paper at 1200 dpi (`docs/poster/figures/steinmetz_task.png`) and credited in the caption. Formal permission (© Springer Nature) is your call.
-4. Clique model (Fig 4): done in code (`9edd37f`). It's one column now, the netted probe only. It still needs a render on your PC.
-5. Clique curves: no change, as you said.
-
-### 2026-10-19 13:00 (agent)
-Rendered Figs 2, 4, 5 on real data (Figs 2 and 4 one column, Fig 5 without "halfway"); clique table cells match probe.out. Raw Steinmetz npz untracked, still on disk; merged to main, not pushed.
+dont take my snn_topo.md to heart, it is a bit behind the poster itself in canva. just working from these notes
+workshop to clarify changes to figures, implement and then re-render.
