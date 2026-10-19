@@ -23,3 +23,6 @@ also remove caption from table figure and add a title to clarify or something. a
 
 ### 2026-10-19 17:40 (agent)
 Part 3 applied: Fig 2 curve is "ring" with Betti-1, Figs 4 and 5 lose their in-place captions, Fig 5 says Betti-1, Fig 3 carries a "Reproduced from Steinmetz et al." credit. All four re-rendered, merged to main, not pushed.
+
+### 2026-10-19 17:59 (agent)
+Part 4 applied on main, no branch: the table figure has a title and key line instead of its caption, and the third column says "trial means + population removed" as Fig 5 does. Re-rendered, numbers unchanged, not pushed.
