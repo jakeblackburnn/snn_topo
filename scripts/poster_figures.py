@@ -600,7 +600,7 @@ def fig_clique_model() -> None:
     loops = betti1_at(curves, density)
     ax.set_title(f"50 neurons of a 12-task net, joined by\ntheir top {density:.0%} of correlations: {loops} loop{'s' * (loops != 1)}", fontsize=26)
     fig.subplots_adjust(left=0.02, right=0.98, top=0.88, bottom=0.02)
-    print(f"clique_model caption facts: {len(counts)} neurons, {len(eligible)} firing >= {clique_probe.RATE_FLOOR} Hz, "
+    print(f"clique_model caption facts: {len(counts)} neurons, {len(eligible)} firing >= {clique_probe.RATE_FLOOR} spikes/bin (1 Hz), "
           f"{clique_probe.N_SAMPLES} bins, Betti 1 area {stored.betti1_vs_random:.2f} of random's")
     save(fig, "clique_model")
 
