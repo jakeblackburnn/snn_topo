@@ -16,7 +16,8 @@ are kept for results.md and handouts.
 
 The clique figures (clique_method, clique_model, clique_results, clique_table) are the
 restarted poster's: they read results/analysis/clique_probe/ (`scripts/clique_probe.py`) and
-draw clique_method from made-up place cells.
+draw clique_method from made-up neurons on a ring. steinmetz_task is Steinmetz et al. 2019 Fig. 1a,e,f
+(steinmetz_fig1.png, cut by hand from the paper) with its credit line.
 
     python scripts/poster_figures.py                                   # every figure
     python scripts/poster_figures.py results table                     # only these
@@ -507,8 +508,8 @@ def fig_torus() -> None:
     save(fig, "torus")
 
 
-def place_cells(preferred: np.ndarray, rng: np.random.Generator, samples: int = 15000) -> np.ndarray:
-    """Spikes of neurons with von Mises tuning on a circle, driven by a random-walk angle: Giusti's
+def ring_cells(preferred: np.ndarray, rng: np.random.Generator, samples: int = 15000) -> np.ndarray:
+    """Spikes of neurons with von Mises tuning on a circle, driven by a random-walk angle: the
     geometric case, as in tests/test_clique.py."""
     angle = np.cumsum(rng.normal(0, 0.1, samples))
     rate = 0.2 * np.exp(2 * (np.cos(angle[None] - preferred[:, None]) - 1))
@@ -533,14 +534,14 @@ def betti1_at(curves: np.ndarray, density: float) -> int:
 
 
 def fig_clique_method() -> None:
-    """Made-up neurons, one column: 16 place cells on a circle joined at three densities, then the
+    """Made-up neurons, one column: 16 neurons on a ring joined at three densities, then the
     Betti 1 curve at the probe's size, 50, against the random band, with the three densities marked.
     The caption is the poster's (docs/poster/draft.md, Fig. 2)."""
     rng = np.random.default_rng(1)
     n = 16
     preferred = np.linspace(0, 2 * np.pi, n, endpoint=False) + rng.uniform(-0.1, 0.1, n)
     pos = np.c_[np.cos(preferred), np.sin(preferred)]
-    c = clique.correlations(place_cells(preferred, rng))
+    c = clique.correlations(ring_cells(preferred, rng))
     curves = clique.betti_curves(c, 1)
     ring = clique.DENSITY[np.argmax(curves[0] > 0)]
     densities = [0.05, ring, 0.4]
@@ -556,16 +557,16 @@ def fig_clique_method() -> None:
     band = np.array([clique.betti_curves(clique.random_matrix(50, rng), 1)[0] for _ in range(20)])
     ax.fill_between(clique.DENSITY, band.min(0), band.max(0), color=RANDOM, alpha=0.6, lw=0)
     ax.plot(clique.DENSITY, np.median(band, 0), color=RANDOM_EDGE, lw=3)
-    geometric = clique.betti_curves(clique.correlations(place_cells(rng.uniform(0, 2 * np.pi, 50), rng)), 1)[0]
+    geometric = clique.betti_curves(clique.correlations(ring_cells(rng.uniform(0, 2 * np.pi, 50), rng)), 1)[0]
     ax.plot(clique.DENSITY, geometric, color=ENGAGED, lw=3)
     for density in densities:
         ax.axvline(density, color="k", ls="--", lw=1.5, zorder=0)
     ax.set_xticks(densities, [f"{d:.0%}" for d in densities])
     peak = np.argmax(np.median(band, 0))
     ax.text(clique.DENSITY[peak] + 0.09, band.max(0)[peak] - 20, "random order\n(20 draws)", ha="left", fontsize=22)
-    ax.text(clique.DENSITY[np.argmax(geometric)] + 0.03, geometric.max() + 2, "place cells", fontsize=22, color="k")
-    ax.set(xlabel="pairs joined", ylabel="number of loops (Betti 1)", xlim=(0, 0.5), ylim=(0, None))
-    ax.set_title("loops at every density, 50 neurons", fontsize=24)
+    ax.text(clique.DENSITY[np.argmax(geometric)] + 0.03, geometric.max() + 2, "ring", fontsize=22, color="k")
+    ax.set(xlabel="pairs joined", ylabel="Betti-1", xlim=(0, 0.5), ylim=(0, None))
+    ax.set_title("Betti-1 at every density, 50 neurons", fontsize=24)
     fig.subplots_adjust(left=0.12, right=0.97, top=0.93, bottom=0.08)
     save(fig, "clique_method")
 
@@ -597,10 +598,8 @@ def fig_clique_model() -> None:
 
     fig, ax = plt.subplots(figsize=(COLUMN_IN, COLUMN_IN))
     draw_complex(ax, spring_positions(c), c, density, SNN, 160)
-    loops = betti1_at(curves, density)
-    ax.set_title(f"50 neurons of a 12-task net, joined by\ntheir top {density:.0%} of correlations: {loops} loop{'s' * (loops != 1)}", fontsize=26)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.88, bottom=0.02)
-    print(f"clique_model caption facts: {len(counts)} neurons, {len(eligible)} firing >= {clique_probe.RATE_FLOOR} spikes/bin (1 Hz), "
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
+    print(f"clique_model caption facts: {betti1_at(curves, density)} loops at {density:.0%}, {len(counts)} neurons, {len(eligible)} firing >= {clique_probe.RATE_FLOOR} spikes/bin (1 Hz), "
           f"{clique_probe.N_SAMPLES} bins, Betti 1 area {stored.betti1_vs_random:.2f} of random's")
     save(fig, "clique_model")
 
@@ -632,21 +631,32 @@ def fig_clique_results() -> None:
         ax.fill_between(clique.DENSITY, *np.percentile(c, [10, 90], 0), color=color, alpha=0.2, lw=0)
         ax.plot(clique.DENSITY, np.median(c, 0), color=color, lw=3, label=name.replace("\n", " "))
     ax.legend(loc="upper right", frameon=False)
-    ax.set(xlabel="edge density", ylabel="number of loops (Betti 1)", xlim=(0, 0.5), ylim=(0, None))
-    ax.set_title("1. Loops as pairs are joined,\n50-neuron probes", fontsize=24)
+    ax.set(xlabel="edge density", ylabel="Betti-1", xlim=(0, 0.5), ylim=(0, None))
+    ax.set_title("1. Betti-1 as pairs are joined,\n50-neuron probes", fontsize=24)
     for ax, removed, title in ((axes[1], False, "2. Raw"), (axes[2], True, "3. Trial means and\npopulation signal removed")):
         strip(ax, [(name, per_source(df, group, removed).to_numpy(), color) for name, group, color in CLIQUE_GROUPS], ".2f")
         ax.axhline(1, color=RANDOM_EDGE, lw=2, ls="--")
-        ax.set(ylim=(0, 1.05), ylabel="Betti 1 area / random")
+        ax.set(ylim=(0, 1.05), ylabel="Betti-1 area / random")
         ax.set_title(title, fontsize=24)
         ax.tick_params(axis="x", labelsize=20)
     axes[2].text(axes[2].get_xlim()[1], 1.0, "random", ha="right", va="bottom", fontsize=20)
-    fig.text(0.02, 0.02, "Curves: median of the sessions' or seeds' median curves, band 10th-90th percentile. Dots: one session (13 per brain group) "
-             "or training seed (5 per net),\neach the median of 10 random 50-neuron probes; bars and numbers are medians. 1 = no order "
-             "beyond chance, 0 = a perfect geometric order.\nTraining moves a net toward chance and toward the brain; "
-             "with both removals the ranges separate.", ha="left", va="bottom", fontsize=19)
-    fig.subplots_adjust(left=0.06, right=0.98, top=0.88, bottom=0.25, wspace=0.35)
+    fig.subplots_adjust(left=0.06, right=0.98, top=0.88, bottom=0.13, wspace=0.35)
     save(fig, "clique_results")
+
+
+def fig_steinmetz_task() -> None:
+    """Steinmetz et al. 2019 Fig. 1a,e,f as cut from the paper (steinmetz_fig1.png, 300 dpi), with the credit
+    on the image so it survives whatever caption the poster gives it."""
+    img = plt.imread(OUT / "steinmetz_fig1.png")
+    h, w = img.shape[:2]
+    credit_in = 0.5
+    fig = plt.figure(figsize=(w / 300, h / 300 + credit_in))
+    ax = fig.add_axes((0, credit_in / (h / 300 + credit_in), 1, 1 - credit_in / (h / 300 + credit_in)))
+    ax.imshow(img)
+    ax.axis("off")
+    fig.text(0.99, 0.01, "Reproduced from Steinmetz et al. (2019), Nature 576:266\u2013273, Fig. 1a,e,f. \u00a9 Springer Nature.",
+             ha="right", va="bottom", fontsize=16)
+    save(fig, "steinmetz_task")
 
 
 def fig_clique_table() -> None:
@@ -707,7 +717,7 @@ def main():
     figures = {"results": fig_results, "table": fig_table, "main": fig_main, "nogo": fig_nogo, "engagement": fig_engagement,
                "zoo": fig_zoo, "noise": fig_noise, "trajectories": fig_trajectories, "pipeline": fig_pipeline, "rips": fig_rips, "torus": fig_torus,
                "clique_method": fig_clique_method, "clique_model": fig_clique_model, "clique_results": fig_clique_results,
-               "clique_table": fig_clique_table}
+               "clique_table": fig_clique_table, "steinmetz_task": fig_steinmetz_task}
     for name in sys.argv[1:] or figures:
         figures[name]()
     print(f"-> {OUT}")
