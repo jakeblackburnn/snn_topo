@@ -13,6 +13,10 @@ reworking figures
 
 5. clique curves - good
 
+## Part 2 - applying figure changes and figuring out results
+run figure scripts to apply changes.
+should results be separated from git? should we remove raw steinmetz, and replace with an install script or something
+to avoid pushing the whole thing to github?
 
 ## Results · 2026-10-19 10:55 (agent)
 1. Topologists Breakfast: no change, as you said.
