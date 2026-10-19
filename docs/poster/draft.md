@@ -50,21 +50,22 @@ leaves many loops instead. We report the area under the loop curve as a fraction
 of the correlations is used, so differences in firing rate drop out.
 
 *[Figure 2: `clique_method`]*
-**Figure 2. Clique topology on a known shape.** Top: place cells on a circle. Their correlations
-(1, dark = high) join neighbours first (2-4) and close one loop. Bottom: a random order of the
-same size forms many loops that come and go. Right (5): loop counts for 50 neurons as pairs are
-joined. The place cells stay near 0 and random peaks near 70, so place cells score about 0.1.
+**Figure 2. Clique topology on a known shape.** Top: 16 place cells on a circle, joined most
+correlated pair first. Neighbours join first: no loop at the top 5% of pairs, one ring at 18%, still
+one loop at 40%. Bottom: loop counts for 50 neurons at every density, with the three steps dashed.
+The place cells stay near 0, while a random order (grey, 20 draws) peaks near 70, so place cells
+score about 0.1.
 
 ## II - Experiments
 **We measure brain and model the same way, through a random probe of 50 neurons.**
 
 **a · Brain data.** Neuropixels: Steinmetz et al. (2019) [1] recorded mice with Neuropixels probes, which pick up on spikes from hundreds of neurons across several brain regions at once. The mice were trained to perform a visual discrimination task, and their brain activity was recorded in both passive and task-engaged scenarios. We use the recorded activities of 13 sessions from their dataset, ranging from 584 to 1769 neurons each, with spikes counted in 10 ms bins over 1.5s, as a representative sample of population activities in mouse brains at rest and during task execution.
 
-*[Figure 3: Steinmetz task (Jake's)]*
+*[Figure 3: `steinmetz_task`]*
 **Figure 3. The task.** Gratings of varying contrast appear on the left, the right, both or neither
 side. The mouse turns a wheel to bring the higher-contrast grating to the centre, and holds still
 when there is none. In passive sessions the same stimuli play while the mouse is not engaged.
-Adapted from Steinmetz et al. [1]. *(Check against Jake's figure.)*
+Reproduced from Steinmetz et al. 2019, Nature 576:266-273, Fig. 1a,e,f [1].
 
 **b · Model.** A Neuropixels probe samples neurons from a brain doing many things at once, so the
 model does many things too. We use Pugavko et al.'s spiking network [3]: 512 neurons trained on 12
@@ -72,10 +73,10 @@ cognitive tasks to about 90% accuracy, following Yang et al.'s multitask network
 comparison we use untrained nets and nets trained on decision-making (DM) only, with 5 seeds of each.
 
 *[Figure 4: `clique_model`]*
-**Figure 4. Probing the model.** Left: a trained 12-task network of 512 neurons, with 50 drawn at
-random (orange). Only neurons firing at least 1 Hz are eligible. Right: the same 50 neurons, joined
-by their top 5% of correlations, with strongly correlated neurons placed close together. At this
-density there are 3 loops. Positions are for display only.
+**Figure 4. Probing the model.** 50 neurons drawn at random from a trained 12-task network of
+512 (only neurons firing at least 1 Hz are eligible), joined by their top 5% of correlations.
+Strongly correlated neurons sit close together; positions are for display only. At this density
+there are 3 loops.
 
 **c · Pipeline.** For each brain session or trained network:
 1. Draw 50 random neurons firing at least 1 Hz.

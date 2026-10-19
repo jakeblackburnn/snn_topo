@@ -533,50 +533,40 @@ def betti1_at(curves: np.ndarray, density: float) -> int:
 
 
 def fig_clique_method() -> None:
-    """Made-up neurons: 16 place cells on a circle against 16 neurons with a random correlation order,
-    then the Betti 1 curve at the probe's size, 50, against the random band."""
+    """Made-up neurons, one column: 16 place cells on a circle joined at three densities, then the
+    Betti 1 curve at the probe's size, 50, against the random band, with the three densities marked.
+    The caption is the poster's (docs/poster/draft.md, Fig. 2)."""
     rng = np.random.default_rng(1)
     n = 16
     preferred = np.linspace(0, 2 * np.pi, n, endpoint=False) + rng.uniform(-0.1, 0.1, n)
     pos = np.c_[np.cos(preferred), np.sin(preferred)]
-    rows = [("place cells on a circle", clique.correlations(place_cells(preferred, rng)), ENGAGED),
-            ("random order", clique.random_matrix(n, rng), RANDOM_EDGE)]
-    ring = clique.DENSITY[np.argmax(clique.betti_curves(rows[0][1], 1)[0] > 0)]
+    c = clique.correlations(place_cells(preferred, rng))
+    curves = clique.betti_curves(c, 1)
+    ring = clique.DENSITY[np.argmax(curves[0] > 0)]
     densities = [0.05, ring, 0.4]
-    fig = plt.figure(figsize=(2 * COLUMN_IN, 13))
-    grid_spec = fig.add_gridspec(2, 6, width_ratios=[1, 1, 1, 1, 0.15, 1.8], wspace=0.15, hspace=0.35)
-    for row, (name, c, color) in enumerate(rows):
-        curves = clique.betti_curves(c, 1)
-        ax = fig.add_subplot(grid_spec[row, 0])
-        ax.imshow(np.where(np.eye(n, dtype=bool), np.nan, c), cmap="Greys", interpolation="nearest")
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_ylabel(name, fontsize=24)
-        if row == 0:
-            ax.set_title("1. correlations\n(dark = high)", fontsize=24)
-        for col, density in enumerate(densities):
-            ax = fig.add_subplot(grid_spec[row, col + 1])
-            draw_complex(ax, pos, c, density, color, 60)
-            loops = betti1_at(curves, density)
-            ax.set_title((f"{col + 2}. top {density:.0%} of pairs\n" if row == 0 else f"top {density:.0%}\n")
-                         + f"{loops} loop{'s' * (loops != 1)}", fontsize=24)
-    ax = fig.add_subplot(grid_spec[:, 5])
+    fig = plt.figure(figsize=(COLUMN_IN, 12))
+    grid_spec = fig.add_gridspec(2, 3, height_ratios=[1, 1.7], wspace=0.15, hspace=0.2)
+    for col, density in enumerate(densities):
+        ax = fig.add_subplot(grid_spec[0, col])
+        draw_complex(ax, pos, c, density, ENGAGED, 60)
+        loops = betti1_at(curves, density)
+        ax.set_title(f"top {density:.0%}\n{loops} loop{'s' * (loops != 1)}", fontsize=24)
+    ax = fig.add_subplot(grid_spec[1, :])
     rng = np.random.default_rng(2)
     band = np.array([clique.betti_curves(clique.random_matrix(50, rng), 1)[0] for _ in range(20)])
     ax.fill_between(clique.DENSITY, band.min(0), band.max(0), color=RANDOM, alpha=0.6, lw=0)
     ax.plot(clique.DENSITY, np.median(band, 0), color=RANDOM_EDGE, lw=3)
     geometric = clique.betti_curves(clique.correlations(place_cells(rng.uniform(0, 2 * np.pi, 50), rng)), 1)[0]
     ax.plot(clique.DENSITY, geometric, color=ENGAGED, lw=3)
+    for density in densities:
+        ax.axvline(density, color="k", ls="--", lw=1.5, zorder=0)
+    ax.set_xticks(densities, [f"{d:.0%}" for d in densities])
     peak = np.argmax(np.median(band, 0))
-    ax.text(clique.DENSITY[peak], band.max(0)[peak] + 2, "random order\n(20 draws)", ha="center", fontsize=22)
+    ax.text(clique.DENSITY[peak] + 0.09, band.max(0)[peak] - 20, "random order\n(20 draws)", ha="left", fontsize=22)
     ax.text(clique.DENSITY[np.argmax(geometric)] + 0.03, geometric.max() + 2, "place cells", fontsize=22, color="k")
-    ax.set(xlabel="edge density (fraction of pairs joined)", ylabel="number of loops (Betti 1)", xlim=(0, 0.5), ylim=(0, None))
-    ax.set_title(f"{len(densities) + 2}. count loops at every density,\n50 neurons", fontsize=24)
-    fig.text(0.02, 0.02, "Clique topology (Giusti et al. 2015): pairs of neurons are joined in order of their correlation, strongest first.\n"
-             "Correlations set by distance on a circle join neighbours first and form one ring; a random order forms many loops that come and go.\n"
-             "The area under the Betti 1 curve, as a fraction of random's, is the measure: near 0 for geometric orders, 1 for chance.",
-             ha="left", va="bottom", fontsize=19)
-    fig.subplots_adjust(left=0.03, right=0.98, top=0.9, bottom=0.17)
+    ax.set(xlabel="pairs joined", ylabel="number of loops (Betti 1)", xlim=(0, 0.5), ylim=(0, None))
+    ax.set_title("loops at every density, 50 neurons", fontsize=24)
+    fig.subplots_adjust(left=0.12, right=0.97, top=0.93, bottom=0.08)
     save(fig, "clique_method")
 
 
@@ -590,7 +580,8 @@ def spring_positions(c: np.ndarray) -> np.ndarray:
 
 
 def fig_clique_model() -> None:
-    """The first k = 50 probe of the 12-task net, seed 0, redrawn exactly as clique_probe drew it."""
+    """The first k = 50 probe of the 12-task net, seed 0, redrawn exactly as clique_probe drew it, netted
+    by its top 5% of correlations; one column. The caption is the poster's (docs/poster/draft.md, Fig. 4)."""
     f = np.load(CLIQUE / "spikes" / "multitask-0.npz")
     counts, bounds = f["counts"], f["bounds"]
     eligible = np.flatnonzero(counts.mean(1) >= clique_probe.RATE_FLOOR)
@@ -604,24 +595,13 @@ def fig_clique_model() -> None:
     assert np.isclose(clique.integrated(curves)[0], stored.betti1), "the redrawn probe is not the one in probes.csv"
     density = 0.05
 
-    fig, axes = plt.subplots(1, 2, figsize=(2 * COLUMN_IN, 12))
-    ax = axes[0]
-    pos = np.random.default_rng(0).uniform(-1, 1, (len(counts), 2))  # the net has no layout: positions are for display
-    rest = np.setdiff1d(np.arange(len(counts)), units)
-    ax.scatter(*pos[rest].T, s=40, color=RANDOM, linewidths=0)
-    ax.scatter(*pos[units].T, s=160, color=SNN, linewidths=0)
-    ax.set_aspect("equal")
-    ax.axis("off")
-    ax.set_title(f"1. A trained 12-task network, {len(counts)} neurons:\n50 drawn at random as a probe", fontsize=26)
-    ax = axes[1]
+    fig, ax = plt.subplots(figsize=(COLUMN_IN, COLUMN_IN))
     draw_complex(ax, spring_positions(c), c, density, SNN, 160)
     loops = betti1_at(curves, density)
-    ax.set_title(f"2. Its 50 neurons joined by the top {density:.0%}\nof correlations: {loops} loop{'s' * (loops != 1)}", fontsize=26)
-    fig.text(0.02, 0.02, f"Pugavko et al. 2023's spiking network, trained on 12 tasks (seed 0). The probe is drawn from the {len(eligible)} "
-             f"neurons firing at least 1 Hz; its correlations\nare over {clique_probe.N_SAMPLES} bins of 10 ms from trials in random "
-             f"order. Positions are for display only: left at random, right pulled together by their correlation\nranks, so strongly correlated neurons sit close. "
-             f"This probe's Betti 1 area is {stored.betti1_vs_random:.2f} of random's.", ha="left", va="bottom", fontsize=19)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.88, bottom=0.14, wspace=0.05)
+    ax.set_title(f"50 neurons of a 12-task net, joined by\ntheir top {density:.0%} of correlations: {loops} loop{'s' * (loops != 1)}", fontsize=26)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.88, bottom=0.02)
+    print(f"clique_model caption facts: {len(counts)} neurons, {len(eligible)} firing >= {clique_probe.RATE_FLOOR} Hz, "
+          f"{clique_probe.N_SAMPLES} bins, Betti 1 area {stored.betti1_vs_random:.2f} of random's")
     save(fig, "clique_model")
 
 
