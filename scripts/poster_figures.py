@@ -660,7 +660,8 @@ def fig_steinmetz_task() -> None:
 
 
 def fig_clique_table() -> None:
-    """Betti 1 area / random at k = 50, median [range] over sessions or seeds; printed as markdown and drawn."""
+    """Betti-1 area / random at k = 50, median [range] over sessions or seeds; printed as markdown and drawn.
+    No caption on the image (Jake, part 4): the title and key line carry how to read it."""
     df = pd.read_csv(CLIQUE / "probes.csv")
     rows = [("untrained net, 12-task inputs", "untrained SNN", UNTRAINED), ("DM-only net, DM inputs", "DM-only SNN", RANDOM_EDGE),
             ("DM-only net, 12-task inputs", "DM-only SNN, 12-task inputs", RANDOM_EDGE), ("12-task net", "12-task SNN", SNN),
@@ -671,16 +672,18 @@ def fig_clique_table() -> None:
 
     table = [(name, color, str(len(per_source(df, group, False))), cell(per_source(df, group, False)), cell(per_source(df, group, True)))
              for name, group, color in rows]
-    header = ["source", "n", "raw", "drift + population removed"]
+    header = ["source", "n", "raw", "trial means + population removed"]
     print("| " + " | ".join(header) + " |\n|" + "---|" * len(header))
     for name, _, *cells in table:
         print("| " + " | ".join([name, *cells]) + " |")
 
     fig, ax = plt.subplots(figsize=(COLUMN_IN, 7.5))
     ax.axis("off")
+    fig.text(0.02, 0.97, "Betti-1 area / random, 50-neuron probes", ha="left", va="top", fontsize=26, fontweight="bold")
+    fig.text(0.02, 0.89, "median [range] over $n$ sessions \u00b7 1 = random, 0 = perfect order", ha="left", va="top", fontsize=18)
     xs = [0.04, 0.5, 0.67, 0.88]
     y, step = 0.93, 0.11
-    for x, text in zip(xs, ["", "n", "raw", "drift +\npopulation\nremoved"]):
+    for x, text in zip(xs, ["", "n", "raw", "trial means +\npopulation\nremoved"]):
         ax.text(x, y, text, ha="left" if x == xs[0] else "center", va="center", fontsize=22, fontweight="bold")
     y -= 1.3 * step
     ax.axhline(y + 0.55 * step, color="k", lw=2)
@@ -692,10 +695,7 @@ def fig_clique_table() -> None:
         y -= step
     ax.axhline(y + 0.5 * step, color="k", lw=2)
     ax.set(xlim=(0, 1), ylim=(y + 0.4 * step, 1))
-    fig.text(0.02, 0.01, "Betti 1 area of 50-neuron probes as a fraction of random's: 1 = chance, 0 = perfect order. Median [range] over\n"
-             "sessions or training seeds, each the median of 10 probes. Drift removed: each neuron's mean within every trial.\n"
-             "Population removed: each neuron regressed on the probe's mean activity.", ha="left", va="bottom", fontsize=17)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.2)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.02)
     save(fig, "clique_table")
 
 
