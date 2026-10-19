@@ -643,7 +643,7 @@ def fig_clique_results() -> None:
     axes[2].text(axes[2].get_xlim()[1], 1.0, "random", ha="right", va="bottom", fontsize=20)
     fig.text(0.02, 0.02, "Curves: median of the sessions' or seeds' median curves, band 10th-90th percentile. Dots: one session (13 per brain group) "
              "or training seed (5 per net),\neach the median of 10 random 50-neuron probes; bars and numbers are medians. 1 = no order "
-             "beyond chance, 0 = a perfect geometric order.\nTraining moves a net toward chance and toward the brain, about halfway; "
+             "beyond chance, 0 = a perfect geometric order.\nTraining moves a net toward chance and toward the brain; "
              "with both removals the ranges separate.", ha="left", va="bottom", fontsize=19)
     fig.subplots_adjust(left=0.06, right=0.98, top=0.88, bottom=0.25, wspace=0.35)
     save(fig, "clique_results")
