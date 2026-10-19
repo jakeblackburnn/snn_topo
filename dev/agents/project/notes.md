@@ -1,7 +1,7 @@
 # Durable notes
 
 ## Env
-- Venv: `~/Code/python_venv_01_main`; bare `python3` has no numpy.
+- Venv: `~/Code/python_venv_01_main` (Jake's home PC). On the Mac checkout (`~/code/main/snn_topo`) there is no `results/` and no venv with the deps: `~/code/pyvenv_main` lacks pandas/ripser/networkx, and no venv has ripser. To render a synthetic figure there, `~/code/main/manifolds/.venv` has pandas, scipy, networkx and gudhi; a `ripser.py` shim over `gudhi.RipsComplex` gave the same clique loop counts (2026-10-19).
 - `results/` is gitignored; CSVs regenerate from scripts (commands in docstrings and E-entries).
 - Stats code run from `python -` (stdin) falls back to serial with noisy tracebacks: run a script file.
 - `python -m pytest` in a worktree needs `PYTHONPATH=.` (editable install resolves to the main checkout); prefer `python -m snntopo.cli` over the console script there.
@@ -80,7 +80,9 @@
 - `clique.betti_curves` with H2 takes ~8 s per probe at k = 128 and <0.5 s at k = 50.
 - The cloned paper code (`cgtasknet`, `multy_task`) was in the session scratchpad: github.com/Pugavkom/{cgtasknet,multy_task}. The regularized settings come from `multy_task/server/mean_fr_filter_bigger_tau_a_less/mean_fr_filtertau_a_less.ipynb`.
 - Projecting out top principal components before clique topology overshoots far above random, even for place cells (2.8-8x); use `clique.demean_trials` (per-trial mean removal) for slow drift. Population regression overshoots slightly (1.09-1.26x on synthetic data).
-- Poster figures for this result: `scripts/poster_figures.py clique_method clique_model clique_results clique_table` (~5 s, needs `PYTHONPATH=.`; it imports `scripts.clique_probe`). They read `results/analysis/clique_probe/`; `clique_method` is synthetic. `clique_model` redraws the first k = 50 probe of `multitask-0` and asserts that it equals its `probes.csv` row. `clique_table` prints its cells as markdown.
+- Poster figures for this result: `scripts/poster_figures.py clique_method clique_model clique_results clique_table` (~5 s, needs `PYTHONPATH=.`; it imports `scripts.clique_probe`). They read `results/analysis/clique_probe/`; `clique_method` is synthetic. `clique_model` redraws the first k = 50 probe of `multitask-0` and asserts that it equals its `probes.csv` row; since 2026-10-19 it is the netted probe alone and prints its caption facts (neurons, eligible, bins, Betti 1 area). Both are one column wide with no embedded caption; captions live in `docs/poster/draft.md`. `clique_table` prints its cells as markdown.
 - In this shell, `pkill -f <pattern>` matches the calling Bash command's own command line and kills it; use `pgrep` and kill by PID.
 - Clique topology is invariant to monotone transforms of the correlations, not to *sampling* noise. Noisy estimates of weak correlations scramble the order and push the value toward 1 (chance). Brain correlations in 10 ms bins are weak, and no split-half or noise-matched control exists yet. Don't write "noise drops out"; the poster lists this as a limitation (`dev/workshop/poster-clique.md` thread 3).
 - Poster framing for the clique result (Jake, 2026-10-18): the measure *tells brain from model* and *ranks sources in a consistent order*. Don't frame it as distance ("halfway", "twice as close"). Brain and model separate only with drift + population removed (nets ≤ 0.39, sessions ≥ 0.49); raw ranges overlap.
+
+- `docs/poster/figures/steinmetz_task.png` (Fig 3): Steinmetz et al. 2019 Fig. 1 panels a, e, f, cut from page 2 of the paper PDF (Jake's copy, `~/Desktop/"=-8d/snntopo/s41586-019-1787-x.pdf`) with `pdftoppm -f 2 -l 2 -r 1200`, crop boxes at 100 dpi: a = (84, 66, 248, 281), e+f = (372, 66, 474, 281), pasted side by side. 3312 × 2580 px = 300 dpi at 11 in. © Springer Nature (exclusive licence, not CC): credited in the caption; permission is Jake's call.
